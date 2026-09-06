@@ -40,32 +40,32 @@ const navGroups = [
     id: 'main',
     label: 'Main',
     items: [
-      { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, href: '/user-dashboard', badge: null },
-      { id: 'products', label: 'My Products', icon: Package, href: '/user-dashboard/products', badge: '3' },
-      { id: 'subscriptions', label: 'Subscriptions', icon: CreditCard, href: '/user-dashboard/subscriptions', badge: null },
-      { id: 'orders', label: 'Orders', icon: ShoppingBag, href: '/user-dashboard/orders', badge: null },
-      { id: 'downloads', label: 'Downloads', icon: Download, href: '/user-dashboard/downloads', badge: '2' },
-      { id: 'wishlist', label: 'Wishlist', icon: Heart, href: '/user-dashboard/wishlist', badge: null },
-      { id: 'referrals', label: 'Referrals', icon: Gift, href: '/user-dashboard/referrals', badge: null },
-      { id: 'notifications', label: 'Notifications', icon: Bell, href: '/user-dashboard/notifications', badge: null },
+      { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, href: '/user-dashboard' },
+      { id: 'products', label: 'My Products', icon: Package, href: '/user-dashboard/products' },
+      { id: 'subscriptions', label: 'Subscriptions', icon: CreditCard, href: '/user-dashboard/subscriptions' },
+      { id: 'orders', label: 'Orders', icon: ShoppingBag, href: '/user-dashboard/orders' },
+      { id: 'downloads', label: 'Downloads', icon: Download, href: '/user-dashboard/downloads' },
+      { id: 'wishlist', label: 'Wishlist', icon: Heart, href: '/user-dashboard/wishlist' },
+      { id: 'referrals', label: 'Referrals', icon: Gift, href: '/user-dashboard/referrals' },
+      { id: 'notifications', label: 'Notifications', icon: Bell, href: '/user-dashboard/notifications' },
     ],
   },
   {
     id: 'billing',
     label: 'Billing & Usage',
     items: [
-      { id: 'invoices', label: 'Invoices', icon: FileText, href: '/user-dashboard/invoices', badge: null },
-      { id: 'usage', label: 'AI Usage', icon: Activity, href: '/user-dashboard/usage', badge: null },
-      { id: 'api-keys', label: 'API Keys', icon: Key, href: '/user-dashboard/api-keys', badge: null },
+      { id: 'invoices', label: 'Invoices', icon: FileText, href: '/user-dashboard/invoices' },
+      { id: 'usage', label: 'AI Usage', icon: Activity, href: '/user-dashboard/usage' },
+      { id: 'api-keys', label: 'API Keys', icon: Key, href: '/user-dashboard/api-keys' },
     ],
   },
   {
     id: 'account',
     label: 'Account',
     items: [
-      { id: 'security', label: 'Security', icon: Shield, href: '/user-dashboard/security', badge: null },
-      { id: 'settings', label: 'Settings', icon: Settings, href: '/user-dashboard/settings', badge: null },
-      { id: 'support', label: 'Support', icon: HelpCircle, href: '/user-dashboard/support', badge: '1' },
+      { id: 'security', label: 'Security', icon: Shield, href: '/user-dashboard/security' },
+      { id: 'settings', label: 'Settings', icon: Settings, href: '/user-dashboard/settings' },
+      { id: 'support', label: 'Support', icon: HelpCircle, href: '/user-dashboard/support' },
     ],
   },
 ];
@@ -98,13 +98,11 @@ export default function DashboardSidebar({
 
   return (
     <>
-      {/* Desktop sidebar */}
       <aside
         className={`fixed left-0 top-0 bottom-0 z-40 hidden lg:flex flex-col bg-card border-r border-border transition-all duration-300 ${
           collapsed ? 'w-16' : 'w-60'
         }`}
       >
-        {/* Logo */}
         <div className={`flex items-center h-16 border-b border-border px-4 flex-shrink-0 ${
           collapsed ? 'justify-center' : 'gap-2.5'
         }`}>
@@ -118,7 +116,6 @@ export default function DashboardSidebar({
           )}
         </div>
 
-        {/* Nav */}
         <nav className="flex-1 overflow-y-auto py-4 px-2">
           {navGroups.map((group) => (
             <div key={`navgroup-${group.id}`} className="mb-5">
@@ -140,16 +137,7 @@ export default function DashboardSidebar({
                         title={collapsed ? item.label : undefined}
                       >
                         <item.icon size={17} className="flex-shrink-0" />
-                        {!collapsed && (
-                          <>
-                            <span className="flex-1 truncate">{item.label}</span>
-                            {item.badge && (
-                              <span className="ml-auto text-xs font-700 bg-primary/10 text-primary px-1.5 py-0.5 rounded-full">
-                                {item.badge}
-                              </span>
-                            )}
-                          </>
-                        )}
+                        {!collapsed && <span className="flex-1 truncate">{item.label}</span>}
                       </Link>
                     </li>
                   );
@@ -159,7 +147,6 @@ export default function DashboardSidebar({
           ))}
         </nav>
 
-        {/* User + collapse */}
         <div className="border-t border-border p-2 flex-shrink-0">
           {!collapsed && (
             <div className="flex items-center gap-2.5 px-3 py-2 mb-1 rounded-xl bg-gradient-to-r from-primary/5 to-accent/5">
@@ -191,7 +178,6 @@ export default function DashboardSidebar({
         </div>
       </aside>
 
-      {/* Mobile sidebar */}
       <aside
         className={`fixed left-0 top-0 bottom-0 z-40 lg:hidden flex flex-col bg-white border-r border-border w-64 transition-transform duration-300 shadow-xl ${
           mobileOpen ? 'translate-x-0' : '-translate-x-full'
@@ -234,11 +220,6 @@ export default function DashboardSidebar({
                       >
                         <item.icon size={17} className="flex-shrink-0" />
                         <span className="flex-1 truncate">{item.label}</span>
-                        {item.badge && (
-                          <span className="ml-auto text-xs font-700 bg-primary/10 text-primary px-1.5 py-0.5 rounded-full">
-                            {item.badge}
-                          </span>
-                        )}
                       </Link>
                     </li>
                   );
@@ -248,7 +229,6 @@ export default function DashboardSidebar({
           ))}
         </nav>
 
-        {/* Mobile user + sign out */}
         <div className="border-t border-border p-3">
           <div className="flex items-center gap-2.5 mb-2">
             <div className="w-7 h-7 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
