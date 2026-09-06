@@ -10,6 +10,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient, createServiceClient } from '@/lib/supabase/server';
 import { getProvider } from '@/lib/payment/registry';
 import { sendOrderConfirmation } from '@/lib/email/sendEmail';
+import { getEffectivePrice } from '@/lib/pricing';
 
 interface CreateSessionRequest {
   productId?: string;
@@ -55,7 +56,7 @@ export async function POST(request: NextRequest) {
 
   const { data: plan, error: planError } = await supabase
     .from('product_plans')
-    .select('id, name, price, currency, billing_period, is_active')
+    .select('id, name, price, currency, billing_period, is_active, sale_price, sale_discount_type, sale_discount_value, sale_starts_at, sale_ends_at')
     .eq('id', planId)
     .eq('product_id', productId)
     .eq('is_active', true)
@@ -70,12 +71,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: `Currency ${currency} is not supported by Payoneer Checkout.` }, { status: 400 });
   }
 
-  const basePrice = Number(plan.price);
-  if (!Number.isFinite(basePrice) || basePrice < 0) {
+  let pricing;
+  try {
+    pricing = getEffectivePrice(plan);
+  } catch {
     return NextResponse.json({ error: 'Invalid product price.' }, { status: 500 });
   }
 
-  let discountAmount = 0;
+  const basePrice = pricing.finalPrice;
+  let couponDiscountAmount = 0;
   let appliedCouponId: string | null = null;
 
   if (couponId) {
@@ -95,7 +99,7 @@ export async function POST(request: NextRequest) {
 
       if (!startsInFuture && !expired && !exhausted && applies) {
         const discountValue = Number(coupon.discount_value);
-        discountAmount = coupon.coupon_type === 'percentage'
+        couponDiscountAmount = coupon.coupon_type === 'percentage'
           ? Math.min(basePrice, Math.max(0, (basePrice * discountValue) / 100))
           : Math.min(basePrice, Math.max(0, discountValue));
         appliedCouponId = coupon.id;
@@ -103,7 +107,9 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  const finalAmount = Number(Math.max(0, basePrice - discountAmount).toFixed(2));
+  const finalAmount = Number(Math.max(0, basePrice - couponDiscountAmount).toFixed(2));
+  const totalDiscountAmount = Number((pricing.discountAmount + couponDiscountAmount).toFixed(2));
+
   if (finalAmount <= 0) {
     return NextResponse.json(
       { error: 'Zero-value orders require the free checkout flow and cannot be sent to Payoneer.' },
@@ -122,7 +128,7 @@ export async function POST(request: NextRequest) {
       status: 'pending_payment',
       amount: finalAmount,
       currency,
-      discount_amount: discountAmount,
+      discount_amount: totalDiscountAmount,
       provider_payment_ref: '',
       receipt_url: '',
       metadata: {
@@ -131,6 +137,10 @@ export async function POST(request: NextRequest) {
         plan_name: plan.name,
         product_name: product.name,
         billing_period: plan.billing_period,
+        regular_price: pricing.regularPrice,
+        sale_price: pricing.salePrice,
+        sale_discount_amount: pricing.discountAmount,
+        coupon_discount_amount: Number(couponDiscountAmount.toFixed(2)),
       },
       created_at: createdAt,
       updated_at: createdAt,
