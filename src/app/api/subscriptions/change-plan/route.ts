@@ -1,42 +1,38 @@
 /**
  * POST /api/subscriptions/change-plan
  *
- * Schedules a plan change (upgrade or downgrade) for a subscription.
- *
+ * Schedules a plan change for a subscription.
  * SECURITY:
- * - Verifies user owns the subscription.
- * - Fetches plan price from database — NEVER trusts client price.
- * - Upgrades redirect to new checkout; downgrades are scheduled for next renewal.
- * - Logs action to subscription_audit_logs.
+ * - Ownership is verified using the authenticated user.
+ * - Prices/plans are read from the database.
+ * - Entitlement mutations are performed only with the server service role.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createServiceClient } from '@/lib/supabase/server';
 import { sendEmail } from '@/lib/email/sendEmail';
 
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
-
-  // ── 1. Authenticate ───────────────────────────────────────────────────────
   const { data: { user }, error: authError } = await supabase.auth.getUser();
   if (authError || !user) {
     return NextResponse.json({ error: 'Authentication required.' }, { status: 401 });
   }
 
-  // ── 2. Parse body ─────────────────────────────────────────────────────────
-  let body: { subscriptionId: string; newPlanId: string; changeType: 'upgrade' | 'downgrade' };
+  let body: { subscriptionId?: string; newPlanId?: string; changeType?: 'upgrade' | 'downgrade' };
   try {
     body = await request.json();
   } catch {
     return NextResponse.json({ error: 'Invalid request body.' }, { status: 400 });
   }
 
-  const { subscriptionId, newPlanId, changeType } = body;
-  if (!subscriptionId || !newPlanId || !changeType) {
-    return NextResponse.json({ error: 'subscriptionId, newPlanId, and changeType are required.' }, { status: 400 });
+  const subscriptionId = body.subscriptionId?.trim();
+  const newPlanId = body.newPlanId?.trim();
+  const changeType = body.changeType;
+  if (!subscriptionId || !newPlanId || !['upgrade', 'downgrade'].includes(changeType ?? '')) {
+    return NextResponse.json({ error: 'subscriptionId, newPlanId, and a valid changeType are required.' }, { status: 400 });
   }
 
-  // ── 3. Fetch subscription and verify ownership ────────────────────────────
   const { data: sub, error: fetchError } = await supabase
     .from('subscriptions')
     .select(`
@@ -51,7 +47,6 @@ export async function POST(request: NextRequest) {
   if (fetchError || !sub) {
     return NextResponse.json({ error: 'Subscription not found.' }, { status: 404 });
   }
-
   if (!['active', 'trialing'].includes(sub.status)) {
     return NextResponse.json(
       { error: `Cannot change plan for subscription with status: ${sub.status}` },
@@ -59,36 +54,30 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // ── 4. Fetch new plan from database (never trust client price) ────────────
   const { data: newPlan, error: planError } = await supabase
     .from('product_plans')
     .select('id, name, price, currency, billing_period, product_id, is_active')
     .eq('id', newPlanId)
     .single();
 
-  if (planError || !newPlan) {
-    return NextResponse.json({ error: 'Plan not found.' }, { status: 404 });
-  }
-
-  if (!newPlan.is_active) {
-    return NextResponse.json({ error: 'Selected plan is not available.' }, { status: 422 });
-  }
-
-  // Verify new plan belongs to the same product
+  if (planError || !newPlan) return NextResponse.json({ error: 'Plan not found.' }, { status: 404 });
+  if (!newPlan.is_active) return NextResponse.json({ error: 'Selected plan is not available.' }, { status: 422 });
   if (newPlan.product_id !== sub.product_id) {
     return NextResponse.json({ error: 'Plan does not belong to the same product.' }, { status: 422 });
+  }
+  if (newPlan.id === sub.plan_id) {
+    return NextResponse.json({ error: 'Selected plan is already active.' }, { status: 422 });
   }
 
   const currentPlan = Array.isArray(sub.product_plans) ? sub.product_plans[0] : sub.product_plans;
   const product = Array.isArray(sub.products) ? sub.products[0] : sub.products;
+  const service = createServiceClient();
 
-  // ── 5. Handle upgrade vs downgrade ───────────────────────────────────────
   if (changeType === 'upgrade') {
-    // Upgrades: return checkout URL for new plan — user pays immediately
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://summeca.com';
-    const checkoutUrl = `${siteUrl}/checkout?productId=${sub.product_id}&planId=${newPlanId}&upgradeFrom=${subscriptionId}`;
+    const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL ?? 'https://summeca.com').replace(/\/$/, '');
+    const checkoutUrl = `${siteUrl}/checkout?product_id=${encodeURIComponent(sub.product_id)}&plan_id=${encodeURIComponent(newPlanId)}&upgrade_from=${encodeURIComponent(subscriptionId)}`;
 
-    await supabase.from('subscription_audit_logs').insert({
+    const { error: auditError } = await service.from('subscription_audit_logs').insert({
       subscription_id: subscriptionId,
       admin_id: null,
       action: 'plan_change',
@@ -102,6 +91,7 @@ export async function POST(request: NextRequest) {
         initiated_by: 'customer',
       },
     });
+    if (auditError) console.warn('[change-plan] Audit log failed:', auditError.message);
 
     return NextResponse.json({
       changeType: 'upgrade',
@@ -111,23 +101,26 @@ export async function POST(request: NextRequest) {
     });
   }
 
-  // Downgrade: schedule for next renewal
-  const { error: downgradeError } = await supabase
+  const now = new Date().toISOString();
+  const { data: updated, error: downgradeError } = await service
     .from('subscriptions')
     .update({
       downgrade_plan_id: newPlanId,
       downgrade_at: sub.current_period_end,
-      updated_at: new Date().toISOString(),
+      updated_at: now,
     })
     .eq('id', subscriptionId)
-    .eq('user_id', user.id);
+    .eq('user_id', user.id)
+    .eq('status', sub.status)
+    .select('id')
+    .maybeSingle();
 
-  if (downgradeError) {
-    console.error('[change-plan] Downgrade error:', downgradeError.message);
-    return NextResponse.json({ error: 'Failed to schedule downgrade.' }, { status: 500 });
+  if (downgradeError || !updated) {
+    console.error('[change-plan] Downgrade error:', downgradeError?.message ?? 'Subscription changed concurrently');
+    return NextResponse.json({ error: 'Failed to schedule downgrade.' }, { status: 409 });
   }
 
-  await supabase.from('subscription_audit_logs').insert({
+  const { error: auditError } = await service.from('subscription_audit_logs').insert({
     subscription_id: subscriptionId,
     admin_id: null,
     action: 'plan_change',
@@ -142,12 +135,12 @@ export async function POST(request: NextRequest) {
       initiated_by: 'customer',
     },
   });
+  if (auditError) console.warn('[change-plan] Audit log failed:', auditError.message);
 
-  // Send plan changed email
   try {
-    const { data: authUser } = await supabase.auth.admin.getUserById(user.id);
+    const { data: authUser } = await service.auth.admin.getUserById(user.id);
     const userEmail = authUser?.user?.email ?? '';
-    const { data: profile } = await supabase
+    const { data: profile } = await service
       .from('user_profiles')
       .select('full_name')
       .eq('id', user.id)
@@ -163,7 +156,7 @@ export async function POST(request: NextRequest) {
           oldPlanName: currentPlan?.name ?? 'Current Plan',
           newPlanName: newPlan.name,
           changeType: 'downgrade',
-          effectiveDate: sub.current_period_end ?? new Date().toISOString(),
+          effectiveDate: sub.current_period_end ?? now,
           amount: newPlan.price,
           currency: newPlan.currency,
         },
