@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { toast } from 'sonner';
 import { Plus, Edit2, Archive, Eye, EyeOff, X, Search, Check } from 'lucide-react';
+import PricingManager from './PricingManager';
 
 interface Product {
   id: string;
@@ -27,8 +28,6 @@ const statusColors: Record<string, string> = {
   draft: 'bg-warning/10 text-warning',
   archived: 'bg-muted text-muted-foreground',
 };
-
-const emptyForm = { name: '', slug: '', description: '', short_desc: '', category: 'other', status: 'draft', thumbnail_url: '', demo_url: '', tags: '' };
 
 function ProductModal({ product, onClose, onSave }: { product: Partial<Product> | null; onClose: () => void; onSave: () => void }) {
   const isEdit = !!product?.id;
@@ -76,7 +75,7 @@ function ProductModal({ product, onClose, onSave }: { product: Partial<Product> 
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center modal-overlay p-4" onClick={onClose}>
-      <div className="bg-card rounded-2xl border border-border w-full max-w-xl max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-card rounded-2xl border border-border w-full max-w-3xl max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between p-5 border-b border-border">
           <h2 className="text-base font-700 text-foreground">{isEdit ? 'Edit Product' : 'New Product'}</h2>
           <button onClick={onClose} className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary transition-all"><X size={16} /></button>
@@ -128,12 +127,21 @@ function ProductModal({ product, onClose, onSave }: { product: Partial<Product> 
             <label className="block text-xs font-600 text-muted-foreground mb-1.5">Tags (comma-separated)</label>
             <input type="text" value={form.tags} onChange={(e) => handleChange('tags', e.target.value)} placeholder="ai, writing, content" className="w-full px-3 py-2.5 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary" />
           </div>
+
+          {isEdit && product?.id ? (
+            <PricingManager productId={product.id} />
+          ) : (
+            <div className="mt-6 pt-6 border-t border-border">
+              <h3 className="text-sm font-800 text-foreground">Pricing</h3>
+              <p className="text-xs text-muted-foreground mt-1">Create the product first, then reopen it to add one-time, monthly, yearly, lifetime, sale pricing and coupons.</p>
+            </div>
+          )}
         </div>
         <div className="flex gap-3 p-5 border-t border-border">
           <button onClick={onClose} className="btn-secondary flex-1">Cancel</button>
           <button onClick={handleSave} disabled={saving} className="btn-primary flex-1 flex items-center justify-center gap-2">
             {saving ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Check size={14} />}
-            {isEdit ? 'Save Changes' : 'Create Product'}
+            {isEdit ? 'Save Product Details' : 'Create Product'}
           </button>
         </div>
       </div>
@@ -244,7 +252,7 @@ export default function AdminProductsPage() {
                         <button onClick={() => handleTogglePublish(product)} title={product.status === 'active' ? 'Unpublish' : 'Publish'} className="w-7 h-7 rounded-lg flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 transition-all">
                           {product.status === 'active' ? <EyeOff size={13} /> : <Eye size={13} />}
                         </button>
-                        <button onClick={() => setEditProduct(product)} title="Edit" className="w-7 h-7 rounded-lg flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 transition-all">
+                        <button onClick={() => setEditProduct(product)} title="Edit product and pricing" className="w-7 h-7 rounded-lg flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 transition-all">
                           <Edit2 size={13} />
                         </button>
                         <button onClick={() => setConfirmArchive(product)} title="Archive" className="w-7 h-7 rounded-lg flex items-center justify-center text-muted-foreground hover:text-warning hover:bg-warning/10 transition-all">
@@ -260,7 +268,6 @@ export default function AdminProductsPage() {
         </div>
       </div>
 
-      {/* Confirm archive dialog */}
       {confirmArchive && (
         <div className="fixed inset-0 z-50 flex items-center justify-center modal-overlay p-4">
           <div className="bg-card rounded-2xl border border-border w-full max-w-sm p-6">
