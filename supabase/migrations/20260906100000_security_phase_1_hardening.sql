@@ -3,7 +3,6 @@
 -- user_profiles.is_admin the authoritative admin flag.
 
 -- The application uses pending_payment for orders waiting for provider confirmation.
--- ALTER TYPE is kept outside the transaction so the value is immediately usable.
 ALTER TYPE public.order_status ADD VALUE IF NOT EXISTS 'pending_payment';
 
 BEGIN;
@@ -16,7 +15,7 @@ RETURNS BOOLEAN
 LANGUAGE sql
 STABLE
 SECURITY DEFINER
-SET search_path = public
+SET search_path = public, pg_temp
 AS $$
   SELECT COALESCE(
     (SELECT up.is_admin FROM public.user_profiles AS up WHERE up.id = auth.uid()),
@@ -28,33 +27,54 @@ REVOKE ALL ON FUNCTION public.is_admin() FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.is_admin() TO authenticated;
 GRANT EXECUTE ON FUNCTION public.is_admin() TO service_role;
 
--- Prevent ordinary users from promoting themselves by updating their own profile.
-CREATE OR REPLACE FUNCTION public.protect_user_admin_flag()
+-- Prevent ordinary users from modifying privileged/system-managed profile fields.
+CREATE OR REPLACE FUNCTION public.protect_user_privileged_fields()
 RETURNS TRIGGER
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public
+SET search_path = public, pg_temp
 AS $$
+DECLARE
+  caller_is_admin BOOLEAN := public.is_admin();
+  caller_is_service BOOLEAN := COALESCE(auth.role(), '') = 'service_role';
 BEGIN
-  IF NEW.is_admin IS DISTINCT FROM OLD.is_admin THEN
-    IF COALESCE(auth.role(), '') <> 'service_role' AND NOT public.is_admin() THEN
-      RAISE EXCEPTION 'Only an administrator may change is_admin';
-    END IF;
+  IF caller_is_service THEN
+    RETURN NEW;
   END IF;
+
+  IF NEW.is_admin IS DISTINCT FROM OLD.is_admin AND NOT caller_is_admin THEN
+    RAISE EXCEPTION 'Only an administrator may change is_admin';
+  END IF;
+
+  IF NEW.plan_tier IS DISTINCT FROM OLD.plan_tier AND NOT caller_is_admin THEN
+    RAISE EXCEPTION 'Only an administrator may change plan_tier';
+  END IF;
+
+  IF NEW.stripe_customer_id IS DISTINCT FROM OLD.stripe_customer_id AND NOT caller_is_admin THEN
+    RAISE EXCEPTION 'Only trusted server code may change payment customer references';
+  END IF;
+
+  IF NEW.email IS DISTINCT FROM OLD.email AND NOT caller_is_admin THEN
+    RAISE EXCEPTION 'Profile email cannot be changed directly';
+  END IF;
+
   RETURN NEW;
 END;
 $$;
 
 DROP TRIGGER IF EXISTS protect_user_admin_flag ON public.user_profiles;
-CREATE TRIGGER protect_user_admin_flag
+DROP TRIGGER IF EXISTS protect_user_privileged_fields ON public.user_profiles;
+CREATE TRIGGER protect_user_privileged_fields
   BEFORE UPDATE ON public.user_profiles
   FOR EACH ROW
-  EXECUTE FUNCTION public.protect_user_admin_flag();
+  EXECUTE FUNCTION public.protect_user_privileged_fields();
 
 -- -----------------------------------------------------------------------------
--- 2. user_profiles — users may read/update only their own profile.
---    The trigger above blocks client changes to is_admin.
+-- 2. user_profiles — no public exposure of emails/system fields.
+--    Users may read/update only their own row; privileged fields are trigger-guarded.
 -- -----------------------------------------------------------------------------
+DROP POLICY IF EXISTS "Public profiles are viewable by everyone." ON public.user_profiles;
+DROP POLICY IF EXISTS "Users can update own profile." ON public.user_profiles;
 DROP POLICY IF EXISTS "users_manage_own_user_profiles" ON public.user_profiles;
 DROP POLICY IF EXISTS "users_read_own_user_profiles" ON public.user_profiles;
 DROP POLICY IF EXISTS "users_update_own_user_profiles" ON public.user_profiles;
@@ -79,6 +99,9 @@ FOR UPDATE
 TO authenticated
 USING (public.is_admin())
 WITH CHECK (public.is_admin());
+
+-- Existing INSERT policy may remain for auth bootstrap, but it cannot create
+-- another user's profile because that policy is already constrained by auth.uid().
 
 -- -----------------------------------------------------------------------------
 -- 3. orders — customers can read their orders and create pending orders only.
@@ -128,15 +151,15 @@ TO authenticated
 USING (user_id = auth.uid());
 
 -- -----------------------------------------------------------------------------
--- 6. payment_events — users can read events for their orders, but only trusted
---    server code (service role) or existing admin policies may write them.
+-- 6. payment_events — customers may only read events for their own orders.
+--    service_role bypasses RLS, so no authenticated INSERT policy is required.
 -- -----------------------------------------------------------------------------
 DROP POLICY IF EXISTS "service_insert_payment_events" ON public.payment_events;
 DROP POLICY IF EXISTS "users_insert_own_payment_events" ON public.payment_events;
 DROP POLICY IF EXISTS "users_update_own_payment_events" ON public.payment_events;
 DROP POLICY IF EXISTS "users_delete_own_payment_events" ON public.payment_events;
-
 DROP POLICY IF EXISTS "users_read_own_payment_events" ON public.payment_events;
+
 CREATE POLICY "users_read_own_payment_events"
 ON public.payment_events
 FOR SELECT
