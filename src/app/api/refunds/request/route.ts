@@ -1,38 +1,40 @@
 /**
  * POST /api/refunds/request
- *
  * Customer-facing refund request endpoint.
  *
- * Security contract:
- * - Authenticates user via Supabase session (never trusts client-provided user_id)
- * - Verifies order ownership server-side
- * - Verifies order is completed (never trusts client-provided status)
- * - Verifies no active refund already exists for this order
- * - Amount is read from the order record, never from the client
- * - Sends refund_requested email via Resend
+ * Security:
+ * - Authenticates user and verifies order ownership server-side.
+ * - Reads amount/currency/status from the order, never from the client.
+ * - Creates the refund with the server-only service role after authorization.
+ * - Database unique index and duplicate check prevent concurrent active requests.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createServiceClient } from '@/lib/supabase/server';
+import { checkRateLimit, getRequestIdentity } from '@/lib/security/rateLimit';
 import { sendEmail } from '@/lib/email/sendEmail';
 
 const VALID_REASONS = ['product_issue', 'not_satisfied', 'duplicate_purchase', 'other'] as const;
 type RefundReason = typeof VALID_REASONS[number];
 
 export async function POST(request: NextRequest) {
-  const supabase = await createClient();
-
-  // ── 1. Authenticate user ──────────────────────────────────────────────────
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser();
-
+  const sessionClient = await createClient();
+  const { data: { user }, error: authError } = await sessionClient.auth.getUser();
   if (authError || !user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  // ── 2. Parse and validate request body ───────────────────────────────────
+  const rate = checkRateLimit(`refund-request:${getRequestIdentity(request, user.id)}`, {
+    limit: 5,
+    windowMs: 60 * 60_000,
+  });
+  if (!rate.allowed) {
+    return NextResponse.json(
+      { error: 'Too many refund requests. Please try again later.' },
+      { status: 429, headers: { 'Retry-After': String(Math.max(1, Math.ceil((rate.resetAt - Date.now()) / 1000))) } }
+    );
+  }
+
   let body: { orderId?: string; reason?: string; customerNote?: string };
   try {
     body = await request.json();
@@ -40,12 +42,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
   }
 
-  const { orderId, reason, customerNote } = body;
+  const orderId = body.orderId?.trim();
+  const reason = body.reason;
+  const sanitizedNote = (body.customerNote ?? '').slice(0, 1000).trim();
 
-  if (!orderId) {
-    return NextResponse.json({ error: 'orderId is required' }, { status: 400 });
-  }
-
+  if (!orderId) return NextResponse.json({ error: 'orderId is required' }, { status: 400 });
   if (!reason || !VALID_REASONS.includes(reason as RefundReason)) {
     return NextResponse.json(
       { error: `reason must be one of: ${VALID_REASONS.join(', ')}` },
@@ -53,11 +54,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // Sanitize customer note
-  const sanitizedNote = (customerNote ?? '').slice(0, 1000).trim();
-
-  // ── 3. Fetch order — verify ownership and status server-side ─────────────
-  const { data: order, error: orderError } = await supabase
+  const { data: order, error: orderError } = await sessionClient
     .from('orders')
     .select(`
       id, user_id, status, amount, currency,
@@ -66,27 +63,21 @@ export async function POST(request: NextRequest) {
       user_profiles ( email, full_name )
     `)
     .eq('id', orderId)
+    .eq('user_id', user.id)
     .single();
 
   if (orderError || !order) {
     return NextResponse.json({ error: 'Order not found' }, { status: 404 });
   }
-
-  // Verify ownership — never trust client
-  if (order.user_id !== user.id) {
-    return NextResponse.json({ error: 'Forbidden — not your order' }, { status: 403 });
-  }
-
-  // Verify order is completed
   if (order.status !== 'completed') {
     return NextResponse.json(
-      { error: `Refunds can only be requested for completed orders. This order is: ${order.status}` },
+      { error: 'Refunds can only be requested for completed orders.' },
       { status: 400 }
     );
   }
 
-  // ── 4. Check for existing active refund (prevent duplicates) ─────────────
-  const { data: existingRefund } = await supabase
+  const service = createServiceClient();
+  const { data: existingRefund } = await service
     .from('refunds')
     .select('id, status')
     .eq('order_id', orderId)
@@ -104,55 +95,61 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // ── 5. Create refund record — amount from order, never from client ────────
-  const { data: refund, error: insertError } = await supabase
+  const requestedAt = new Date().toISOString();
+  const { data: refund, error: insertError } = await service
     .from('refunds')
     .insert({
       order_id: orderId,
       user_id: user.id,
-      amount: order.amount,        // server-side: from order record
-      currency: order.currency,    // server-side: from order record
+      amount: order.amount,
+      currency: order.currency,
       reason: reason as RefundReason,
       customer_note: sanitizedNote,
       status: 'pending',
-      requested_at: new Date().toISOString(),
+      requested_at: requestedAt,
     })
     .select('id')
     .single();
 
   if (insertError || !refund) {
-    console.error('[refunds/request] Insert error:', insertError);
+    if (insertError?.code === '23505') {
+      return NextResponse.json({ error: 'An active refund request already exists for this order.' }, { status: 409 });
+    }
+    console.error('[refunds/request] Insert error:', insertError?.message);
     return NextResponse.json({ error: 'Failed to create refund request' }, { status: 500 });
   }
 
-  // ── 6. Send refund_requested email ────────────────────────────────────────
-  const customerEmail = (order.user_profiles as { email?: string } | null)?.email;
+  const customerEmail = (order.user_profiles as { email?: string } | null)?.email ?? user.email;
   const customerName = (order.user_profiles as { full_name?: string } | null)?.full_name ?? '';
   const productName = (order.products as { name?: string } | null)?.name ?? 'Your product';
   const planName = (order.product_plans as { name?: string } | null)?.name ?? '';
 
   if (customerEmail) {
-    await sendEmail({
-      type: 'refund_requested',
-      to: customerEmail,
-      data: {
-        customerName,
-        orderId,
-        refundId: refund.id,
-        productName,
-        planName,
-        amount: order.amount,
-        currency: order.currency,
-        reason,
-        customerNote: sanitizedNote,
-        requestedAt: new Date().toISOString(),
-      },
-    });
+    try {
+      await sendEmail({
+        type: 'refund_requested',
+        to: customerEmail,
+        data: {
+          customerName,
+          orderId,
+          refundId: refund.id,
+          productName,
+          planName,
+          amount: order.amount,
+          currency: order.currency,
+          reason,
+          customerNote: sanitizedNote,
+          requestedAt,
+        },
+      });
+    } catch (emailErr) {
+      console.warn('[refunds/request] Confirmation email failed:', emailErr);
+    }
   }
 
   return NextResponse.json({
     success: true,
     refundId: refund.id,
     message: 'Refund request submitted successfully. Our team will review it within 1–3 business days.',
-  });
+  }, { headers: { 'Cache-Control': 'no-store' } });
 }
