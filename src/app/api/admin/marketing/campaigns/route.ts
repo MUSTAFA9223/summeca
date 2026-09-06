@@ -1,19 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-
-async function requireAdmin(supabase: Awaited<ReturnType<typeof createClient>>) {
-  const { data: { user }, error } = await supabase.auth.getUser();
-  if (error || !user) return null;
-  const meta = user.user_metadata ?? {};
-  const appMeta = user.app_metadata ?? {};
-  if (meta.role !== 'admin' && appMeta.role !== 'admin') return null;
-  return user;
-}
+import { requireAdmin } from '@/lib/auth/requireAdmin';
 
 export async function GET(request: NextRequest) {
   const supabase = await createClient();
   const user = await requireAdmin(supabase);
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
   const { searchParams } = new URL(request.url);
   const status = searchParams.get('status');
@@ -36,10 +28,12 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
   const user = await requireAdmin(supabase);
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
   let body: Record<string, unknown>;
-  try { body = await request.json(); } catch {
+  try {
+    body = await request.json();
+  } catch {
     return NextResponse.json({ error: 'Invalid body' }, { status: 400 });
   }
 
