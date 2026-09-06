@@ -1,61 +1,61 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { requireAdmin } from '@/lib/auth/requireAdmin';
+
+function sanitizeActionUrl(value: unknown): string | null {
+  if (typeof value !== 'string' || value.length === 0) return null;
+  if (!value.startsWith('/') || value.startsWith('//')) return null;
+  return value.slice(0, 2048);
+}
 
 // POST /api/admin/notifications/send — admin sends system notification
 export async function POST(req: NextRequest) {
   try {
     const supabase = await createClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Verify admin role
-    const isAdmin =
-      user.user_metadata?.role === 'admin' ||
-      user.app_metadata?.role === 'admin';
-    if (!isAdmin) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
+    const user = await requireAdmin(supabase);
+    if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
     const body = await req.json();
     const { title, message, type, action_url, target } = body;
 
-    if (!title || !message) {
+    if (typeof title !== 'string' || typeof message !== 'string' || !title.trim() || !message.trim()) {
       return NextResponse.json({ error: 'title and message are required' }, { status: 400 });
+    }
+    if (title.length > 200 || message.length > 5000) {
+      return NextResponse.json({ error: 'Notification content is too long' }, { status: 400 });
     }
 
     let userIds: string[] = [];
 
     if (target === 'all') {
-      // Fetch all user IDs from auth.users via user_profiles
-      const { data: profiles } = await supabase
-        .from('user_profiles' as never)
-        .select('id');
-      userIds = (profiles as { id: string }[] | null)?.map((p) => p.id) || [];
+      const { data: profiles, error: profileError } = await supabase
+        .from('user_profiles')
+        .select('id')
+        .limit(5000);
+      if (profileError) throw profileError;
+      userIds = (profiles ?? []).map((p) => p.id);
     } else if (Array.isArray(target)) {
-      userIds = target;
+      userIds = target.filter((id): id is string => typeof id === 'string').slice(0, 5000);
     } else if (typeof target === 'string') {
       userIds = [target];
     }
 
+    userIds = [...new Set(userIds)];
     if (userIds.length === 0) {
       return NextResponse.json({ error: 'No target users found' }, { status: 400 });
     }
 
+    const safeActionUrl = sanitizeActionUrl(action_url);
     const rows = userIds.map((uid) => ({
       user_id: uid,
-      type: type || 'announcement',
-      title,
-      message,
-      action_url: action_url || null,
+      type: typeof type === 'string' ? type.slice(0, 50) : 'announcement',
+      title: title.trim(),
+      message: message.trim(),
+      action_url: safeActionUrl,
       read: false,
     }));
 
-    const { error: insertError } = await supabase
-      .from('notifications')
-      .insert(rows);
-
+    const { error: insertError } = await supabase.from('notifications').insert(rows);
     if (insertError) throw insertError;
 
     return NextResponse.json({ success: true, sent: userIds.length });
@@ -69,17 +69,8 @@ export async function POST(req: NextRequest) {
 export async function GET() {
   try {
     const supabase = await createClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const isAdmin =
-      user.user_metadata?.role === 'admin' ||
-      user.app_metadata?.role === 'admin';
-    if (!isAdmin) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
+    const user = await requireAdmin(supabase);
+    if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
     const { count: total } = await supabase
       .from('notifications')
@@ -95,7 +86,6 @@ export async function GET() {
       .select('*', { count: 'exact', head: true })
       .eq('type', 'announcement');
 
-    // Recent 20 notifications for stats
     const { data: recent } = await supabase
       .from('notifications')
       .select('id, type, title, created_at, read')
