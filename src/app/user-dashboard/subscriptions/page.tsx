@@ -44,7 +44,7 @@ interface UsageRow {
 
 type StatusFilter = 'all' | 'active' | 'trialing' | 'paused' | 'cancelled' | 'expired';
 
-const statusConfig: Record<string, { label: string; icon: React.ElementType; cls: string }> = {
+const statusConfig: Record<string, { label: string; icon: React.ComponentType<any>; cls: string }> = {
   active: { label: 'Active', icon: CheckCircle, cls: 'bg-success/10 text-success border border-success/20' },
   trialing: { label: 'Trial', icon: Clock, cls: 'bg-primary/10 text-primary border border-primary/20' },
   paused: { label: 'Paused', icon: PauseCircle, cls: 'bg-warning/10 text-warning border border-warning/20' },

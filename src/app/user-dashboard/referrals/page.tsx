@@ -19,7 +19,7 @@ interface ReferralStats {
   }[];
 }
 
-const STATUS_CONFIG: Record<string, { label: string; cls: string; icon: React.ElementType }> = {
+const STATUS_CONFIG: Record<string, { label: string; cls: string; icon: React.ComponentType<any> }> = {
   pending: { label: 'Pending', cls: 'bg-warning/10 text-warning', icon: Clock },
   registered: { label: 'Registered', cls: 'bg-info/10 text-info', icon: Users },
   purchased: { label: 'Purchased', cls: 'bg-success/10 text-success', icon: CheckCircle2 },
@@ -33,7 +33,7 @@ export default function ReferralsPage() {
   const [generating, setGenerating] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://summeca1430.builtwithrocket.new';
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://summeca.com';
 
   useEffect(() => {
     if (!user) return;
@@ -231,8 +231,8 @@ export default function ReferralsPage() {
                     return (
                       <div key={ref.id} className="flex items-center justify-between px-6 py-3">
                         <div className="flex items-center gap-3">
-                          <div className={`w-7 h-7 rounded-full ${statusCfg.bg} flex items-center justify-center`}>
-                            <StatusIcon size={13} className={statusCfg.color} />
+                          <div className={`w-7 h-7 rounded-full ${statusCfg.cls} flex items-center justify-center`}>
+                            <StatusIcon size={13}  />
                           </div>
                           <div>
                             <div className="text-xs font-600 text-foreground">Referral #{ref.id.slice(0, 8)}</div>
