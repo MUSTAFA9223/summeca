@@ -137,7 +137,7 @@ function buildDateParams(dateRange: string, customFrom: string, customTo: string
 // ─── Sub-components ──────────────────────────────────────────────────────────
 
 function KpiCard({ label, value, sub, icon: Icon, color }: {
-  label: string; value: string; sub?: string; icon: React.ElementType; color: string;
+  label: string; value: string; sub?: string; icon: React.ComponentType<any>; color: string;
 }) {
   return (
     <div className="bg-card border border-border rounded-xl p-5 flex items-start gap-4">

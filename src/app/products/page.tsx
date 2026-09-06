@@ -49,14 +49,14 @@ const AI_CATEGORIES = ['ai_tool', 'api', 'plugin'];
 const SAAS_CATEGORIES = ['course', 'other'];
 const DIGITAL_CATEGORIES = ['template', 'dataset'];
 
-const FILTER_TABS: { key: FilterType; label: string; icon: React.ElementType }[] = [
+const FILTER_TABS: { key: FilterType; label: string; icon: React.ComponentType<any> }[] = [
   { key: 'all', label: 'All Products', icon: Package },
   { key: 'ai', label: 'AI Tools', icon: Zap },
   { key: 'saas', label: 'SaaS Apps', icon: LayoutDashboard },
   { key: 'digital', label: 'Digital Products', icon: FileText },
 ];
 
-const SORT_OPTIONS: { key: SortType; label: string; icon: React.ElementType }[] = [
+const SORT_OPTIONS: { key: SortType; label: string; icon: React.ComponentType<any> }[] = [
   { key: 'featured', label: 'Featured', icon: Award },
   { key: 'newest', label: 'Newest', icon: Clock },
   { key: 'popular', label: 'Most Popular', icon: TrendingUp },

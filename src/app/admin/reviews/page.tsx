@@ -22,7 +22,7 @@ interface Review {
   product?: { name: string; slug: string };
 }
 
-const STATUS_CONFIG: Record<string, { label: string; cls: string; icon: React.ElementType }> = {
+const STATUS_CONFIG: Record<string, { label: string; cls: string; icon: React.ComponentType<any> }> = {
   pending: { label: 'Pending', cls: 'bg-amber-50 text-amber-700 border-amber-200', icon: Clock },
   approved: { label: 'Approved', cls: 'bg-teal-50 text-teal-700 border-teal-200', icon: CheckCircle2 },
   rejected: { label: 'Rejected', cls: 'bg-red-50 text-red-700 border-red-200', icon: XCircle },

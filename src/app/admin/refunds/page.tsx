@@ -119,7 +119,7 @@ function DetailModal({ refund, onClose, onAction, actionLoading }: DetailModalPr
   const [adminNote, setAdminNote] = useState(refund.admin_note || '');
   const [confirmAction, setConfirmAction] = useState<string | null>(null);
 
-  const allowedActions: Record<string, { label: string; color: string; icon: React.ElementType }[]> = {
+  const allowedActions: Record<string, { label: string; color: string; icon: React.ComponentType<any> }[]> = {
     pending: [
       { label: 'Mark Under Review', color: 'bg-blue-500 hover:bg-blue-600 text-white', icon: Eye },
       { label: 'Reject', color: 'bg-danger hover:bg-danger/90 text-white', icon: XCircle },

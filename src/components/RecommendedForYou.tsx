@@ -28,7 +28,7 @@ interface RecommendedProduct {
   review_count?: number;
 }
 
-const TYPE_ICON: Record<string, React.ElementType> = {
+const TYPE_ICON: Record<string, React.ComponentType<any>> = {
   ai_tool: Zap, api: Zap, plugin: Zap,
   template: FileText, dataset: FileText,
   course: LayoutDashboard, other: LayoutDashboard,
