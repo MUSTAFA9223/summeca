@@ -40,17 +40,21 @@
   },
   "scripts": {
     "dev": "next dev -p 4028",
-    "build": "next build",
+    "build": "opennextjs-cloudflare build && node scripts/prepare-cloudflare-dist.mjs",
     "start": "next start",
     "lint": "next lint",
     "lint:fix": "next lint --fix",
     "format": "prettier --write \"src/**/*.{ts,tsx,css,md,json}\"",
     "serve": "next start",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "preview": "opennextjs-cloudflare build && node scripts/prepare-cloudflare-dist.mjs && opennextjs-cloudflare preview",
+    "deploy": "opennextjs-cloudflare build && node scripts/prepare-cloudflare-dist.mjs && opennextjs-cloudflare deploy",
+    "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts"
   },
   "dependencies": {
     "@dhiwise/component-tagger": "^1.0.16",
     "@heroicons/react": "^2.2.0",
+    "@opennextjs/cloudflare": "1.20.6",
     "@react-three/drei": "10.7.8",
     "@react-three/fiber": "9.7.0",
     "@rocketnew/llm-sdk": "1.1.0",
@@ -80,13 +84,14 @@
     "@typescript-eslint/parser": "^8.29.0",
     "autoprefixer": "10.4.2",
     "eslint": "^9",
-    "eslint-config-next": "^15.2.4",
+    "eslint-config-next": "^15.5.24",
     "eslint-config-prettier": "^10.1.1",
     "eslint-plugin-prettier": "^5.2.6",
     "postcss": "8.4.8",
     "prettier": "^3.5.3",
     "tailwindcss": "3.4.6",
     "tailwindcss-animate": "^1.0.7",
-    "typescript": "^5"
+    "typescript": "^5",
+    "wrangler": "4.129.0"
   }
 }
