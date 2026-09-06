@@ -2,16 +2,13 @@
  * PATCH /api/admin/subscriptions/[id]
  *
  * Admin-only endpoint to pause, cancel, or restore a subscription.
- * All actions are logged to subscription_audit_logs.
- *
- * SECURITY:
- * - Requires admin authentication.
- * - Never trusts client-provided status.
- * - Validates state transitions server-side.
+ * State transitions are validated server-side and all mutations use the
+ * server-only service role after the admin session has been verified.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createServiceClient } from '@/lib/supabase/server';
+import { requireAdmin } from '@/lib/auth/requireAdmin';
 import { sendEmail } from '@/lib/email/sendEmail';
 
 type AdminAction = 'pause' | 'cancel' | 'restore';
@@ -33,38 +30,27 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id: subscriptionId } = await params;
-  const supabase = await createClient();
+  const sessionClient = await createClient();
+  const user = await requireAdmin(sessionClient);
+  if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-  // ── 1. Verify admin ───────────────────────────────────────────────────────
-  const { data: { user }, error: authError } = await supabase.auth.getUser();
-  if (authError || !user) {
-    return NextResponse.json({ error: 'Authentication required.' }, { status: 401 });
-  }
-
-  const { data: adminProfile } = await supabase
-    .from('user_profiles')
-    .select('is_admin')
-    .eq('id', user.id)
-    .single();
-
-  if (!adminProfile?.is_admin) {
-    return NextResponse.json({ error: 'Admin access required.' }, { status: 403 });
-  }
-
-  // ── 2. Parse body ─────────────────────────────────────────────────────────
-  let body: { action: AdminAction; note?: string };
+  let body: { action?: AdminAction; note?: string };
   try {
     body = await request.json();
   } catch {
     return NextResponse.json({ error: 'Invalid request body.' }, { status: 400 });
   }
 
-  const { action, note } = body;
+  const action = body.action;
+  const note = body.note?.trim();
   if (!action || !['pause', 'cancel', 'restore'].includes(action)) {
     return NextResponse.json({ error: 'action must be one of: pause, cancel, restore' }, { status: 400 });
   }
+  if (note && note.length > 1000) {
+    return NextResponse.json({ error: 'note is too long' }, { status: 400 });
+  }
 
-  // ── 3. Fetch subscription ─────────────────────────────────────────────────
+  const supabase = createServiceClient();
   const { data: sub, error: fetchError } = await supabase
     .from('subscriptions')
     .select(`
@@ -79,7 +65,6 @@ export async function PATCH(
     return NextResponse.json({ error: 'Subscription not found.' }, { status: 404 });
   }
 
-  // ── 4. Validate state transition ──────────────────────────────────────────
   if (!VALID_TRANSITIONS[action].includes(sub.status)) {
     return NextResponse.json(
       { error: `Cannot ${action} a subscription with status: ${sub.status}` },
@@ -90,8 +75,6 @@ export async function PATCH(
   const previousStatus = sub.status;
   const newStatus = ACTION_NEW_STATUS[action];
   const now = new Date().toISOString();
-
-  // ── 5. Build update payload ───────────────────────────────────────────────
   const updatePayload: Record<string, unknown> = {
     status: newStatus,
     updated_at: now,
@@ -102,25 +85,26 @@ export async function PATCH(
   } else if (action === 'cancel') {
     updatePayload.cancelled_at = now;
     if (note) updatePayload.cancel_reason = note;
-  } else if (action === 'restore') {
+  } else {
     updatePayload.cancelled_at = null;
     updatePayload.paused_at = null;
     updatePayload.past_due_at = null;
   }
 
-  // ── 6. Update subscription ────────────────────────────────────────────────
-  const { error: updateError } = await supabase
+  const { data: updated, error: updateError } = await supabase
     .from('subscriptions')
     .update(updatePayload)
-    .eq('id', subscriptionId);
+    .eq('id', subscriptionId)
+    .eq('status', previousStatus)
+    .select('id')
+    .maybeSingle();
 
-  if (updateError) {
-    console.error(`[admin/subscriptions/${subscriptionId}] Update error:`, updateError.message);
-    return NextResponse.json({ error: 'Failed to update subscription.' }, { status: 500 });
+  if (updateError || !updated) {
+    console.error(`[admin/subscriptions/${subscriptionId}] Update error:`, updateError?.message ?? 'Concurrent change');
+    return NextResponse.json({ error: 'Failed to update subscription.' }, { status: 409 });
   }
 
-  // ── 7. Audit log ──────────────────────────────────────────────────────────
-  await supabase.from('subscription_audit_logs').insert({
+  const { error: auditError } = await supabase.from('subscription_audit_logs').insert({
     subscription_id: subscriptionId,
     admin_id: user.id,
     action,
@@ -129,8 +113,8 @@ export async function PATCH(
     note: note ?? `Admin ${action}d subscription`,
     metadata: { initiated_by: 'admin', admin_id: user.id },
   });
+  if (auditError) console.warn('[admin/subscriptions] Audit log failed:', auditError.message);
 
-  // ── 8. Send notification email (fire-and-forget) ──────────────────────────
   try {
     const { data: authUser } = await supabase.auth.admin.getUserById(sub.user_id);
     const userEmail = authUser?.user?.email ?? '';
