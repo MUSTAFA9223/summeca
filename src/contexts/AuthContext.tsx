@@ -69,7 +69,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       const code = url.searchParams.get('code');
       if (!code) return false;
 
-      const wasRecovery = hasRecentMarker(RECOVERY_PENDING_KEY);
+      const wasRecovery = hasRecentMarker(RECOVERY_PENDING_KEY) || window.location.pathname === '/reset-password';
       const wasSignup = hasRecentMarker(SIGNUP_PENDING_KEY);
       const { data, error } = await supabase.auth.exchangeCodeForSession(code);
 
@@ -178,8 +178,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       window.localStorage.setItem(RECOVERY_PENDING_KEY, String(Date.now()));
     }
 
+    // Send recovery links directly to the reset page. The page exchanges the
+    // PKCE code (or accepts the recovery session) before allowing an update.
     const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${getSiteUrl()}/auth/callback?next=/reset-password`,
+      redirectTo: `${getSiteUrl()}/reset-password`,
     });
 
     if (error) {
