@@ -21,10 +21,12 @@ jobs:
       CLOUDFLARE_ACCOUNT_ID: d1be5d550572a2e61551f95f485bf297
 
     steps:
-      - name: Verify Cloudflare deployment credentials
+      - name: Normalize and verify Cloudflare credentials
         shell: bash
         run: |
-          if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
+          RAW_TOKEN="$CLOUDFLARE_API_TOKEN"
+          CLEAN_TOKEN="$(printf '%s' "$RAW_TOKEN" | tr -d '\r\n' | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' -e 's/^[Bb][Ee][Aa][Rr][Ee][Rr][[:space:]]\+//')"
+          if [ -z "$CLEAN_TOKEN" ]; then
             echo "CLOUDFLARE_API_TOKEN is not configured in GitHub Actions secrets."
             exit 21
           fi
@@ -32,6 +34,7 @@ jobs:
             echo "CLOUDFLARE_ACCOUNT_ID is not configured."
             exit 22
           fi
+          echo "CLOUDFLARE_API_TOKEN=$CLEAN_TOKEN" >> "$GITHUB_ENV"
           echo "Cloudflare deployment credentials are configured."
 
       - name: Checkout
