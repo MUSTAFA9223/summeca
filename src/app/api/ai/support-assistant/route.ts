@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { completion } from '@rocketnew/llm-sdk';
-import { createClient } from '@/lib/supabase/server';
+import { checkRateLimit, getRequestIdentity } from '@/lib/security/rateLimit';
 
 const SYSTEM_PROMPT = `You are SUMMECA Support Assistant — a helpful, professional customer support AI for SUMMECA, a premium digital products marketplace.
 
 Your capabilities:
 - Answer questions about SUMMECA products, features, and pricing
-- Help users understand their orders, subscriptions, and downloads
+- Help users understand general order, subscription, and download workflows
 - Guide users through refund requests and payment issues
 - Explain subscription plans and how to upgrade/downgrade
 - Suggest relevant products based on user needs
@@ -15,64 +15,86 @@ Your capabilities:
 Guidelines:
 - Be concise, friendly, and professional
 - If you cannot resolve an issue, suggest the user create a support ticket
+- Never claim to have accessed an individual user's account, orders, or private data
 - Never share sensitive user data or internal system details
-- For billing/payment issues, direct users to create a ticket for human review
+- For billing/payment disputes, direct users to create a ticket for human review
 - Keep responses under 200 words unless a detailed explanation is needed`;
 
+const ALLOWED_ROLES = new Set(['user', 'assistant']);
+
+type SafeMessage = { role: 'user' | 'assistant'; content: string };
+
+function validateMessages(value: unknown): SafeMessage[] | null {
+  if (!Array.isArray(value) || value.length === 0) return null;
+  const messages: SafeMessage[] = [];
+  let totalChars = 0;
+
+  for (const raw of value.slice(-10)) {
+    if (!raw || typeof raw !== 'object') return null;
+    const role = (raw as Record<string, unknown>).role;
+    const content = (raw as Record<string, unknown>).content;
+    if (typeof role !== 'string' || !ALLOWED_ROLES.has(role) || typeof content !== 'string') return null;
+    const trimmed = content.trim();
+    if (!trimmed || trimmed.length > 2000) return null;
+    totalChars += trimmed.length;
+    if (totalChars > 12_000) return null;
+    messages.push({ role: role as SafeMessage['role'], content: trimmed });
+  }
+
+  if (messages[messages.length - 1]?.role !== 'user') return null;
+  return messages;
+}
+
 export async function POST(request: NextRequest) {
+  const rate = checkRateLimit(`support-assistant:${getRequestIdentity(request)}`, {
+    limit: 6,
+    windowMs: 60_000,
+  });
+  if (!rate.allowed) {
+    return NextResponse.json(
+      { error: 'Too many support requests. Please try again shortly.' },
+      { status: 429, headers: { 'Retry-After': String(Math.max(1, Math.ceil((rate.resetAt - Date.now()) / 1000))) } }
+    );
+  }
+
   try {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    let body: Record<string, unknown>;
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
+    }
 
-    const body = await request.json();
-    const { messages } = body;
-
-    if (!messages || !Array.isArray(messages) || messages.length === 0) {
-      return NextResponse.json({ error: 'Messages array is required' }, { status: 400 });
+    const messages = validateMessages(body.messages);
+    if (!messages) {
+      return NextResponse.json({ error: 'A valid messages array is required' }, { status: 400 });
     }
 
     const apiKey = process.env.OPENAI_API_KEY;
     if (!apiKey) {
-      return NextResponse.json({ error: 'AI service not configured' }, { status: 500 });
+      return NextResponse.json({ error: 'AI service not configured' }, { status: 503 });
     }
-
-    const fullMessages = [
-      { role: 'system', content: SYSTEM_PROMPT },
-      ...messages.slice(-10), // Keep last 10 messages for context
-    ];
 
     const response = await completion({
       model: 'gpt-4o-mini',
-      messages: fullMessages,
+      messages: [{ role: 'system', content: SYSTEM_PROMPT }, ...messages],
       stream: false,
       api_key: apiKey,
       max_tokens: 400,
+      temperature: 0.3,
     }) as { choices?: Array<{ message?: { content?: string } }> };
 
-    const assistantMessage = response?.choices?.[0]?.message?.content || 'I apologize, I could not generate a response. Please try again or create a support ticket.';
-
-    // Log AI conversation if user is authenticated
-    if (user) {
-      try {
-        await supabase.from('notifications').insert({
-          user_id: user.id,
-          type: 'announcement',
-          title: 'AI Support interaction',
-          message: `AI assistant helped with: ${messages[messages.length - 1]?.content?.slice(0, 80) || 'query'}`,
-          action_url: '/user-dashboard/support',
-          read: true, // Silent log
-        });
-      } catch {
-        // Non-critical
-      }
+    const assistantMessage = response?.choices?.[0]?.message?.content?.trim();
+    if (!assistantMessage) {
+      return NextResponse.json({ error: 'AI service returned an empty response' }, { status: 502 });
     }
 
-    return NextResponse.json({
-      message: assistantMessage,
-      role: 'assistant',
-    });
+    return NextResponse.json(
+      { message: assistantMessage, role: 'assistant' },
+      { headers: { 'Cache-Control': 'no-store' } }
+    );
   } catch (err) {
     console.error('[support-assistant] error:', err);
-    return NextResponse.json({ error: 'AI service error' }, { status: 500 });
+    return NextResponse.json({ error: 'AI service error' }, { status: 502 });
   }
 }

@@ -1,19 +1,13 @@
 /**
- * Admin Refund Management API
- *
  * PATCH /api/admin/refunds/[id]
  *
- * Allows admins to transition refund status:
- *   pending → under_review → approved → processing → completed
- *   any → rejected
- *   processing → failed
- *
- * When status moves to 'approved', triggers Payoneer refund API if configured.
- * Sends appropriate email notification on each status change.
+ * Admin refund workflow. Provider-backed refunds are never reported as
+ * completed unless the provider has supplied a refund reference.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createServiceClient } from '@/lib/supabase/server';
+import { requireAdmin } from '@/lib/auth/requireAdmin';
 import { sendEmail } from '@/lib/email/sendEmail';
 
 type RefundAction = 'under_review' | 'approved' | 'processing' | 'completed' | 'rejected' | 'failed';
@@ -22,34 +16,25 @@ const VALID_ACTIONS: RefundAction[] = [
   'under_review', 'approved', 'processing', 'completed', 'rejected', 'failed',
 ];
 
+const ALLOWED_TRANSITIONS: Record<string, RefundAction[]> = {
+  pending: ['under_review', 'rejected'],
+  under_review: ['approved', 'rejected'],
+  approved: ['processing', 'rejected'],
+  processing: ['completed', 'failed'],
+  completed: [],
+  rejected: [],
+  failed: ['processing'],
+};
+
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id: refundId } = await params;
-  const supabase = await createClient();
+  const sessionClient = await createClient();
+  const user = await requireAdmin(sessionClient);
+  if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-  // ── 1. Verify admin session ──────────────────────────────────────────────
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser();
-
-  if (authError || !user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
-  const { data: profile } = await supabase
-    .from('user_profiles')
-    .select('is_admin')
-    .eq('id', user.id)
-    .single();
-
-  if (!profile?.is_admin) {
-    return NextResponse.json({ error: 'Forbidden — admin access required' }, { status: 403 });
-  }
-
-  // ── 2. Parse body ────────────────────────────────────────────────────────
   let body: { action?: string; adminNote?: string };
   try {
     body = await request.json();
@@ -57,22 +42,22 @@ export async function PATCH(
     return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
   }
 
-  const { action, adminNote } = body;
-
-  if (!action || !VALID_ACTIONS.includes(action as RefundAction)) {
-    return NextResponse.json(
-      { error: `action must be one of: ${VALID_ACTIONS.join(', ')}` },
-      { status: 400 }
-    );
+  const action = body.action as RefundAction | undefined;
+  const adminNote = body.adminNote?.trim();
+  if (!action || !VALID_ACTIONS.includes(action)) {
+    return NextResponse.json({ error: `action must be one of: ${VALID_ACTIONS.join(', ')}` }, { status: 400 });
+  }
+  if (adminNote && adminNote.length > 1000) {
+    return NextResponse.json({ error: 'adminNote is too long' }, { status: 400 });
   }
 
-  // ── 3. Fetch refund with order and customer details ──────────────────────
+  const supabase = createServiceClient();
   const { data: refund, error: refundError } = await supabase
     .from('refunds')
     .select(`
       id, order_id, user_id, amount, currency, reason, status, provider_refund_id,
       orders (
-        id, provider_payment_ref, metadata,
+        id, status, provider_payment_ref, metadata,
         products ( name ),
         product_plans ( name ),
         user_profiles ( email, full_name )
@@ -81,164 +66,156 @@ export async function PATCH(
     .eq('id', refundId)
     .single();
 
-  if (refundError || !refund) {
-    return NextResponse.json({ error: 'Refund not found' }, { status: 404 });
-  }
+  if (refundError || !refund) return NextResponse.json({ error: 'Refund not found' }, { status: 404 });
 
-  // ── 4. Validate state transition ─────────────────────────────────────────
   const currentStatus = refund.status;
-  const newStatus = action as RefundAction;
-
-  const allowedTransitions: Record<string, RefundAction[]> = {
-    pending: ['under_review', 'rejected'],
-    under_review: ['approved', 'rejected'],
-    approved: ['processing', 'rejected'],
-    processing: ['completed', 'failed'],
-    completed: [],
-    rejected: [],
-    failed: ['processing'],
-  };
-
-  if (!allowedTransitions[currentStatus]?.includes(newStatus)) {
+  if (!ALLOWED_TRANSITIONS[currentStatus]?.includes(action)) {
     return NextResponse.json(
-      { error: `Cannot transition from '${currentStatus}' to '${newStatus}'` },
+      { error: `Cannot transition from '${currentStatus}' to '${action}'` },
       { status: 400 }
     );
   }
 
-  // ── 5. Payoneer refund API call when moving to 'approved' ─────────────────
-  let providerRefundId: string | undefined;
-  let payoneerAttempted = false;
-  let payoneerConfigured = false;
+  const order = refund.orders as any;
+  const provider = String((order?.metadata as Record<string, unknown> | null)?.provider ?? 'manual');
+  let providerRefundId = refund.provider_refund_id || undefined;
 
-  if (newStatus === 'approved') {
-    const order = refund.orders as any;
-    const providerPaymentRef = order?.provider_payment_ref;
-    const provider = (order?.metadata as Record<string, string>)?.provider ?? 'payoneer';
-
+  // Starting an approved Payoneer refund must succeed at Payoneer first.
+  if (action === 'approved' && provider === 'payoneer') {
+    const providerPaymentRef = order?.provider_payment_ref as string | undefined;
     const merchantCode = process.env.PAYONEER_MERCHANT_CODE;
     const paymentToken = process.env.PAYONEER_PAYMENT_TOKEN;
-    const environment = (process.env.PAYONEER_ENVIRONMENT ?? 'sandbox') as 'sandbox' | 'live';
+    const environment = process.env.PAYONEER_ENVIRONMENT === 'live' ? 'live' : 'sandbox';
 
-    payoneerConfigured = Boolean(merchantCode && paymentToken);
-
-    if (provider === 'payoneer' && providerPaymentRef && payoneerConfigured) {
-      payoneerAttempted = true;
-      const baseUrl =
-        environment === 'live' ?'https://api.live.oscato.com'
-          : 'https://api.sandbox.oscato.com';
-
-      const credentials = Buffer.from(`${merchantCode}:${paymentToken}`).toString('base64');
-
-      try {
-        const refundRes = await fetch(
-          `${baseUrl}/checkout/charges/${encodeURIComponent(providerPaymentRef)}/refunds`,
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Basic ${credentials}`,
-              Accept: 'application/json',
-            },
-            body: JSON.stringify({
-              amount: Number(refund.amount),
-              currency: refund.currency.toUpperCase(),
-              reference: `REFUND-${refundId.slice(0, 8).toUpperCase()}`,
-            }),
-            signal: AbortSignal.timeout(15_000),
-          }
-        );
-
-        if (refundRes.ok) {
-          const refundData = (await refundRes.json()) as { identification?: { longId?: string } };
-          providerRefundId = refundData?.identification?.longId;
-          console.log(`[admin/refunds] Payoneer refund initiated for refund ${refundId}`);
-        } else {
-          console.warn(
-            `[admin/refunds] Payoneer refund API returned ${refundRes.status} for refund ${refundId}`
-          );
-        }
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : 'unknown';
-        console.warn(`[admin/refunds] Payoneer refund request failed: ${msg}`);
-      }
+    if (!providerPaymentRef) {
+      return NextResponse.json({ error: 'Missing Payoneer payment reference' }, { status: 409 });
     }
+    if (!merchantCode || !paymentToken) {
+      return NextResponse.json({ error: 'Payoneer refunds are not configured on the server' }, { status: 503 });
+    }
+
+    const baseUrl = environment === 'live'
+      ? 'https://api.live.oscato.com'
+      : 'https://api.sandbox.oscato.com';
+    const credentials = Buffer.from(`${merchantCode}:${paymentToken}`).toString('base64');
+
+    try {
+      const refundRes = await fetch(
+        `${baseUrl}/checkout/charges/${encodeURIComponent(providerPaymentRef)}/refunds`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Basic ${credentials}`,
+            Accept: 'application/json',
+          },
+          body: JSON.stringify({
+            amount: Number(refund.amount),
+            currency: refund.currency.toUpperCase(),
+            reference: `REFUND-${refundId.slice(0, 8).toUpperCase()}`,
+          }),
+          signal: AbortSignal.timeout(15_000),
+        }
+      );
+
+      if (!refundRes.ok) {
+        console.error(`[admin/refunds] Payoneer refund failed with status ${refundRes.status}`);
+        return NextResponse.json({ error: 'Payoneer did not accept the refund request' }, { status: 502 });
+      }
+
+      const refundData = (await refundRes.json()) as { identification?: { longId?: string } };
+      providerRefundId = refundData?.identification?.longId;
+      if (!providerRefundId) {
+        return NextResponse.json({ error: 'Payoneer did not return a refund reference' }, { status: 502 });
+      }
+    } catch (err) {
+      console.error('[admin/refunds] Payoneer refund request failed:', err);
+      return NextResponse.json({ error: 'Payoneer refund request failed' }, { status: 502 });
+    }
+  } else if (action === 'approved' && provider !== 'manual' && provider !== 'payoneer') {
+    return NextResponse.json(
+      { error: `Refund integration is not implemented for provider: ${provider}` },
+      { status: 501 }
+    );
   }
 
-  // ── 6. Build update payload ───────────────────────────────────────────────
+  // A provider-backed refund cannot be manually declared completed without proof.
+  if (action === 'completed' && provider !== 'manual' && !providerRefundId) {
+    return NextResponse.json(
+      { error: 'Provider confirmation is required before completing this refund' },
+      { status: 409 }
+    );
+  }
+
   const now = new Date().toISOString();
   const updatePayload: Record<string, unknown> = {
-    status: newStatus,
+    status: action,
     updated_at: now,
   };
 
-  if (adminNote) {
-    updatePayload.admin_note = adminNote.slice(0, 1000).trim();
-  }
+  if (adminNote) updatePayload.admin_note = adminNote;
+  if (['under_review', 'approved', 'rejected'].includes(action)) updatePayload.reviewed_at = now;
+  if (action === 'completed') updatePayload.completed_at = now;
+  if (providerRefundId) updatePayload.provider_refund_id = providerRefundId;
 
-  if (newStatus === 'under_review' || newStatus === 'approved' || newStatus === 'rejected') {
-    updatePayload.reviewed_at = now;
-  }
-
-  if (newStatus === 'completed') {
-    updatePayload.completed_at = now;
-  }
-
-  if (providerRefundId) {
-    updatePayload.provider_refund_id = providerRefundId;
-  }
-
-  // ── 7. Update refund record ───────────────────────────────────────────────
-  const { error: updateError } = await supabase
+  const { data: updated, error: updateError } = await supabase
     .from('refunds')
     .update(updatePayload)
-    .eq('id', refundId);
+    .eq('id', refundId)
+    .eq('status', currentStatus)
+    .select('id')
+    .maybeSingle();
 
-  if (updateError) {
-    console.error(`[admin/refunds] Failed to update refund ${refundId}:`, updateError);
-    return NextResponse.json({ error: 'Failed to update refund' }, { status: 500 });
+  if (updateError || !updated) {
+    console.error(`[admin/refunds] Failed to update refund ${refundId}:`, updateError?.message ?? 'Concurrent change');
+    return NextResponse.json({ error: 'Failed to update refund' }, { status: 409 });
   }
 
-  // If completed, also update the order status to 'refunded'
-  if (newStatus === 'completed') {
-    await supabase
+  if (action === 'completed') {
+    const { error: orderError } = await supabase
       .from('orders')
       .update({ status: 'refunded', updated_at: now })
-      .eq('id', refund.order_id);
+      .eq('id', refund.order_id)
+      .eq('status', 'completed');
 
-    // Log payment event
-    await supabase.from('payment_events').insert({
+    if (orderError) {
+      console.error('[admin/refunds] Failed to update order after refund:', orderError.message);
+      return NextResponse.json({ error: 'Refund updated but order status update failed' }, { status: 500 });
+    }
+
+    const { error: eventError } = await supabase.from('payment_events').insert({
       order_id: refund.order_id,
-      provider: 'payoneer',
+      provider,
       event_type: 'refunded',
-      provider_payment_ref: providerRefundId ?? '',
+      provider_payment_ref: providerRefundId ?? order?.provider_payment_ref ?? '',
       metadata: {
         refund_id: refundId,
         refund_amount: refund.amount,
         completed_by: user.id,
       },
     });
+    if (eventError && eventError.code !== '23505') {
+      console.warn('[admin/refunds] Failed to log refund event:', eventError.message);
+    }
   }
 
-  // ── 8. Send email notification ────────────────────────────────────────────
-  const order = refund.orders as any;
   const customerEmail = order?.user_profiles?.email;
   const customerName = order?.user_profiles?.full_name ?? '';
   const productName = order?.products?.name ?? 'Your product';
   const planName = order?.product_plans?.name ?? '';
 
-  if (customerEmail) {
-    const emailTypeMap: Record<RefundAction, string | null> = {
-      under_review: null,
-      approved: 'refund_approved',
-      processing: null,
-      completed: 'refund_completed',
-      rejected: 'refund_rejected',
-      failed: null,
-    };
+  const emailTypeMap: Record<RefundAction, string | null> = {
+    under_review: null,
+    approved: 'refund_approved',
+    processing: null,
+    completed: 'refund_completed',
+    rejected: 'refund_rejected',
+    failed: null,
+  };
 
-    const emailType = emailTypeMap[newStatus];
-    if (emailType) {
+  const emailType = emailTypeMap[action];
+  if (customerEmail && emailType) {
+    try {
       await sendEmail({
         type: emailType as any,
         to: customerEmail,
@@ -250,30 +227,21 @@ export async function PATCH(
           planName,
           amount: refund.amount,
           currency: refund.currency,
-          status: newStatus,
+          status: action,
           adminNote: adminNote ?? '',
           updatedAt: now,
         },
       });
+    } catch (emailErr) {
+      console.warn('[admin/refunds] Email failed (non-fatal):', emailErr);
     }
   }
 
-  // ── 9. Build response ─────────────────────────────────────────────────────
-  const response: Record<string, unknown> = {
+  return NextResponse.json({
     success: true,
     refundId,
     previousStatus: currentStatus,
-    newStatus,
-  };
-
-  if (newStatus === 'approved' && !payoneerConfigured) {
-    response.payoneerWarning =
-      'Payoneer credentials are not configured. Refund status set to approved. ' + 'Configure PAYONEER_MERCHANT_CODE and PAYONEER_PAYMENT_TOKEN to process via Payoneer.';
-  }
-
-  if (providerRefundId) {
-    response.providerRefundId = providerRefundId;
-  }
-
-  return NextResponse.json(response);
+    newStatus: action,
+    ...(providerRefundId ? { providerRefundId } : {}),
+  });
 }
