@@ -90,6 +90,6 @@ test('password recovery email redirects directly to reset page', () => {
 test('reset page exchanges a PKCE recovery code before validating the user', () => {
   const source = fs.readFileSync('src/app/reset-password/page.tsx', 'utf8');
   assert.match(source, /searchParams\.get\('code'\)/);
-  assert.match(source, /exchangeCodeForSession\(code\)/);
+  assert.match(source, /exchangeCodeForSession\(\s*code\s*,?/);
   assert.match(source, /auth\.updateUser\(\{ password \}\)/);
 });
