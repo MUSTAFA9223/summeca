@@ -12,13 +12,21 @@ function getSafeNext(value: string | null): string {
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get('code');
-  const next = getSafeNext(searchParams.get('next'));
+  const requestedNext = getSafeNext(searchParams.get('next'));
 
   if (code) {
     const supabase = await createClient();
-    const { error } = await supabase.auth.exchangeCodeForSession(code);
-    if (!error) {
-      return NextResponse.redirect(`${origin}${next}`);
+    const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+
+    if (!error && data.user) {
+      const { data: profile } = await supabase
+        .from('user_profiles')
+        .select('is_admin')
+        .eq('id', data.user.id)
+        .maybeSingle();
+
+      const destination = profile?.is_admin ? '/admin' : requestedNext;
+      return NextResponse.redirect(`${origin}${destination}`);
     }
   }
 
