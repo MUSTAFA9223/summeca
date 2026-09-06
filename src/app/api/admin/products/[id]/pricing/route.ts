@@ -22,7 +22,10 @@ async function requireAdmin() {
   return { service, user };
 }
 
-function asNumber(value: unknown, field: string, allowNull = false) {
+function asNumber(value: unknown, field: string): number;
+function asNumber(value: unknown, field: string, allowNull: false): number;
+function asNumber(value: unknown, field: string, allowNull: true): number | null;
+function asNumber(value: unknown, field: string, allowNull = false): number | null {
   if (allowNull && (value === null || value === undefined || value === '')) return null;
   const n = Number(value);
   if (!Number.isFinite(n)) throw new Error(`${field} must be a valid number.`);
