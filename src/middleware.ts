@@ -3,14 +3,28 @@ import { NextResponse, type NextRequest } from 'next/server';
 
 export async function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname;
-  if (path.startsWith('/api/') && !['GET','HEAD','OPTIONS'].includes(request.method) && path !== '/api/payment/webhook') {
+
+  // Keep the inexpensive origin protection for state-changing API requests.
+  if (path.startsWith('/api/') && !['GET', 'HEAD', 'OPTIONS'].includes(request.method) && path !== '/api/payment/webhook') {
     const origin = request.headers.get('origin');
     if ((origin && origin !== request.nextUrl.origin) || request.headers.get('sec-fetch-site') === 'cross-site') {
-      return NextResponse.json({error:'Invalid request origin'}, {status:403});
+      return NextResponse.json({ error: 'Invalid request origin' }, { status: 403 });
     }
   }
-  let supabaseResponse = NextResponse.next({ request });
 
+  const isUserDashboard = path.startsWith('/user-dashboard');
+  const isAdminPage = path.startsWith('/admin');
+  const isAdminApi = path.startsWith('/api/admin');
+  const isAuthEntry = path === '/sign-up-login-screen' || path === '/login' || path === '/signup';
+
+  // Public pages and ordinary APIs do not need a Supabase network request in
+  // middleware. This prevents every asset/page navigation from spending Worker
+  // CPU and making an auth request at the edge.
+  if (!isUserDashboard && !isAdminPage && !isAdminApi && !isAuthEntry) {
+    return NextResponse.next();
+  }
+
+  let supabaseResponse = NextResponse.next({ request });
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -23,7 +37,12 @@ export async function middleware(request: NextRequest) {
           cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
           supabaseResponse = NextResponse.next({ request });
           cookiesToSet.forEach(({ name, value, options }) => {
-            supabaseResponse.cookies.set(name, value, { ...options, sameSite: 'lax', secure: process.env.NODE_ENV === 'production', httpOnly: false });
+            supabaseResponse.cookies.set(name, value, {
+              ...options,
+              sameSite: 'lax',
+              secure: process.env.NODE_ENV === 'production',
+              httpOnly: false,
+            });
           });
           supabaseResponse.headers.set('Cache-Control', 'private, no-store');
         },
@@ -31,20 +50,13 @@ export async function middleware(request: NextRequest) {
     }
   );
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { data: { user } } = await supabase.auth.getUser();
 
-  // Preserve refreshed cookies on redirects and keep authenticated responses out of shared caches.
   const finish = (response: NextResponse) => {
     supabaseResponse.cookies.getAll().forEach(cookie => response.cookies.set(cookie));
-    if (user || path.startsWith('/auth/') || path === '/reset-password' || path.startsWith('/api/')) response.headers.set('Cache-Control','private, no-store');
+    response.headers.set('Cache-Control', 'private, no-store');
     return response;
   };
-  const pathname = request.nextUrl.pathname;
-  const isUserDashboard = pathname.startsWith('/user-dashboard');
-  const isAdminPage = pathname.startsWith('/admin');
-  const isAdminApi = pathname.startsWith('/api/admin');
 
   if (!user && isUserDashboard) {
     const url = request.nextUrl.clone();
@@ -54,16 +66,14 @@ export async function middleware(request: NextRequest) {
 
   if (isAdminPage || isAdminApi) {
     if (!user) {
-      if (isAdminApi) {
-        return finish(NextResponse.json({ error: 'Unauthorized' }, { status: 401 }));
-      }
-
+      if (isAdminApi) return finish(NextResponse.json({ error: 'Unauthorized' }, { status: 401 }));
       const url = request.nextUrl.clone();
       url.pathname = '/sign-up-login-screen';
-      url.searchParams.set('next', pathname);
+      url.searchParams.set('next', path);
       return finish(NextResponse.redirect(url));
     }
 
+    // Admin authorization stays database-backed; never trust editable user_metadata.
     const { data: profile } = await supabase
       .from('user_profiles')
       .select('is_admin')
@@ -71,24 +81,23 @@ export async function middleware(request: NextRequest) {
       .single();
 
     if (!profile?.is_admin) {
-      if (isAdminApi) {
-        return finish(NextResponse.json({ error: 'Forbidden' }, { status: 403 }));
-      }
-
+      if (isAdminApi) return finish(NextResponse.json({ error: 'Forbidden' }, { status: 403 }));
       const url = request.nextUrl.clone();
       url.pathname = '/';
       return finish(NextResponse.redirect(url));
     }
   }
 
-  if (
-    user &&
-    (pathname === '/sign-up-login-screen' ||
-      pathname === '/login' ||
-      pathname === '/signup')
-  ) {
+  if (user && isAuthEntry) {
     const url = request.nextUrl.clone();
-    url.pathname = '/user-dashboard';
+    // Resolve the role once here so a signed-in admin is not sent through the
+    // customer dashboard first.
+    const { data: profile } = await supabase
+      .from('user_profiles')
+      .select('is_admin')
+      .eq('id', user.id)
+      .single();
+    url.pathname = profile?.is_admin ? '/admin' : '/user-dashboard';
     return finish(NextResponse.redirect(url));
   }
 
@@ -96,7 +105,15 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
+  // Run auth middleware only where authentication/authorization is actually
+  // required. Public storefront pages bypass it completely.
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/user-dashboard/:path*',
+    '/admin/:path*',
+    '/api/admin/:path*',
+    '/sign-up-login-screen',
+    '/login',
+    '/signup',
+    '/api/:path*',
   ],
 };
