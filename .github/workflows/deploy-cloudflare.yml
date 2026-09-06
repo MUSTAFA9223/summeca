@@ -9,6 +9,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: summeca-production
+  cancel-in-progress: false
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -34,6 +38,7 @@ jobs:
             echo "CLOUDFLARE_ACCOUNT_ID is not configured."
             exit 22
           fi
+          echo "::add-mask::$CLEAN_TOKEN"
           echo "CLOUDFLARE_API_TOKEN=$CLEAN_TOKEN" >> "$GITHUB_ENV"
           echo "Cloudflare deployment credentials are configured."
 
@@ -46,10 +51,13 @@ jobs:
           node-version: '22'
 
       - name: Install dependencies
-        run: npm install --no-audit --no-fund
+        run: npm ci --no-audit --no-fund
 
       - name: Type check
         run: npm run type-check
+
+      - name: Auth security regression tests
+        run: node --test tests/auth-middleware.test.cjs
 
       - name: Build Cloudflare Worker
         run: npm run build

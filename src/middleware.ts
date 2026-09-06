@@ -1,21 +1,14 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
-function getProjectRef(): string {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  return url.match(/https:\/\/([^.]+)\./)?.[1] ?? '';
-}
-
-function injectTokenFromHeader(request: NextRequest): void {
-  const token = request.headers.get('x-sb-token');
-  if (!token) return;
-  const hasCookie = request.cookies.getAll().some((c) => c.name.includes('auth-token'));
-  if (hasCookie) return;
-  request.cookies.set(`sb-${getProjectRef()}-auth-token`, token);
-}
-
 export async function middleware(request: NextRequest) {
-  injectTokenFromHeader(request);
+  const path = request.nextUrl.pathname;
+  if (path.startsWith('/api/') && !['GET','HEAD','OPTIONS'].includes(request.method) && path !== '/api/payment/webhook') {
+    const origin = request.headers.get('origin');
+    if ((origin && origin !== request.nextUrl.origin) || request.headers.get('sec-fetch-site') === 'cross-site') {
+      return NextResponse.json({error:'Invalid request origin'}, {status:403});
+    }
+  }
   let supabaseResponse = NextResponse.next({ request });
 
   const supabase = createServerClient(
@@ -27,10 +20,12 @@ export async function middleware(request: NextRequest) {
           return request.cookies.getAll();
         },
         setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
+          supabaseResponse = NextResponse.next({ request });
           cookiesToSet.forEach(({ name, value, options }) => {
-            request.cookies.set(name, value);
-            supabaseResponse.cookies.set(name, value, options);
+            supabaseResponse.cookies.set(name, value, { ...options, sameSite: 'lax', secure: process.env.NODE_ENV === 'production', httpOnly: false });
           });
+          supabaseResponse.headers.set('Cache-Control', 'private, no-store');
         },
       },
     }
@@ -40,6 +35,12 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
+  // Preserve refreshed cookies on redirects and keep authenticated responses out of shared caches.
+  const finish = (response: NextResponse) => {
+    supabaseResponse.cookies.getAll().forEach(cookie => response.cookies.set(cookie));
+    if (user || path.startsWith('/auth/') || path === '/reset-password' || path.startsWith('/api/')) response.headers.set('Cache-Control','private, no-store');
+    return response;
+  };
   const pathname = request.nextUrl.pathname;
   const isUserDashboard = pathname.startsWith('/user-dashboard');
   const isAdminPage = pathname.startsWith('/admin');
@@ -48,19 +49,19 @@ export async function middleware(request: NextRequest) {
   if (!user && isUserDashboard) {
     const url = request.nextUrl.clone();
     url.pathname = '/sign-up-login-screen';
-    return NextResponse.redirect(url);
+    return finish(NextResponse.redirect(url));
   }
 
   if (isAdminPage || isAdminApi) {
     if (!user) {
       if (isAdminApi) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        return finish(NextResponse.json({ error: 'Unauthorized' }, { status: 401 }));
       }
 
       const url = request.nextUrl.clone();
       url.pathname = '/sign-up-login-screen';
       url.searchParams.set('next', pathname);
-      return NextResponse.redirect(url);
+      return finish(NextResponse.redirect(url));
     }
 
     const { data: profile } = await supabase
@@ -71,12 +72,12 @@ export async function middleware(request: NextRequest) {
 
     if (!profile?.is_admin) {
       if (isAdminApi) {
-        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+        return finish(NextResponse.json({ error: 'Forbidden' }, { status: 403 }));
       }
 
       const url = request.nextUrl.clone();
       url.pathname = '/';
-      return NextResponse.redirect(url);
+      return finish(NextResponse.redirect(url));
     }
   }
 
@@ -88,10 +89,10 @@ export async function middleware(request: NextRequest) {
   ) {
     const url = request.nextUrl.clone();
     url.pathname = '/user-dashboard';
-    return NextResponse.redirect(url);
+    return finish(NextResponse.redirect(url));
   }
 
-  return supabaseResponse;
+  return finish(supabaseResponse);
 }
 
 export const config = {

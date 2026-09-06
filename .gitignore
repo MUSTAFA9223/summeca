@@ -12,6 +12,9 @@ out/
 
 # Production build
 build/
+.open-next/
+dist/
+.wrangler/
 
 # Logs
 npm-debug.log*
