@@ -5,11 +5,15 @@ import AdminSidebar from './AdminSidebar';
 
 interface AdminShellProps {
   children: React.ReactNode;
-  adminName: string;
-  adminEmail: string;
+  adminName?: string;
+  adminEmail?: string;
 }
 
-export default function AdminShell({ children, adminName, adminEmail }: AdminShellProps) {
+export default function AdminShell({
+  children,
+  adminName = 'Admin',
+  adminEmail = '',
+}: AdminShellProps) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
@@ -45,7 +49,7 @@ export default function AdminShell({ children, adminName, adminEmail }: AdminShe
           </button>
           <div className="flex-1" />
           <div className="flex items-center gap-2">
-            <span className="text-xs font-600 text-muted-foreground hidden sm:block">{adminEmail}</span>
+            {adminEmail && <span className="text-xs font-600 text-muted-foreground hidden sm:block">{adminEmail}</span>}
             <div className="w-7 h-7 rounded-full bg-primary/20 flex items-center justify-center">
               <span className="text-xs font-700 text-primary">{adminName.charAt(0).toUpperCase()}</span>
             </div>
