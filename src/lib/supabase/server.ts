@@ -18,12 +18,11 @@ export async function createClient() {
             cookiesToSet.forEach(({ name, value, options }) =>
               cookieStore.set(name, value, {
                 ...options,
-                // Auth cookies are first-party only for SUMMECA. Lax blocks
-                // most cross-site POST cookie sending while preserving normal
-                // top-level navigation and OAuth callback flows.
+                // Lax supports top-level navigation and OAuth callbacks.
+                // The browser SDK must read cookies to refresh the session.
                 sameSite: 'lax',
                 secure: process.env.NODE_ENV === 'production',
-                httpOnly: true,
+                httpOnly: false,
               })
             );
           } catch {

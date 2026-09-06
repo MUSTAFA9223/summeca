@@ -8,6 +8,9 @@ function run(command, args, env = process.env) {
   });
 
   if (result.error) throw result.error;
+  if (result.signal) {
+    throw new Error(`${command} terminated by ${result.signal}`);
+  }
   if (typeof result.status === 'number' && result.status !== 0) {
     process.exit(result.status);
   }

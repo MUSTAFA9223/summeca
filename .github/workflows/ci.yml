@@ -31,13 +31,16 @@ jobs:
         with:
           node-version: '22'
           cache: npm
-          cache-dependency-path: package.json
+          cache-dependency-path: package-lock.json
 
       - name: Install dependencies
-        run: npm install --no-audit --no-fund
+        run: npm ci --no-audit --no-fund
 
       - name: Type check
         run: npm run type-check
+
+      - name: Auth security regression tests
+        run: node --test tests/auth-middleware.test.cjs
 
       - name: Production build
         run: npm run build

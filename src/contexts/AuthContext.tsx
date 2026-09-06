@@ -201,7 +201,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   // Check if Email is Verified
   const isEmailVerified = () => {
-    return user?.email_confirmed_at !== null;
+    return Boolean(user?.email_confirmed_at);
   };
 
   // Get User Profile from Database
