@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createServiceClient } from '@/lib/supabase/server';
+import { checkRateLimit, getRequestIdentity } from '@/lib/security/rateLimit';
 
 export async function GET() {
   try {
@@ -20,10 +21,10 @@ export async function GET() {
       return NextResponse.json({ error: 'Failed to fetch settings' }, { status: 500 });
     }
 
-    // Return defaults if no row exists yet
-    return NextResponse.json({
-      settings: settings || { login_alerts: true, email_alerts: true },
-    });
+    return NextResponse.json(
+      { settings: settings || { login_alerts: true, email_alerts: true } },
+      { headers: { 'Cache-Control': 'private, no-store' } }
+    );
   } catch (err) {
     console.error('[security/settings GET] Unexpected error:', err);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
@@ -38,13 +39,38 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const body = await req.json();
-    const { login_alerts, email_alerts } = body;
+    const rate = checkRateLimit(`security-settings:${getRequestIdentity(req, user.id)}`, {
+      limit: 20,
+      windowMs: 10 * 60_000,
+    });
+    if (!rate.allowed) {
+      return NextResponse.json({ error: 'Too many settings updates' }, { status: 429 });
+    }
 
-    const { error } = await supabase
+    let body: { login_alerts?: unknown; email_alerts?: unknown };
+    try {
+      body = await req.json();
+    } catch {
+      return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
+    }
+
+    if (typeof body.login_alerts !== 'boolean' || typeof body.email_alerts !== 'boolean') {
+      return NextResponse.json(
+        { error: 'login_alerts and email_alerts must be boolean values' },
+        { status: 400 }
+      );
+    }
+
+    const service = createServiceClient();
+    const { error } = await service
       .from('security_settings')
       .upsert(
-        { user_id: user.id, login_alerts: !!login_alerts, email_alerts: !!email_alerts },
+        {
+          user_id: user.id,
+          login_alerts: body.login_alerts,
+          email_alerts: body.email_alerts,
+          updated_at: new Date().toISOString(),
+        },
         { onConflict: 'user_id' }
       );
 
@@ -53,7 +79,17 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ error: 'Failed to update settings' }, { status: 500 });
     }
 
-    return NextResponse.json({ success: true });
+    const { error: logError } = await service.from('user_security_logs').insert({
+      user_id: user.id,
+      event_type: 'security_settings_changed',
+      device_info: {
+        user_agent: req.headers.get('user-agent')?.slice(0, 500) ?? null,
+      },
+      ip_hash: null,
+    });
+    if (logError) console.warn('[security/settings PUT] Security log failed:', logError.message);
+
+    return NextResponse.json({ success: true }, { headers: { 'Cache-Control': 'no-store' } });
   } catch (err) {
     console.error('[security/settings PUT] Unexpected error:', err);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
