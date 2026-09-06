@@ -5,6 +5,9 @@
 -- The application uses pending_payment for orders waiting for provider confirmation.
 ALTER TYPE public.order_status ADD VALUE IF NOT EXISTS 'pending_payment';
 
+-- New server-side AI generation type used by the admin insights endpoint.
+ALTER TYPE public.ai_generation_type ADD VALUE IF NOT EXISTS 'customer_insights';
+
 BEGIN;
 
 -- -----------------------------------------------------------------------------
@@ -68,6 +71,56 @@ CREATE TRIGGER protect_user_privileged_fields
   BEFORE UPDATE ON public.user_profiles
   FOR EACH ROW
   EXECUTE FUNCTION public.protect_user_privileged_fields();
+
+-- -----------------------------------------------------------------------------
+-- 1b. Harden AI usage accounting
+-- -----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.increment_ai_usage(p_user_id UUID, p_tokens INTEGER DEFAULT 0)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+DECLARE
+  v_period_start DATE := date_trunc('month', CURRENT_DATE)::DATE;
+  v_period_end   DATE := (date_trunc('month', CURRENT_DATE) + INTERVAL '1 month - 1 day')::DATE;
+  v_limit        INTEGER := 50;
+BEGIN
+  IF p_user_id IS NULL THEN
+    RAISE EXCEPTION 'p_user_id is required';
+  END IF;
+
+  IF EXISTS (
+    SELECT 1 FROM public.user_profiles
+    WHERE id = p_user_id AND is_admin = true
+  ) THEN
+    v_limit := 9999;
+  END IF;
+
+  INSERT INTO public.ai_usage (
+    user_id, period_start, period_end, requests_count, tokens_used, monthly_limit
+  )
+  VALUES (
+    p_user_id,
+    v_period_start,
+    v_period_end,
+    1,
+    GREATEST(COALESCE(p_tokens, 0), 0),
+    v_limit
+  )
+  ON CONFLICT (user_id, period_start)
+  DO UPDATE SET
+    requests_count = public.ai_usage.requests_count + 1,
+    tokens_used     = public.ai_usage.tokens_used + GREATEST(COALESCE(p_tokens, 0), 0),
+    monthly_limit   = v_limit,
+    updated_at      = CURRENT_TIMESTAMP;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.increment_ai_usage(UUID, INTEGER) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.increment_ai_usage(UUID, INTEGER) FROM anon;
+REVOKE ALL ON FUNCTION public.increment_ai_usage(UUID, INTEGER) FROM authenticated;
+GRANT EXECUTE ON FUNCTION public.increment_ai_usage(UUID, INTEGER) TO service_role;
 
 -- -----------------------------------------------------------------------------
 -- 2. user_profiles — no public exposure of emails/system fields.
