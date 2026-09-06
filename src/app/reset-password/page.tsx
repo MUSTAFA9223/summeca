@@ -20,13 +20,45 @@ export default function ResetPasswordPage() {
     let active = true;
 
     async function verifyRecoverySession() {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      try {
+        if (typeof window !== 'undefined') {
+          const url = new URL(window.location.href);
+          const code = url.searchParams.get('code');
 
-      if (!active) return;
-      setSessionValid(Boolean(user));
-      setCheckingSession(false);
+          if (code) {
+            const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+            if (exchangeError) throw exchangeError;
+            url.searchParams.delete('code');
+            window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
+          } else if (window.location.hash) {
+            const hash = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+            const accessToken = hash.get('access_token');
+            const refreshToken = hash.get('refresh_token');
+            if (accessToken && refreshToken) {
+              const { error: sessionError } = await supabase.auth.setSession({
+                access_token: accessToken,
+                refresh_token: refreshToken,
+              });
+              if (sessionError) throw sessionError;
+              window.history.replaceState({}, '', `${url.pathname}${url.search}`);
+            }
+          }
+        }
+
+        const {
+          data: { user },
+          error: userError,
+        } = await supabase.auth.getUser();
+
+        if (userError) throw userError;
+        if (!active) return;
+        setSessionValid(Boolean(user));
+      } catch {
+        if (!active) return;
+        setSessionValid(false);
+      } finally {
+        if (active) setCheckingSession(false);
+      }
     }
 
     verifyRecoverySession();
