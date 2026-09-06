@@ -2,6 +2,10 @@
 -- Removes client-controlled privilege / entitlement mutations and makes
 -- user_profiles.is_admin the authoritative admin flag.
 
+-- The application uses pending_payment for orders waiting for provider confirmation.
+-- ALTER TYPE is kept outside the transaction so the value is immediately usable.
+ALTER TYPE public.order_status ADD VALUE IF NOT EXISTS 'pending_payment';
+
 BEGIN;
 
 -- -----------------------------------------------------------------------------
@@ -48,7 +52,8 @@ CREATE TRIGGER protect_user_admin_flag
   EXECUTE FUNCTION public.protect_user_admin_flag();
 
 -- -----------------------------------------------------------------------------
--- 2. user_profiles — users may read/update only their own non-privileged profile
+-- 2. user_profiles — users may read/update only their own profile.
+--    The trigger above blocks client changes to is_admin.
 -- -----------------------------------------------------------------------------
 DROP POLICY IF EXISTS "users_manage_own_user_profiles" ON public.user_profiles;
 DROP POLICY IF EXISTS "users_read_own_user_profiles" ON public.user_profiles;
@@ -124,14 +129,13 @@ USING (user_id = auth.uid());
 
 -- -----------------------------------------------------------------------------
 -- 6. payment_events — users can read events for their orders, but only trusted
---    server code (service role) or admin policies may write them.
+--    server code (service role) or existing admin policies may write them.
 -- -----------------------------------------------------------------------------
 DROP POLICY IF EXISTS "service_insert_payment_events" ON public.payment_events;
 DROP POLICY IF EXISTS "users_insert_own_payment_events" ON public.payment_events;
 DROP POLICY IF EXISTS "users_update_own_payment_events" ON public.payment_events;
 DROP POLICY IF EXISTS "users_delete_own_payment_events" ON public.payment_events;
 
--- Keep/recreate read policy idempotently.
 DROP POLICY IF EXISTS "users_read_own_payment_events" ON public.payment_events;
 CREATE POLICY "users_read_own_payment_events"
 ON public.payment_events
