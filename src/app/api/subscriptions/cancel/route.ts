@@ -5,38 +5,38 @@
  * Access is kept until the end of the current billing period.
  *
  * SECURITY:
- * - Verifies user owns the subscription server-side.
+ * - Verifies ownership with the authenticated client.
+ * - Performs the entitlement mutation with the server-only service role.
  * - Never trusts client-provided status or user_id.
- * - Logs action to subscription_audit_logs.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createServiceClient } from '@/lib/supabase/server';
 import { sendEmail } from '@/lib/email/sendEmail';
 
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
-
-  // ── 1. Authenticate ───────────────────────────────────────────────────────
   const { data: { user }, error: authError } = await supabase.auth.getUser();
   if (authError || !user) {
     return NextResponse.json({ error: 'Authentication required.' }, { status: 401 });
   }
 
-  // ── 2. Parse body ─────────────────────────────────────────────────────────
-  let body: { subscriptionId: string; reason?: string };
+  let body: { subscriptionId?: string; reason?: string };
   try {
     body = await request.json();
   } catch {
     return NextResponse.json({ error: 'Invalid request body.' }, { status: 400 });
   }
 
-  const { subscriptionId, reason } = body;
+  const subscriptionId = body.subscriptionId?.trim();
+  const reason = body.reason?.trim();
   if (!subscriptionId) {
     return NextResponse.json({ error: 'subscriptionId is required.' }, { status: 400 });
   }
+  if (reason && reason.length > 1000) {
+    return NextResponse.json({ error: 'reason is too long.' }, { status: 400 });
+  }
 
-  // ── 3. Fetch subscription and verify ownership ────────────────────────────
   const { data: sub, error: fetchError } = await supabase
     .from('subscriptions')
     .select(`
@@ -45,14 +45,13 @@ export async function POST(request: NextRequest) {
       product_plans ( name, price, currency )
     `)
     .eq('id', subscriptionId)
-    .eq('user_id', user.id)   // ownership check
+    .eq('user_id', user.id)
     .single();
 
   if (fetchError || !sub) {
     return NextResponse.json({ error: 'Subscription not found.' }, { status: 404 });
   }
 
-  // ── 4. Validate state ─────────────────────────────────────────────────────
   if (!['active', 'trialing', 'past_due'].includes(sub.status)) {
     return NextResponse.json(
       { error: `Cannot cancel a subscription with status: ${sub.status}` },
@@ -60,41 +59,42 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const previousStatus = sub.status;
-
-  // ── 5. Update subscription ────────────────────────────────────────────────
-  const { error: updateError } = await supabase
+  const service = createServiceClient();
+  const cancelledAt = new Date().toISOString();
+  const { data: updated, error: updateError } = await service
     .from('subscriptions')
     .update({
       status: 'cancelled',
-      cancelled_at: new Date().toISOString(),
+      cancelled_at: cancelledAt,
       cancel_reason: reason ?? '',
-      updated_at: new Date().toISOString(),
+      updated_at: cancelledAt,
     })
     .eq('id', subscriptionId)
-    .eq('user_id', user.id);
+    .eq('user_id', user.id)
+    .eq('status', sub.status)
+    .select('id')
+    .maybeSingle();
 
-  if (updateError) {
-    console.error('[cancel] Update error:', updateError.message);
-    return NextResponse.json({ error: 'Failed to cancel subscription.' }, { status: 500 });
+  if (updateError || !updated) {
+    console.error('[cancel] Update error:', updateError?.message ?? 'Subscription changed concurrently');
+    return NextResponse.json({ error: 'Failed to cancel subscription.' }, { status: 409 });
   }
 
-  // ── 6. Audit log ──────────────────────────────────────────────────────────
-  await supabase.from('subscription_audit_logs').insert({
+  const { error: auditError } = await service.from('subscription_audit_logs').insert({
     subscription_id: subscriptionId,
     admin_id: null,
     action: 'cancel',
-    previous_status: previousStatus,
+    previous_status: sub.status,
     new_status: 'cancelled',
     note: reason ? `Customer reason: ${reason}` : 'Customer cancelled',
     metadata: { initiated_by: 'customer', user_id: user.id },
   });
+  if (auditError) console.warn('[cancel] Audit log failed:', auditError.message);
 
-  // ── 7. Send cancellation email (fire-and-forget) ──────────────────────────
   try {
-    const { data: authUser } = await supabase.auth.admin.getUserById(user.id);
+    const { data: authUser } = await service.auth.admin.getUserById(user.id);
     const userEmail = authUser?.user?.email ?? '';
-    const { data: profile } = await supabase
+    const { data: profile } = await service
       .from('user_profiles')
       .select('full_name')
       .eq('id', user.id)
@@ -111,8 +111,8 @@ export async function POST(request: NextRequest) {
           customerName: profile?.full_name ?? '',
           productName: product?.name ?? 'Your Subscription',
           planName: plan?.name ?? 'Plan',
-          cancelledAt: new Date().toISOString(),
-          accessUntil: sub.current_period_end ?? new Date().toISOString(),
+          cancelledAt,
+          accessUntil: sub.current_period_end ?? cancelledAt,
           reason: reason ?? '',
         },
       });
