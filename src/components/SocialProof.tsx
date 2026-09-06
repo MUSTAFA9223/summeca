@@ -8,9 +8,8 @@ interface RecentPurchaseToastProps {
 }
 
 /**
- * Intentionally disabled until this component is backed by verified, real
- * purchase events. SUMMECA must never display fabricated customer names,
- * locations, products, timestamps, or purchase activity.
+ * Disabled until backed by verified, server-sourced purchase events.
+ * SUMMECA must never display fabricated customer activity.
  */
 export function RecentPurchaseToast(_props: RecentPurchaseToastProps) {
   return null;
@@ -18,11 +17,12 @@ export function RecentPurchaseToast(_props: RecentPurchaseToastProps) {
 
 interface CustomerCountBadgeProps {
   count?: number;
+  verified?: boolean;
   className?: string;
 }
 
-export function CustomerCountBadge({ count = 0, className = '' }: CustomerCountBadgeProps) {
-  if (count <= 0) return null;
+export function CustomerCountBadge({ count = 0, verified = false, className = '' }: CustomerCountBadgeProps) {
+  if (!verified || count <= 0) return null;
 
   return (
     <div className={`inline-flex items-center gap-2 bg-white rounded-full border border-border px-4 py-2 shadow-sm ${className}`}>
@@ -46,11 +46,12 @@ export function CustomerCountBadge({ count = 0, className = '' }: CustomerCountB
 interface PopularityIndicatorProps {
   count: number;
   productName?: string;
+  verified?: boolean;
   className?: string;
 }
 
-export function PopularityIndicator({ count, productName, className = '' }: PopularityIndicatorProps) {
-  if (count <= 0) return null;
+export function PopularityIndicator({ count, productName, verified = false, className = '' }: PopularityIndicatorProps) {
+  if (!verified || count <= 0) return null;
 
   return (
     <div className={`flex items-center gap-1.5 text-xs text-secondary-foreground ${className}`}>
@@ -79,15 +80,16 @@ export function VerifiedBuyerBadge({ className = '' }: VerifiedBuyerBadgeProps) 
 interface SocialProofStripProps {
   productName?: string;
   purchaseCount?: number;
+  verified?: boolean;
   className?: string;
 }
 
-export function SocialProofStrip({ productName, purchaseCount = 0, className = '' }: SocialProofStripProps) {
-  if (purchaseCount <= 0) return null;
+export function SocialProofStrip({ productName, purchaseCount = 0, verified = false, className = '' }: SocialProofStripProps) {
+  if (!verified || purchaseCount <= 0) return null;
 
   return (
     <div className={`flex flex-wrap items-center gap-3 ${className}`}>
-      <PopularityIndicator count={purchaseCount} productName={productName} />
+      <PopularityIndicator count={purchaseCount} productName={productName} verified />
     </div>
   );
 }
