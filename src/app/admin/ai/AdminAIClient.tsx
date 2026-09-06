@@ -165,7 +165,7 @@ function ProductGeneratorTab({ usage, onGenerated }: { usage: UsageStats | null;
               <OutputBlock key={key} label={key.replace(/([A-Z])/g, ' $1').trim()} value={output[key] as string[]} />
             ) : null
           )}
-          {output.faq && (
+          {Boolean(output.faq) && (
             <div>
               <button
                 onClick={() => toggle('faq')}
@@ -185,7 +185,7 @@ function ProductGeneratorTab({ usage, onGenerated }: { usage: UsageStats | null;
               )}
             </div>
           )}
-          {output.fullDescription && (
+          {Boolean(output.fullDescription) && (
             <div>
               <button
                 onClick={() => toggle('desc')}
@@ -336,8 +336,8 @@ function CampaignBuilderTab({ usage, onGenerated }: { usage: UsageStats | null; 
           {['campaignName', 'audience', 'marketingAngle', 'emailSubject'].map(key =>
             output[key] ? <OutputBlock key={key} label={key.replace(/([A-Z])/g, ' $1').trim()} value={output[key] as string} /> : null
           )}
-          {output.channels && <OutputBlock label="Recommended Channels" value={output.channels as string[]} />}
-          {output.kpis && <OutputBlock label="KPIs to Track" value={output.kpis as string[]} />}
+          {Boolean(output.channels) && <OutputBlock label="Recommended Channels" value={output.channels as string[]} />}
+          {Boolean(output.kpis) && <OutputBlock label="KPIs to Track" value={output.kpis as string[]} />}
           {socialPosts && (
             <div className="space-y-3">
               <span className="text-xs font-600 text-muted-foreground uppercase tracking-wide">Social Posts</span>
@@ -354,7 +354,7 @@ function CampaignBuilderTab({ usage, onGenerated }: { usage: UsageStats | null; 
               ))}
             </div>
           )}
-          {output.emailBody && <OutputBlock label="Email Body" value={output.emailBody as string} />}
+          {Boolean(output.emailBody) && <OutputBlock label="Email Body" value={output.emailBody as string} />}
         </div>
       )}
     </div>
@@ -449,8 +449,8 @@ function ProductAnalysisTab({ usage, onGenerated }: { usage: UsageStats | null; 
               </div>
             </div>
           )}
-          {output.strengths && <OutputBlock label="Strengths" value={output.strengths as string[]} />}
-          {output.weaknesses && <OutputBlock label="Weaknesses" value={output.weaknesses as string[]} />}
+          {Boolean(output.strengths) && <OutputBlock label="Strengths" value={output.strengths as string[]} />}
+          {Boolean(output.weaknesses) && <OutputBlock label="Weaknesses" value={output.weaknesses as string[]} />}
           {recommendations && (
             <div className="space-y-2">
               <span className="text-xs font-600 text-muted-foreground uppercase tracking-wide">Recommendations</span>
@@ -468,8 +468,8 @@ function ProductAnalysisTab({ usage, onGenerated }: { usage: UsageStats | null; 
               ))}
             </div>
           )}
-          {output.pricingInsight && <OutputBlock label="Pricing Insight" value={output.pricingInsight as string} />}
-          {output.ctaImprovement && <OutputBlock label="CTA Improvement" value={output.ctaImprovement as string} />}
+          {Boolean(output.pricingInsight) && <OutputBlock label="Pricing Insight" value={output.pricingInsight as string} />}
+          {Boolean(output.ctaImprovement) && <OutputBlock label="CTA Improvement" value={output.ctaImprovement as string} />}
         </div>
       )}
     </div>
@@ -549,9 +549,9 @@ function CustomerInsightsTab({ usage, onGenerated }: { usage: UsageStats | null;
               </div>
             </div>
           )}
-          {output.revenueInsights && <OutputBlock label="Revenue Insights" value={output.revenueInsights as string[]} />}
-          {output.growthOpportunities && <OutputBlock label="Growth Opportunities" value={output.growthOpportunities as string[]} />}
-          {output.riskFactors && <OutputBlock label="Risk Factors" value={output.riskFactors as string[]} />}
+          {Boolean(output.revenueInsights) && <OutputBlock label="Revenue Insights" value={output.revenueInsights as string[]} />}
+          {Boolean(output.growthOpportunities) && <OutputBlock label="Growth Opportunities" value={output.growthOpportunities as string[]} />}
+          {Boolean(output.riskFactors) && <OutputBlock label="Risk Factors" value={output.riskFactors as string[]} />}
           {recommendations && (
             <div className="space-y-2">
               <span className="text-xs font-600 text-muted-foreground uppercase tracking-wide">Strategic Recommendations</span>
@@ -569,7 +569,7 @@ function CustomerInsightsTab({ usage, onGenerated }: { usage: UsageStats | null;
               ))}
             </div>
           )}
-          {output.nextSteps && <OutputBlock label="Next Steps" value={output.nextSteps as string[]} />}
+          {Boolean(output.nextSteps) && <OutputBlock label="Next Steps" value={output.nextSteps as string[]} />}
         </div>
       )}
     </div>
@@ -652,7 +652,7 @@ export default function AdminAIClient() {
 
   useEffect(() => { fetchUsage(); }, [fetchUsage]);
 
-  const tabs: { id: ActiveTab; label: string; icon: React.ElementType; description: string }[] = [
+  const tabs: { id: ActiveTab; label: string; icon: React.ComponentType<any>; description: string }[] = [
     { id: 'product', label: 'Product Generator', icon: FileText, description: 'Generate titles, descriptions, SEO & social content' },
     { id: 'seo', label: 'SEO Assistant', icon: Search, description: 'Optimize metadata, keywords & schema' },
     { id: 'campaign', label: 'Campaign Builder', icon: Megaphone, description: 'Create email, social & ad campaigns' },

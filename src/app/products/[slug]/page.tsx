@@ -517,7 +517,7 @@ export default function ProductDetailPage() {
       const [plansResult, reviewsResult, relatedResult] = await Promise.all([
         supabase.from('product_plans').select('*').eq('product_id', productData.id).eq('is_active', true).order('sort_order', { ascending: true }),
         supabase.from('reviews').select('*').eq('product_id', productData.id).eq('moderation_status', 'approved').order('is_featured', { ascending: false }).order('created_at', { ascending: false }).limit(12),
-        supabase.from('products').select('id, name, slug, short_desc, thumbnail_url, category, tags').eq('status', 'active').eq('category', productData.category).neq('id', productData.id).limit(3),
+        supabase.from('products').select('id, name, slug, description, short_desc, category, status, thumbnail_url, demo_url, tags, metadata, created_at').eq('status', 'active').eq('category', productData.category).neq('id', productData.id).limit(3),
       ]);
 
       const plansData = plansResult.data;

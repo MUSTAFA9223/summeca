@@ -50,7 +50,7 @@ const statusColors: Record<string, string> = {
   past_due: 'bg-orange-500/10 text-orange-500',
 };
 
-const statusIcons: Record<string, React.ElementType> = {
+const statusIcons: Record<string, React.ComponentType<any>> = {
   active: CheckCircle,
   cancelled: XCircle,
   expired: AlertCircle,
