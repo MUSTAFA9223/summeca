@@ -1,19 +1,14 @@
 /**
  * POST /api/ai/generate
  *
- * Secure server-side AI generation endpoint for SUMMECA AI Marketing Engine.
- *
- * SECURITY CONTRACT:
- * - API keys NEVER exposed to frontend
- * - All AI calls made server-side via abstraction layer
- * - User authentication required for all requests
- * - Admin required for admin-only generation types
- * - Usage tracked per user per month
- * - Rate limiting enforced via ai_usage table
+ * Server-side AI generation for the SUMMECA marketing engine.
+ * API keys remain server-only; admin authorization is sourced from
+ * user_profiles.is_admin and usage writes use the service role.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createServiceClient } from '@/lib/supabase/server';
+import { checkRateLimit, getRequestIdentity } from '@/lib/security/rateLimit';
 import {
   generateProductContent,
   generateSEOContent,
@@ -22,7 +17,6 @@ import {
   generateCustomerInsights,
 } from '@/lib/ai/aiProvider';
 
-// Generation types that require admin role
 const ADMIN_ONLY_TYPES = new Set([
   'product_description',
   'seo_optimization',
@@ -31,35 +25,36 @@ const ADMIN_ONLY_TYPES = new Set([
   'customer_insights',
 ]);
 
-// Monthly limits by role
-const MONTHLY_LIMITS: Record<string, number> = {
+const MONTHLY_LIMITS = {
   admin: 9999,
   user: 50,
-};
+} as const;
 
 export async function POST(request: NextRequest) {
-  const supabase = await createClient();
+  const sessionClient = await createClient();
+  const { data: { user }, error: authError } = await sessionClient.auth.getUser();
+  if (authError || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  // ── 1. Authenticate ───────────────────────────────────────────────────────
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser();
+  const { data: profile } = await sessionClient
+    .from('user_profiles')
+    .select('is_admin')
+    .eq('id', user.id)
+    .maybeSingle();
 
-  if (authError || !user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const isAdmin = profile?.is_admin === true;
+  const userRole: keyof typeof MONTHLY_LIMITS = isAdmin ? 'admin' : 'user';
+
+  const burst = checkRateLimit(`ai-generate:${getRequestIdentity(request, user.id)}`, {
+    limit: isAdmin ? 30 : 10,
+    windowMs: 60_000,
+  });
+  if (!burst.allowed) {
+    return NextResponse.json(
+      { error: 'Too many AI requests. Please try again shortly.' },
+      { status: 429, headers: { 'Retry-After': String(Math.max(1, Math.ceil((burst.resetAt - Date.now()) / 1000))) } }
+    );
   }
 
-  // ── 2. Fetch user profile for role check ──────────────────────────────────
-  const { data: profile } = await supabase
-    .from('user_profiles')
-    .select('role')
-    .eq('id', user.id)
-    .single();
-
-  const userRole = profile?.role ?? 'user';
-
-  // ── 3. Parse request body ─────────────────────────────────────────────────
   let body: { type?: string; input?: Record<string, unknown> };
   try {
     body = await request.json();
@@ -67,40 +62,46 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
   }
 
-  const { type, input } = body;
+  const type = typeof body.type === 'string' ? body.type : '';
+  const input = body.input && typeof body.input === 'object' && !Array.isArray(body.input)
+    ? body.input
+    : {};
 
-  if (!type) {
-    return NextResponse.json({ error: 'type is required' }, { status: 400 });
+  if (!ADMIN_ONLY_TYPES.has(type)) {
+    return NextResponse.json({ error: 'Unknown generation type' }, { status: 400 });
   }
-
-  // ── 4. Authorization check ────────────────────────────────────────────────
-  if (ADMIN_ONLY_TYPES.has(type) && userRole !== 'admin') {
+  if (!isAdmin) {
     return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
   }
 
-  // ── 5. Usage limit check ──────────────────────────────────────────────────
-  const periodStart = new Date();
-  periodStart.setDate(1);
-  periodStart.setHours(0, 0, 0, 0);
-
-  const { data: usageRow } = await supabase
-    .from('ai_usage')
-    .select('requests_count, monthly_limit')
-    .eq('user_id', user.id)
-    .gte('period_start', periodStart.toISOString().slice(0, 10))
-    .maybeSingle();
-
-  const limit = MONTHLY_LIMITS[userRole] ?? 50;
-  const used = usageRow?.requests_count ?? 0;
-
-  if (used >= limit) {
-    return NextResponse.json(
-      { error: 'Monthly AI usage limit reached', used, limit },
-      { status: 429 }
-    );
+  let inputSize = 0;
+  try {
+    inputSize = JSON.stringify(input).length;
+  } catch {
+    return NextResponse.json({ error: 'Invalid input' }, { status: 400 });
+  }
+  if (inputSize > 25_000) {
+    return NextResponse.json({ error: 'AI input is too large' }, { status: 413 });
   }
 
-  // ── 6. Execute generation ─────────────────────────────────────────────────
+  const service = createServiceClient();
+  const periodStart = new Date();
+  periodStart.setUTCDate(1);
+  periodStart.setUTCHours(0, 0, 0, 0);
+
+  const { data: usageRow } = await service
+    .from('ai_usage')
+    .select('requests_count')
+    .eq('user_id', user.id)
+    .eq('period_start', periodStart.toISOString().slice(0, 10))
+    .maybeSingle();
+
+  const limit = MONTHLY_LIMITS[userRole];
+  const used = usageRow?.requests_count ?? 0;
+  if (used >= limit) {
+    return NextResponse.json({ error: 'Monthly AI usage limit reached', used, limit }, { status: 429 });
+  }
+
   let result;
   try {
     switch (type) {
@@ -120,43 +121,44 @@ export async function POST(request: NextRequest) {
         result = await generateCustomerInsights(input as Parameters<typeof generateCustomerInsights>[0]);
         break;
       default:
-        return NextResponse.json({ error: `Unknown generation type: ${type}` }, { status: 400 });
+        return NextResponse.json({ error: 'Unknown generation type' }, { status: 400 });
     }
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'AI generation failed';
-    return NextResponse.json({ error: message }, { status: 500 });
+    console.error('[ai/generate] generation error:', err);
+    return NextResponse.json({ error: 'AI generation failed' }, { status: 502 });
   }
 
-  // ── 7. Save generation history ────────────────────────────────────────────
-  const { data: savedGen } = await supabase
+  const { data: savedGen, error: historyError } = await service
     .from('ai_generations')
     .insert({
       user_id: user.id,
       generation_type: type,
       model: result.model,
-      input_data: input ?? {},
+      input_data: input,
       output_text: result.text,
       tokens_used: result.tokensUsed,
       duration_ms: result.durationMs,
-      product_id: (input as Record<string, unknown>)?.productId as string ?? null,
+      product_id: typeof input.productId === 'string' ? input.productId : null,
     })
     .select('id')
     .single();
 
-  // ── 8. Increment usage ────────────────────────────────────────────────────
-  await supabase.rpc('increment_ai_usage', {
-    p_user_id: user.id,
-    p_tokens: result.tokensUsed,
-  });
+  if (historyError) {
+    console.warn('[ai/generate] Failed to save generation history:', historyError.message);
+  }
 
-  // ── 9. Parse JSON output safely ───────────────────────────────────────────
+  const { error: usageError } = await service.rpc('increment_ai_usage', {
+    p_user_id: user.id,
+    p_tokens: Math.max(0, Number(result.tokensUsed) || 0),
+  });
+  if (usageError) console.warn('[ai/generate] Failed to increment usage:', usageError.message);
+
   let parsedOutput: unknown = result.text;
   try {
-    // Strip markdown code fences if present
     const cleaned = result.text.replace(/^```json\s*/i, '').replace(/\s*```$/i, '').trim();
     parsedOutput = JSON.parse(cleaned);
   } catch {
-    // Return raw text if not valid JSON
+    // Raw text is returned when the model response is not JSON.
   }
 
   return NextResponse.json({
@@ -167,5 +169,5 @@ export async function POST(request: NextRequest) {
     tokensUsed: result.tokensUsed,
     durationMs: result.durationMs,
     usage: { used: used + 1, limit },
-  });
+  }, { headers: { 'Cache-Control': 'no-store' } });
 }

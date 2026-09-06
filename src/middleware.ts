@@ -40,23 +40,29 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Protect dashboard routes
-  if (!user && request.nextUrl.pathname.startsWith('/user-dashboard')) {
+  const pathname = request.nextUrl.pathname;
+  const isUserDashboard = pathname.startsWith('/user-dashboard');
+  const isAdminPage = pathname.startsWith('/admin');
+  const isAdminApi = pathname.startsWith('/api/admin');
+
+  if (!user && isUserDashboard) {
     const url = request.nextUrl.clone();
     url.pathname = '/sign-up-login-screen';
     return NextResponse.redirect(url);
   }
 
-  // Protect admin routes — require authentication first
-  if (request.nextUrl.pathname.startsWith('/admin')) {
+  if (isAdminPage || isAdminApi) {
     if (!user) {
+      if (isAdminApi) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+
       const url = request.nextUrl.clone();
       url.pathname = '/sign-up-login-screen';
-      url.searchParams.set('next', request.nextUrl.pathname);
+      url.searchParams.set('next', pathname);
       return NextResponse.redirect(url);
     }
 
-    // Server-side admin check via DB
     const { data: profile } = await supabase
       .from('user_profiles')
       .select('is_admin')
@@ -64,18 +70,21 @@ export async function middleware(request: NextRequest) {
       .single();
 
     if (!profile?.is_admin) {
+      if (isAdminApi) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      }
+
       const url = request.nextUrl.clone();
       url.pathname = '/';
       return NextResponse.redirect(url);
     }
   }
 
-  // Redirect authenticated users away from auth pages
   if (
     user &&
-    (request.nextUrl.pathname === '/sign-up-login-screen' ||
-      request.nextUrl.pathname === '/login' ||
-      request.nextUrl.pathname === '/signup')
+    (pathname === '/sign-up-login-screen' ||
+      pathname === '/login' ||
+      pathname === '/signup')
   ) {
     const url = request.nextUrl.clone();
     url.pathname = '/user-dashboard';

@@ -1,29 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-
-async function requireAdmin(supabase: Awaited<ReturnType<typeof createClient>>) {
-  const { data: { user }, error } = await supabase.auth.getUser();
-  if (error || !user) return null;
-  const meta = user.user_metadata ?? {};
-  const appMeta = user.app_metadata ?? {};
-  if (meta.role !== 'admin' && appMeta.role !== 'admin') return null;
-  return user;
-}
+import { requireAdmin } from '@/lib/auth/requireAdmin';
 
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const supabase = await createClient();
   const user = await requireAdmin(supabase);
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
   const { id } = await params;
   let body: Record<string, unknown>;
-  try { body = await request.json(); } catch {
+  try {
+    body = await request.json();
+  } catch {
     return NextResponse.json({ error: 'Invalid body' }, { status: 400 });
+  }
+
+  const allowed = new Set(['name', 'campaign_type', 'status', 'subject', 'content', 'target_type', 'scheduled_at']);
+  const safeBody = Object.fromEntries(Object.entries(body).filter(([key]) => allowed.has(key)));
+  if (Object.keys(safeBody).length === 0) {
+    return NextResponse.json({ error: 'No allowed fields to update' }, { status: 400 });
   }
 
   const { data, error } = await supabase
     .from('marketing_campaigns')
-    .update(body)
+    .update(safeBody)
     .eq('id', id)
     .select()
     .single();
@@ -35,7 +35,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 export async function DELETE(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const supabase = await createClient();
   const user = await requireAdmin(supabase);
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
   const { id } = await params;
   const { error } = await supabase.from('marketing_campaigns').delete().eq('id', id);

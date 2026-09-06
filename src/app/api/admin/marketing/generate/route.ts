@@ -1,15 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { requireAdmin } from '@/lib/auth/requireAdmin';
 import { generateText } from '@/lib/ai/aiProvider';
-
-async function requireAdmin(supabase: Awaited<ReturnType<typeof createClient>>) {
-  const { data: { user }, error } = await supabase.auth.getUser();
-  if (error || !user) return null;
-  const meta = user.user_metadata ?? {};
-  const appMeta = user.app_metadata ?? {};
-  if (meta.role !== 'admin' && appMeta.role !== 'admin') return null;
-  return user;
-}
 
 const SYSTEM_PROMPT = `You are a senior digital marketing strategist for SUMMECA, a premium AI digital products marketplace.
 Create compelling, conversion-focused marketing content. Always respond with valid JSON only.`;
@@ -60,10 +52,12 @@ Return JSON:
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
   const user = await requireAdmin(supabase);
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
   let body: Record<string, unknown>;
-  try { body = await request.json(); } catch {
+  try {
+    body = await request.json();
+  } catch {
     return NextResponse.json({ error: 'Invalid body' }, { status: 400 });
   }
 
@@ -79,6 +73,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'product and goal are required' }, { status: 400 });
   }
 
+  const values = [product, audience ?? '', goal, tone, campaign_type];
+  if (values.some((value) => typeof value !== 'string' || value.length > 4000)) {
+    return NextResponse.json({ error: 'Input is too long or invalid' }, { status: 400 });
+  }
+
   try {
     const result = await generateText(
       SYSTEM_PROMPT,
@@ -91,7 +90,7 @@ export async function POST(request: NextRequest) {
       const cleaned = result.text.replace(/^```json\s*/i, '').replace(/\s*```$/i, '').trim();
       parsed = JSON.parse(cleaned);
     } catch {
-      // Return raw text if not valid JSON
+      // Return raw text if not valid JSON.
     }
 
     return NextResponse.json({

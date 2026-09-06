@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createServiceClient } from '@/lib/supabase/server';
+import { checkRateLimit, getRequestIdentity } from '@/lib/security/rateLimit';
 import { sendEmail } from '@/lib/email/sendEmail';
 
 export async function POST(req: NextRequest) {
@@ -10,48 +11,69 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const body = await req.json();
-    const { newPassword } = body;
+    const rate = checkRateLimit(`change-password:${getRequestIdentity(req, user.id)}`, {
+      limit: 5,
+      windowMs: 15 * 60_000,
+    });
+    if (!rate.allowed) {
+      return NextResponse.json(
+        { error: 'Too many password change attempts. Please try again later.' },
+        { status: 429, headers: { 'Retry-After': String(Math.max(1, Math.ceil((rate.resetAt - Date.now()) / 1000))) } }
+      );
+    }
 
-    if (!newPassword || typeof newPassword !== 'string') {
+    let body: { newPassword?: string };
+    try {
+      body = await req.json();
+    } catch {
+      return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
+    }
+
+    const newPassword = body.newPassword;
+    if (typeof newPassword !== 'string') {
       return NextResponse.json({ error: 'New password is required' }, { status: 400 });
     }
-    if (newPassword.length < 8) {
-      return NextResponse.json({ error: 'Password must be at least 8 characters' }, { status: 400 });
+    if (newPassword.length < 8 || newPassword.length > 128) {
+      return NextResponse.json({ error: 'Password must be between 8 and 128 characters' }, { status: 400 });
     }
 
-    // Update password via Supabase Auth (server-side)
     const { error: updateError } = await supabase.auth.updateUser({ password: newPassword });
     if (updateError) {
-      console.error('[change-password] Update error:', updateError.message);
-      return NextResponse.json({ error: updateError.message || 'Failed to update password' }, { status: 400 });
+      console.warn('[change-password] Supabase rejected password update:', updateError.message);
+      return NextResponse.json({ error: 'Failed to update password. Please check the password requirements and try again.' }, { status: 400 });
     }
 
-    // Log the event
-    await supabase.from('user_security_logs').insert({
+    const service = createServiceClient();
+    const { error: logError } = await service.from('user_security_logs').insert({
       user_id: user.id,
       event_type: 'password_change',
-      device_info: {},
+      device_info: {
+        user_agent: req.headers.get('user-agent')?.slice(0, 500) ?? null,
+      },
       ip_hash: null,
     });
+    if (logError) console.warn('[change-password] Security log failed:', logError.message);
 
-    // Send confirmation email
     const customerName = user.user_metadata?.full_name || user.email?.split('@')[0] || 'User';
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://summeca.com';
+    const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://summeca.com').replace(/\/$/, '');
 
     if (user.email) {
-      await sendEmail({
-        type: 'security_password_changed',
-        to: user.email,
-        data: {
-          customerName,
-          changedAt: new Date().toISOString(),
-          securityUrl: `${siteUrl}/user-dashboard/security`,
-        },
-      } as Parameters<typeof sendEmail>[0]);
+      try {
+        await sendEmail({
+          type: 'security_password_changed',
+          to: user.email,
+          data: {
+            customerName,
+            changedAt: new Date().toISOString(),
+            securityUrl: `${siteUrl}/user-dashboard/security`,
+          },
+        } as Parameters<typeof sendEmail>[0]);
+      } catch (emailErr) {
+        console.warn('[change-password] Confirmation email failed:', emailErr);
+      }
     }
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true }, { headers: { 'Cache-Control': 'no-store' } });
   } catch (err) {
     console.error('[change-password] Unexpected error:', err);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
