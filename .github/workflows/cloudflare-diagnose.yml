@@ -35,10 +35,23 @@ jobs:
       - name: Verify normal Next build
         run: npm run build
 
+      - name: Inspect build directories
+        run: |
+          echo 'Root:'
+          ls -la
+          echo '.next:'
+          ls -la .next | head -50
+          echo 'dist:'
+          if [ -d dist ]; then ls -la dist | head -50; else echo 'dist directory does not exist'; fi
+
       - name: Check vinext compatibility
         continue-on-error: true
         run: npx --yes vinext@latest check
 
       - name: Test Wrangler automatic configuration (dry run)
         continue-on-error: true
-        run: npx --yes wrangler@latest deploy --dry-run --x-autoconfig
+        run: npx --yes wrangler@latest deploy --dry-run --autoconfig
+
+      - name: Test current assets-style deploy (dry run)
+        continue-on-error: true
+        run: npx --yes wrangler@latest deploy --dry-run --assets=dist
