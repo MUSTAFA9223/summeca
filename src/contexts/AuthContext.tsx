@@ -26,7 +26,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     if (typeof window !== 'undefined') {
       return window.location.origin;
     }
-    return 'https://summeca1430.builtwithrocket.new';
+    return 'https://summeca.com';
   };
 
   useEffect(() => {
@@ -85,7 +85,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   // Reset Password (sends email)
   const resetPassword = async (email: string) => {
     const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${getSiteUrl()}/auth/callback?next=/user-dashboard/settings`,
+      redirectTo: `${getSiteUrl()}/auth/callback?next=/reset-password`,
     });
     if (error) throw error;
     return data;
