@@ -8,7 +8,7 @@ on:
 jobs:
   diagnose:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     env:
       NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
       NEXT_PUBLIC_SUPABASE_ANON_KEY: test-anon-key
@@ -29,29 +29,40 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Install dependencies
+      - name: Install current dependencies
         run: npm install --no-audit --no-fund
 
-      - name: Verify normal Next build
-        run: npm run build
+      - name: Apply OpenNext migration in CI workspace
+        run: npx --yes @opennextjs/cloudflare@latest migrate
 
-      - name: Inspect build directories
+      - name: Show migration changes
         run: |
-          echo 'Root:'
-          ls -la
-          echo '.next:'
-          ls -la .next | head -50
-          echo 'dist:'
-          if [ -d dist ]; then ls -la dist | head -50; else echo 'dist directory does not exist'; fi
+          git diff -- package.json next.config.mjs wrangler.jsonc open-next.config.ts || true
+          echo '--- package.json ---'
+          cat package.json
+          echo '--- wrangler.jsonc ---'
+          cat wrangler.jsonc
+          echo '--- open-next.config.ts ---'
+          cat open-next.config.ts
 
-      - name: Check vinext compatibility
-        continue-on-error: true
-        run: npx --yes vinext@latest check
+      - name: Install migrated dependencies
+        run: npm install --no-audit --no-fund
 
-      - name: Test Wrangler automatic configuration (dry run)
-        continue-on-error: true
-        run: npx --yes wrangler@latest deploy --dry-run --autoconfig
+      - name: Build OpenNext worker
+        run: npx opennextjs-cloudflare build
 
-      - name: Test current assets-style deploy (dry run)
-        continue-on-error: true
-        run: npx --yes wrangler@latest deploy --dry-run --assets=dist
+      - name: Inspect OpenNext output
+        run: |
+          find .open-next -maxdepth 2 -type d -print | sort | head -80
+          find .open-next -maxdepth 2 -type f -print | sort | head -80
+
+      - name: Prepare legacy dist assets directory
+        run: |
+          rm -rf dist
+          mkdir -p dist
+          if [ -d .open-next/assets ]; then cp -a .open-next/assets/. dist/; fi
+          test -d dist
+          ls -la dist | head -50
+
+      - name: Test existing Cloudflare deploy command with worker config
+        run: npx wrangler deploy --dry-run --assets=dist
