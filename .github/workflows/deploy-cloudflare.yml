@@ -15,7 +15,7 @@ jobs:
     timeout-minutes: 25
     env:
       NEXT_PUBLIC_SUPABASE_URL: https://encrvihpdkvubxyvphlt.supabase.co
-      NEXT_PUBLIC_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVuY3J2aWhwZGt2dWJ4eXZwaGx0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgzMjg1NjAsImV4cCI6MjEwMzkwNDU2MH0.1J7aufKi5bTjhAohMNeScLfU3Gj3EALoNHwWgBo6Y2c
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJIUzI1NiIsInJlZiI6ImVuY3J2aWhwZGt2dWJ4eXZwaGx0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgzMjg1NjAsImV4cCI6MjEwMzkwNDU2MH0.1J7aufKi5bTjhAohMNeScLfU3Gj3EALoNHwWgBo6Y2c
       NEXT_PUBLIC_SITE_URL: https://summeca.com
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
 
@@ -32,11 +32,11 @@ jobs:
       - name: Resolve Cloudflare account automatically
         shell: bash
         run: |
-          RESPONSE="$(curl -fsS -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" https://api.cloudflare.com/client/v4/accounts)"
-          ACCOUNT_ID="$(printf '%s' "$RESPONSE" | jq -r '.result[0].id // empty')"
-          ACCOUNT_NAME="$(printf '%s' "$RESPONSE" | jq -r '.result[0].name // empty')"
+          WHOAMI="$(npx --yes wrangler@4.129.0 whoami --json)"
+          ACCOUNT_ID="$(printf '%s' "$WHOAMI" | jq -r '.accounts[0].id // empty')"
+          ACCOUNT_NAME="$(printf '%s' "$WHOAMI" | jq -r '.accounts[0].name // empty')"
           if [ -z "$ACCOUNT_ID" ]; then
-            echo "Could not resolve a Cloudflare account from the API token."
+            echo "Could not resolve a Cloudflare account from Wrangler."
             exit 22
           fi
           echo "CLOUDFLARE_ACCOUNT_ID=$ACCOUNT_ID" >> "$GITHUB_ENV"
