@@ -1,75 +1,58 @@
 /**
  * POST /api/payment/create-payoneer-session
  *
- * Server-side Payoneer checkout session creation.
- *
- * SECURITY CONTRACT:
- * - Amount is calculated server-side from the database — never trusted from the client.
- * - Currency is validated server-side.
- * - Product availability is validated server-side.
- * - Order is created with status = 'pending_payment'.
- * - The Payoneer hosted checkout URL is returned to the client.
- * - The order is only marked 'completed' by the webhook handler after server-side verification.
- * - No CVV, full card numbers, or secrets are stored or returned.
- * - No Payoneer credentials are exposed to the client.
+ * Trusted server-side order creation for Payoneer Checkout.
+ * All prices and availability checks come from the database; the client only
+ * submits product/plan/coupon identifiers.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createServiceClient } from '@/lib/supabase/server';
 import { getProvider } from '@/lib/payment/registry';
 import { sendOrderConfirmation } from '@/lib/email/sendEmail';
 
 interface CreateSessionRequest {
-  productId: string;
-  planId: string;
+  productId?: string;
+  planId?: string;
   couponId?: string | null;
 }
 
-export async function POST(request: NextRequest) {
-  // ── 1. Authenticate the user ──────────────────────────────────────────────
-  const supabase = await createClient();
-  const { data: { user }, error: authError } = await supabase.auth.getUser();
+const SUPPORTED_CURRENCIES = new Set(['USD', 'EUR', 'GBP', 'AUD', 'CAD', 'JPY', 'CHF', 'HKD', 'SGD']);
 
+export async function POST(request: NextRequest) {
+  const sessionClient = await createClient();
+  const { data: { user }, error: authError } = await sessionClient.auth.getUser();
   if (authError || !user) {
-    return NextResponse.json(
-      { error: 'Authentication required.' },
-      { status: 401 }
-    );
+    return NextResponse.json({ error: 'Authentication required.' }, { status: 401 });
   }
 
-  // ── 2. Parse and validate request body ────────────────────────────────────
   let body: CreateSessionRequest;
   try {
-    body = (await request.json()) as CreateSessionRequest;
+    body = await request.json();
   } catch {
     return NextResponse.json({ error: 'Invalid request body.' }, { status: 400 });
   }
 
-  const { productId, planId, couponId } = body;
-
+  const productId = body.productId?.trim();
+  const planId = body.planId?.trim();
+  const couponId = body.couponId?.trim() || null;
   if (!productId || !planId) {
-    return NextResponse.json(
-      { error: 'productId and planId are required.' },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: 'productId and planId are required.' }, { status: 400 });
   }
 
-  // ── 3. Validate product availability (server-side) ────────────────────────
+  const supabase = createServiceClient();
+
   const { data: product, error: productError } = await supabase
     .from('products')
-    .select('id, name, slug, is_active')
+    .select('id, name, slug, status')
     .eq('id', productId)
-    .eq('is_active', true)
+    .eq('status', 'active')
     .single();
 
   if (productError || !product) {
-    return NextResponse.json(
-      { error: 'Product not found or unavailable.' },
-      { status: 404 }
-    );
+    return NextResponse.json({ error: 'Product not found or unavailable.' }, { status: 404 });
   }
 
-  // ── 4. Validate plan and calculate amount server-side ─────────────────────
   const { data: plan, error: planError } = await supabase
     .from('product_plans')
     .select('id, name, price, currency, billing_period, is_active')
@@ -79,53 +62,56 @@ export async function POST(request: NextRequest) {
     .single();
 
   if (planError || !plan) {
-    return NextResponse.json(
-      { error: 'Plan not found or unavailable.' },
-      { status: 404 }
-    );
+    return NextResponse.json({ error: 'Plan not found or unavailable.' }, { status: 404 });
   }
 
-  // ── 5. Validate currency ──────────────────────────────────────────────────
-  const supportedCurrencies = ['USD', 'EUR', 'GBP', 'AUD', 'CAD', 'JPY', 'CHF', 'HKD', 'SGD'];
-  const currency = plan.currency.toUpperCase();
-
-  if (!supportedCurrencies.includes(currency)) {
-    return NextResponse.json(
-      { error: `Currency ${currency} is not supported by Payoneer Checkout.` },
-      { status: 400 }
-    );
+  const currency = String(plan.currency).toUpperCase();
+  if (!SUPPORTED_CURRENCIES.has(currency)) {
+    return NextResponse.json({ error: `Currency ${currency} is not supported by Payoneer Checkout.` }, { status: 400 });
   }
 
-  // ── 6. Apply coupon discount (server-side) ────────────────────────────────
+  const basePrice = Number(plan.price);
+  if (!Number.isFinite(basePrice) || basePrice < 0) {
+    return NextResponse.json({ error: 'Invalid product price.' }, { status: 500 });
+  }
+
   let discountAmount = 0;
   let appliedCouponId: string | null = null;
 
   if (couponId) {
     const { data: coupon } = await supabase
       .from('coupons')
-      .select('id, coupon_type, discount_value, applies_to, max_uses, used_count, valid_until, is_active')
+      .select('id, coupon_type, discount_value, applies_to, max_uses, used_count, valid_from, valid_until, is_active')
       .eq('id', couponId)
       .eq('is_active', true)
-      .single();
+      .maybeSingle();
 
     if (coupon) {
-      const isExpired = coupon.valid_until && new Date(coupon.valid_until) < new Date();
-      const isExhausted = coupon.max_uses !== null && coupon.used_count >= coupon.max_uses;
-      const appliesToProduct = !coupon.applies_to || coupon.applies_to === productId;
+      const now = new Date();
+      const startsInFuture = coupon.valid_from && new Date(coupon.valid_from) > now;
+      const expired = coupon.valid_until && new Date(coupon.valid_until) < now;
+      const exhausted = coupon.max_uses !== null && coupon.used_count >= coupon.max_uses;
+      const applies = !coupon.applies_to || coupon.applies_to === productId;
 
-      if (!isExpired && !isExhausted && appliesToProduct) {
-        discountAmount =
-          coupon.coupon_type === 'percentage'
-            ? (plan.price * coupon.discount_value) / 100
-            : Math.min(coupon.discount_value, plan.price);
+      if (!startsInFuture && !expired && !exhausted && applies) {
+        const discountValue = Number(coupon.discount_value);
+        discountAmount = coupon.coupon_type === 'percentage'
+          ? Math.min(basePrice, Math.max(0, (basePrice * discountValue) / 100))
+          : Math.min(basePrice, Math.max(0, discountValue));
         appliedCouponId = coupon.id;
       }
     }
   }
 
-  const finalAmount = Math.max(0, plan.price - discountAmount);
+  const finalAmount = Number(Math.max(0, basePrice - discountAmount).toFixed(2));
+  if (finalAmount <= 0) {
+    return NextResponse.json(
+      { error: 'Zero-value orders require the free checkout flow and cannot be sent to Payoneer.' },
+      { status: 422 }
+    );
+  }
 
-  // ── 7. Create the order with status = 'pending_payment' ───────────────────
+  const createdAt = new Date().toISOString();
   const { data: order, error: orderError } = await supabase
     .from('orders')
     .insert({
@@ -137,7 +123,7 @@ export async function POST(request: NextRequest) {
       amount: finalAmount,
       currency,
       discount_amount: discountAmount,
-      provider_payment_ref: '', // populated by webhook after payment
+      provider_payment_ref: '',
       receipt_url: '',
       metadata: {
         provider: 'payoneer',
@@ -146,22 +132,19 @@ export async function POST(request: NextRequest) {
         product_name: product.name,
         billing_period: plan.billing_period,
       },
+      created_at: createdAt,
+      updated_at: createdAt,
     })
     .select('id')
     .single();
 
   if (orderError || !order) {
     console.error('[create-payoneer-session] Failed to create order:', orderError?.message);
-    return NextResponse.json(
-      { error: 'Failed to create order. Please try again.' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Failed to create order. Please try again.' }, { status: 500 });
   }
 
-  // ── 8. Create Payoneer checkout session (server-side) ─────────────────────
   const provider = getProvider('payoneer');
-
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://summeca1430.builtwithrocket.new';
+  const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL ?? 'https://summeca.com').replace(/\/$/, '');
 
   const sessionResult = await provider.createSession({
     orderId: order.id,
@@ -172,16 +155,16 @@ export async function POST(request: NextRequest) {
     productName: product.name,
     planName: plan.name,
     userId: user.id,
-    successUrl: `${siteUrl}/checkout/success?order_id=${order.id}`,
-    cancelUrl: `${siteUrl}/checkout/cancel?order_id=${order.id}`,
+    successUrl: `${siteUrl}/checkout/success?order_id=${encodeURIComponent(order.id)}`,
+    cancelUrl: `${siteUrl}/checkout/cancel?order_id=${encodeURIComponent(order.id)}`,
   });
 
   if (!sessionResult.success || !sessionResult.redirectUrl) {
-    // Mark the order as failed since we couldn't create the payment session
     await supabase
       .from('orders')
       .update({ status: 'failed', updated_at: new Date().toISOString() })
-      .eq('id', order.id);
+      .eq('id', order.id)
+      .eq('status', 'pending_payment');
 
     return NextResponse.json(
       { error: sessionResult.error ?? 'Failed to create payment session.' },
@@ -189,30 +172,31 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // ── 9. Store the provider payment reference ───────────────────────────────
   if (sessionResult.providerPaymentRef) {
-    await supabase
+    const { error: refError } = await supabase
       .from('orders')
       .update({
         provider_payment_ref: sessionResult.providerPaymentRef,
         updated_at: new Date().toISOString(),
       })
-      .eq('id', order.id);
+      .eq('id', order.id)
+      .eq('status', 'pending_payment');
+
+    if (refError) {
+      console.error('[create-payoneer-session] Failed to save provider ref:', refError.message);
+      return NextResponse.json({ error: 'Failed to finalize payment session.' }, { status: 500 });
+    }
   }
 
-  // ── 10. Send order confirmation email (server-side, fire-and-forget) ──────
   try {
-    const { data: authUser } = await supabase.auth.admin.getUserById(user.id);
-    const userEmail = authUser?.user?.email ?? '';
-
     const { data: userProfile } = await supabase
       .from('user_profiles')
       .select('full_name')
       .eq('id', user.id)
       .maybeSingle();
 
-    if (userEmail) {
-      await sendOrderConfirmation(userEmail, {
+    if (user.email) {
+      await sendOrderConfirmation(user.email, {
         customerName: userProfile?.full_name ?? '',
         orderId: order.id,
         productName: product.name,
@@ -220,16 +204,13 @@ export async function POST(request: NextRequest) {
         amount: Math.round(finalAmount * 100),
         currency,
         billingPeriod: plan.billing_period,
-        createdAt: new Date().toISOString(),
+        createdAt,
       });
     }
   } catch (emailErr) {
     console.warn('[create-payoneer-session] Order confirmation email failed (non-fatal):', emailErr);
   }
 
-  // ── 11. Return the hosted checkout URL to the client ──────────────────────
-  // The client will redirect the user to this URL.
-  // The URL is from Payoneer — it is safe to return to the client.
   return NextResponse.json({
     orderId: order.id,
     redirectUrl: sessionResult.redirectUrl,
