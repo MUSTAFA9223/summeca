@@ -20,30 +20,57 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const supabase = useMemo(() => createClient(), []);
 
   const getSiteUrl = () => {
-    if (process.env.NEXT_PUBLIC_SITE_URL) {
-      return process.env.NEXT_PUBLIC_SITE_URL;
-    }
+    // Client-side auth actions must use the domain the visitor is actually on.
+    // This avoids stale deployment environment values sending recovery links
+    // back to an old preview/Rocket URL.
     if (typeof window !== 'undefined') {
       return window.location.origin;
+    }
+    if (process.env.NEXT_PUBLIC_SITE_URL) {
+      return process.env.NEXT_PUBLIC_SITE_URL;
     }
     return 'https://summeca.com';
   };
 
   useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
+    const redirectRecoveryToResetPage = () => {
+      if (typeof window !== 'undefined' && window.location.pathname !== '/reset-password') {
+        window.location.replace('/reset-password');
+      }
+    };
 
-    // Listen for auth changes
+    const hasRecoveryMarkerInUrl = () => {
+      if (typeof window === 'undefined') return false;
+      const hash = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+      const search = new URLSearchParams(window.location.search);
+      return hash.get('type') === 'recovery' || search.get('type') === 'recovery';
+    };
+
+    // Subscribe before reading the initial session so PASSWORD_RECOVERY cannot
+    // be missed while Supabase is processing the recovery link.
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      setUser(session?.user ?? null);
+    } = supabase.auth.onAuthStateChange((event, nextSession) => {
+      setSession(nextSession);
+      setUser(nextSession?.user ?? null);
       setLoading(false);
+
+      if (event === 'PASSWORD_RECOVERY') {
+        redirectRecoveryToResetPage();
+      }
+    });
+
+    // Get initial session. If Supabase already consumed an implicit recovery
+    // URL before the listener fired, the URL marker plus a valid session is a
+    // safe fallback signal to open the password form.
+    supabase.auth.getSession().then(({ data: { session: initialSession } }) => {
+      setSession(initialSession);
+      setUser(initialSession?.user ?? null);
+      setLoading(false);
+
+      if (initialSession && hasRecoveryMarkerInUrl()) {
+        redirectRecoveryToResetPage();
+      }
     });
 
     return () => subscription.unsubscribe();
