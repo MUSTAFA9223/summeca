@@ -10,9 +10,7 @@ const AUTH_FLOW_MAX_AGE_MS = 60 * 60 * 1000;
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within AuthProvider');
-  }
+  if (!context) throw new Error('useAuth must be used within AuthProvider');
   return context;
 };
 
@@ -23,12 +21,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const supabase = useMemo(() => createClient(), []);
 
   const getSiteUrl = () => {
-    if (typeof window !== 'undefined') {
-      return window.location.origin;
-    }
-    if (process.env.NEXT_PUBLIC_SITE_URL) {
-      return process.env.NEXT_PUBLIC_SITE_URL;
-    }
+    if (typeof window !== 'undefined') return window.location.origin;
+    if (process.env.NEXT_PUBLIC_SITE_URL) return process.env.NEXT_PUBLIC_SITE_URL;
     return 'https://summeca.com';
   };
 
@@ -48,9 +42,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     };
 
     const clearMarker = (key: string) => {
-      if (typeof window !== 'undefined') {
-        window.localStorage.removeItem(key);
-      }
+      if (typeof window !== 'undefined') window.localStorage.removeItem(key);
     };
 
     const hasRecoveryMarkerInUrl = () => {
@@ -61,23 +53,24 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     };
 
     const handleStrayAuthCode = async () => {
-      if (typeof window === 'undefined' || window.location.pathname === '/auth/callback') {
-        return false;
-      }
+      if (typeof window === 'undefined' || window.location.pathname === '/auth/callback' || window.location.pathname === '/reset-password') return false;
 
       const url = new URL(window.location.href);
       const code = url.searchParams.get('code');
+      const flowId = url.searchParams.get('sb_flow_id');
       if (!code) return false;
 
-      const wasRecovery = hasRecentMarker(RECOVERY_PENDING_KEY) || window.location.pathname === '/reset-password';
+      const wasRecovery = hasRecentMarker(RECOVERY_PENDING_KEY);
       const wasSignup = hasRecentMarker(SIGNUP_PENDING_KEY);
-      const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+      const { data, error } = await supabase.auth.exchangeCodeForSession(
+        code,
+        flowId ? { flowId } : undefined,
+      );
 
-      if (!active || error || !data.session) {
-        return false;
-      }
+      if (!active || error || !data.session) return false;
 
       url.searchParams.delete('code');
+      url.searchParams.delete('sb_flow_id');
       window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
 
       if (wasRecovery) {
@@ -85,24 +78,19 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         redirectRecoveryToResetPage();
         return true;
       }
-
       if (wasSignup) {
         clearMarker(SIGNUP_PENDING_KEY);
         window.location.replace('/user-dashboard');
         return true;
       }
-
       return false;
     };
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((event, nextSession) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, nextSession) => {
       if (!active) return;
       setSession(nextSession);
       setUser(nextSession?.user ?? null);
       setLoading(false);
-
       if (event === 'PASSWORD_RECOVERY') {
         clearMarker(RECOVERY_PENDING_KEY);
         redirectRecoveryToResetPage();
@@ -111,13 +99,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     handleStrayAuthCode().then((handled) => {
       if (handled || !active) return;
-
       supabase.auth.getSession().then(({ data: { session: initialSession } }) => {
         if (!active) return;
         setSession(initialSession);
         setUser(initialSession?.user ?? null);
         setLoading(false);
-
         if (initialSession && (hasRecoveryMarkerInUrl() || hasRecentMarker(RECOVERY_PENDING_KEY))) {
           clearMarker(RECOVERY_PENDING_KEY);
           redirectRecoveryToResetPage();
@@ -131,24 +117,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     };
   }, [supabase]);
 
-  // Email/Password Sign Up
   const signUp = async (email: string, password: string, metadata: any = {}) => {
-    if (typeof window !== 'undefined') {
-      window.localStorage.setItem(SIGNUP_PENDING_KEY, String(Date.now()));
-    }
-
+    if (typeof window !== 'undefined') window.localStorage.setItem(SIGNUP_PENDING_KEY, String(Date.now()));
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        data: {
-          full_name: metadata?.fullName || '',
-          avatar_url: metadata?.avatarUrl || '',
-        },
+        data: { full_name: metadata?.fullName || '', avatar_url: metadata?.avatarUrl || '' },
         emailRedirectTo: `${getSiteUrl()}/auth/callback`,
       },
     });
-
     if (error) {
       if (typeof window !== 'undefined') window.localStorage.removeItem(SIGNUP_PENDING_KEY);
       throw error;
@@ -156,34 +134,22 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return data;
   };
 
-  // Email/Password Sign In
   const signIn = async (email: string, password: string) => {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) throw error;
     return data;
   };
 
-  // Sign Out
   const signOut = async () => {
     const { error } = await supabase.auth.signOut();
     if (error) throw error;
   };
 
-  // Reset Password (sends email)
   const resetPassword = async (email: string) => {
-    if (typeof window !== 'undefined') {
-      window.localStorage.setItem(RECOVERY_PENDING_KEY, String(Date.now()));
-    }
-
-    // Send recovery links directly to the reset page. The page exchanges the
-    // PKCE code (or accepts the recovery session) before allowing an update.
+    if (typeof window !== 'undefined') window.localStorage.setItem(RECOVERY_PENDING_KEY, String(Date.now()));
     const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${getSiteUrl()}/reset-password`,
     });
-
     if (error) {
       if (typeof window !== 'undefined') window.localStorage.removeItem(RECOVERY_PENDING_KEY);
       throw error;
@@ -191,36 +157,21 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return data;
   };
 
-  // Get Current User
   const getCurrentUser = async () => {
-    const {
-      data: { user },
-      error,
-    } = await supabase.auth.getUser();
+    const { data: { user }, error } = await supabase.auth.getUser();
     if (error) throw error;
     return user;
   };
 
-  // Check if Email is Verified
-  const isEmailVerified = () => {
-    return Boolean(user?.email_confirmed_at);
-  };
+  const isEmailVerified = () => Boolean(user?.email_confirmed_at);
 
-  // Get User Profile from Database
   const getUserProfile = async () => {
     if (!user) return null;
-    const { data, error } = await supabase
-      .from('user_profiles')
-      .select('*')
-      .eq('id', user.id)
-      .single();
-    if (error) {
-      return null;
-    }
+    const { data, error } = await supabase.from('user_profiles').select('*').eq('id', user.id).single();
+    if (error) return null;
     return data;
   };
 
-  // Update User Profile
   const updateProfile = async (updates: { full_name?: string; avatar_url?: string }) => {
     if (!user) throw new Error('Not authenticated');
     const { data, error } = await supabase.auth.updateUser({ data: updates });
@@ -228,19 +179,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return data;
   };
 
-  const value = {
-    user,
-    session,
-    loading,
-    signUp,
-    signIn,
-    signOut,
-    resetPassword,
-    getCurrentUser,
-    isEmailVerified,
-    getUserProfile,
-    updateProfile,
-  };
-
+  const value = { user, session, loading, signUp, signIn, signOut, resetPassword, getCurrentUser, isEmailVerified, getUserProfile, updateProfile };
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
