@@ -124,10 +124,14 @@ GRANT EXECUTE ON FUNCTION public.increment_ai_usage(UUID, INTEGER) TO service_ro
 
 -- -----------------------------------------------------------------------------
 -- 2. user_profiles — no public exposure of emails/system fields.
---    Users may read/update only their own row; privileged fields are trigger-guarded.
+--    The auth.users trigger creates profiles. Browser clients cannot INSERT or
+--    DELETE profile rows and therefore cannot bootstrap a privileged profile.
 -- -----------------------------------------------------------------------------
 DROP POLICY IF EXISTS "Public profiles are viewable by everyone." ON public.user_profiles;
 DROP POLICY IF EXISTS "Users can update own profile." ON public.user_profiles;
+DROP POLICY IF EXISTS "Users can insert own profile." ON public.user_profiles;
+DROP POLICY IF EXISTS "users_insert_own_user_profiles" ON public.user_profiles;
+DROP POLICY IF EXISTS "users_delete_own_user_profiles" ON public.user_profiles;
 DROP POLICY IF EXISTS "users_manage_own_user_profiles" ON public.user_profiles;
 DROP POLICY IF EXISTS "users_read_own_user_profiles" ON public.user_profiles;
 DROP POLICY IF EXISTS "users_update_own_user_profiles" ON public.user_profiles;
@@ -153,16 +157,17 @@ TO authenticated
 USING (public.is_admin())
 WITH CHECK (public.is_admin());
 
--- Existing INSERT policy may remain for auth bootstrap, but it cannot create
--- another user's profile because that policy is already constrained by auth.uid().
-
 -- -----------------------------------------------------------------------------
--- 3. orders — customers can read their orders and create pending orders only.
---    They cannot change payment/completion state themselves.
+-- 3. orders — customers can only read their own orders.
+--    All order creation/status changes go through trusted server routes so the
+--    browser cannot choose price, discount, provider metadata, or payment state.
 -- -----------------------------------------------------------------------------
 DROP POLICY IF EXISTS "users_manage_own_orders" ON public.orders;
 DROP POLICY IF EXISTS "users_read_own_orders" ON public.orders;
 DROP POLICY IF EXISTS "users_create_pending_orders" ON public.orders;
+DROP POLICY IF EXISTS "users_insert_own_orders" ON public.orders;
+DROP POLICY IF EXISTS "users_update_own_orders" ON public.orders;
+DROP POLICY IF EXISTS "users_delete_own_orders" ON public.orders;
 
 CREATE POLICY "users_read_own_orders"
 ON public.orders
@@ -170,20 +175,14 @@ FOR SELECT
 TO authenticated
 USING (user_id = auth.uid());
 
-CREATE POLICY "users_create_pending_orders"
-ON public.orders
-FOR INSERT
-TO authenticated
-WITH CHECK (
-  user_id = auth.uid()
-  AND status::text IN ('pending', 'pending_payment')
-);
-
 -- -----------------------------------------------------------------------------
 -- 4. subscriptions — entitlement changes are server/admin only.
 -- -----------------------------------------------------------------------------
 DROP POLICY IF EXISTS "users_manage_own_subscriptions" ON public.subscriptions;
 DROP POLICY IF EXISTS "users_read_own_subscriptions" ON public.subscriptions;
+DROP POLICY IF EXISTS "users_insert_own_subscriptions" ON public.subscriptions;
+DROP POLICY IF EXISTS "users_update_own_subscriptions" ON public.subscriptions;
+DROP POLICY IF EXISTS "users_delete_own_subscriptions" ON public.subscriptions;
 
 CREATE POLICY "users_read_own_subscriptions"
 ON public.subscriptions
@@ -196,6 +195,9 @@ USING (user_id = auth.uid());
 -- -----------------------------------------------------------------------------
 DROP POLICY IF EXISTS "users_manage_own_downloads" ON public.downloads;
 DROP POLICY IF EXISTS "users_read_own_downloads" ON public.downloads;
+DROP POLICY IF EXISTS "users_insert_own_downloads" ON public.downloads;
+DROP POLICY IF EXISTS "users_update_own_downloads" ON public.downloads;
+DROP POLICY IF EXISTS "users_delete_own_downloads" ON public.downloads;
 
 CREATE POLICY "users_read_own_downloads"
 ON public.downloads
@@ -205,7 +207,7 @@ USING (user_id = auth.uid());
 
 -- -----------------------------------------------------------------------------
 -- 6. payment_events — customers may only read events for their own orders.
---    service_role bypasses RLS, so no authenticated INSERT policy is required.
+--    service_role bypasses RLS, so no authenticated write policy is required.
 -- -----------------------------------------------------------------------------
 DROP POLICY IF EXISTS "service_insert_payment_events" ON public.payment_events;
 DROP POLICY IF EXISTS "users_insert_own_payment_events" ON public.payment_events;
