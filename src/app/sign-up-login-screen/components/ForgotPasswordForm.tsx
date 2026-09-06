@@ -45,7 +45,7 @@ export default function ForgotPasswordForm() {
         </div>
         <h2 className="text-xl font-700 text-foreground mb-2">Check your inbox</h2>
         <p className="text-sm text-muted-foreground leading-relaxed max-w-xs mx-auto">
-          We sent a password reset link to{' '}
+          We sent a secure password reset link to{' '}
           <span className="font-600 text-foreground">{submittedEmail}</span>.
           Check your spam folder if it doesn&apos;t arrive within 2 minutes.
         </p>
