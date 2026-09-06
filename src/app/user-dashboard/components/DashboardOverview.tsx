@@ -3,431 +3,60 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
-import {
-  ArrowRight,
-  Cpu,
-  CreditCard,
-  Download,
-  Loader2,
-  Package,
-  RefreshCw,
-  ShoppingBag,
-  Sparkles,
-  WandSparkles,
-} from 'lucide-react';
+import { ArrowRight, Cpu, CreditCard, Download, Loader2, Package, RefreshCw, ShoppingBag, Sparkles, WandSparkles } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 
-const Animated3DBackground = dynamic(
-  () => import('@/components/ui/Animated3DBackground'),
-  { ssr: false }
-);
+const Animated3DBackground = dynamic(() => import('@/components/ui/Animated3DBackground'), { ssr: false });
 
-type DashboardOrder = {
-  id: string;
-  product_id: string | null;
-  created_at: string;
-  amount: number | string | null;
-  currency: string | null;
-  status: string;
-  products: { name?: string | null } | null;
-  product_plans: { name?: string | null } | null;
-};
+type DashboardOrder = { id:string; product_id:string|null; created_at:string; amount:number|string|null; currency:string|null; status:string; products:{name?:string|null}|null; product_plans:{name?:string|null}|null };
+type DashboardSubscription = { id:string; product_id:string|null; status:string; current_period_end:string|null; products:{name?:string|null}|null; product_plans:{name?:string|null;price?:number|string|null;currency?:string|null;billing_period?:string|null}|null };
+type DashboardDownload = { id:string; product_id:string|null; file_name:string|null; file_size:number|null; status:string; download_count:number|null; created_at:string; products:{name?:string|null}|null };
+type DashboardAiUsage = { requests_count:number|null; tokens_used:number|null; monthly_limit:number|null; period_start:string; period_end:string };
+type DashboardData = { orders:DashboardOrder[]; subscriptions:DashboardSubscription[]; downloads:DashboardDownload[]; aiUsage:DashboardAiUsage|null };
+const emptyData:DashboardData={orders:[],subscriptions:[],downloads:[],aiUsage:null};
 
-type DashboardSubscription = {
-  id: string;
-  product_id: string | null;
-  status: string;
-  current_period_end: string | null;
-  products: { name?: string | null } | null;
-  product_plans: {
-    name?: string | null;
-    price?: number | string | null;
-    currency?: string | null;
-    billing_period?: string | null;
-  } | null;
-};
+function currency(value:number,code='USD'){try{return new Intl.NumberFormat('en-US',{style:'currency',currency:code||'USD'}).format(value)}catch{return `$${value.toFixed(2)}`}}
+function dateLabel(value:string|null){if(!value)return '—';return new Date(value).toLocaleDateString('en-US',{year:'numeric',month:'short',day:'numeric'})}
+function unwrapRelation<T>(value:T|T[]|null|undefined):T|null{if(Array.isArray(value))return value[0]??null;return value??null}
 
-type DashboardDownload = {
-  id: string;
-  product_id: string | null;
-  file_name: string | null;
-  file_size: number | null;
-  status: string;
-  download_count: number | null;
-  created_at: string;
-  products: { name?: string | null } | null;
-};
-
-type DashboardAiUsage = {
-  requests_count: number | null;
-  tokens_used: number | null;
-  monthly_limit: number | null;
-  period_start: string;
-  period_end: string;
-};
-
-type DashboardData = {
-  orders: DashboardOrder[];
-  subscriptions: DashboardSubscription[];
-  downloads: DashboardDownload[];
-  aiUsage: DashboardAiUsage | null;
-};
-
-const emptyData: DashboardData = {
-  orders: [],
-  subscriptions: [],
-  downloads: [],
-  aiUsage: null,
-};
-
-function currency(value: number, code = 'USD') {
-  try {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: code || 'USD',
-    }).format(value);
-  } catch {
-    return `$${value.toFixed(2)}`;
-  }
-}
-
-function dateLabel(value: string | null) {
-  if (!value) return '—';
-  return new Date(value).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  });
-}
-
-function unwrapRelation<T>(value: T | T[] | null | undefined): T | null {
-  if (Array.isArray(value)) return value[0] ?? null;
-  return value ?? null;
-}
-
-export default function DashboardOverview() {
-  const { user } = useAuth();
-  const supabase = useMemo(() => createClient(), []);
-  const [data, setData] = useState<DashboardData>(emptyData);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const displayName =
-    user?.user_metadata?.full_name ||
-    user?.email?.split('@')?.[0] ||
-    'there';
-
-  const loadDashboard = useCallback(async () => {
-    if (!user?.id) {
-      setData(emptyData);
-      setLoading(false);
-      return;
-    }
-
-    setLoading(true);
-    setError(null);
-
-    try {
-      const currentMonth = new Date().toISOString().slice(0, 7) + '-01';
-
-      const [ordersResult, subscriptionsResult, downloadsResult, aiUsageResult] = await Promise.all([
-        supabase
-          .from('orders')
-          .select(`
-            id,
-            product_id,
-            created_at,
-            amount,
-            currency,
-            status,
-            products ( name ),
-            product_plans ( name )
-          `)
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: false })
-          .limit(20),
-        supabase
-          .from('subscriptions')
-          .select(`
-            id,
-            product_id,
-            status,
-            current_period_end,
-            products ( name ),
-            product_plans ( name, price, currency, billing_period )
-          `)
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: false })
-          .limit(20),
-        supabase
-          .from('downloads')
-          .select(`
-            id,
-            product_id,
-            file_name,
-            file_size,
-            status,
-            download_count,
-            created_at,
-            products ( name )
-          `)
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: false })
-          .limit(20),
-        supabase
-          .from('ai_usage')
-          .select('requests_count, tokens_used, monthly_limit, period_start, period_end')
-          .eq('user_id', user.id)
-          .gte('period_start', currentMonth)
-          .order('period_start', { ascending: false })
-          .limit(1)
-          .maybeSingle(),
-      ]);
-
-      const firstError =
-        ordersResult.error ||
-        subscriptionsResult.error ||
-        downloadsResult.error ||
-        aiUsageResult.error;
-
-      if (firstError) throw firstError;
-
-      const orders = (ordersResult.data ?? []).map((row: any) => ({
-        ...row,
-        products: unwrapRelation(row.products),
-        product_plans: unwrapRelation(row.product_plans),
-      })) as DashboardOrder[];
-
-      const subscriptions = (subscriptionsResult.data ?? []).map((row: any) => ({
-        ...row,
-        products: unwrapRelation(row.products),
-        product_plans: unwrapRelation(row.product_plans),
-      })) as DashboardSubscription[];
-
-      const downloads = (downloadsResult.data ?? []).map((row: any) => ({
-        ...row,
-        products: unwrapRelation(row.products),
-      })) as DashboardDownload[];
-
-      setData({
-        orders,
-        subscriptions,
-        downloads,
-        aiUsage: (aiUsageResult.data as DashboardAiUsage | null) ?? null,
-      });
-    } catch (loadError: unknown) {
-      setData(emptyData);
-      setError(loadError instanceof Error ? loadError.message : 'Unable to load your account data.');
-    } finally {
-      setLoading(false);
-    }
-  }, [supabase, user?.id]);
-
-  useEffect(() => {
-    loadDashboard();
-  }, [loadDashboard]);
-
-  const completedOrders = data.orders.filter((order) => order.status === 'completed');
-  const totalSpend = completedOrders.reduce((sum, order) => sum + Number(order.amount || 0), 0);
-  const activeSubscriptions = data.subscriptions.filter((sub) =>
-    ['active', 'trialing'].includes(sub.status)
-  );
-  const availableDownloads = data.downloads.filter((item) => item.status === 'available');
-  const ownedProductIds = new Set<string>();
-  completedOrders.forEach((order) => order.product_id && ownedProductIds.add(order.product_id));
-  activeSubscriptions.forEach((sub) => sub.product_id && ownedProductIds.add(sub.product_id));
-
-  const aiRequests = Number(data.aiUsage?.requests_count || 0);
-  const aiLimit = Number(data.aiUsage?.monthly_limit || 0);
-  const aiProgress = aiLimit > 0 ? Math.min(100, Math.round((aiRequests / aiLimit) * 100)) : 0;
-
-  const kpis = [
-    {
-      label: 'Active Products',
-      value: ownedProductIds.size,
-      subtext: 'Purchased or currently subscribed',
-      icon: Package,
-    },
-    {
-      label: 'AI Requests This Month',
-      value: aiRequests,
-      subtext: aiLimit > 0 ? `${aiRequests.toLocaleString()} of ${aiLimit.toLocaleString()} used` : 'No AI usage recorded',
-      icon: WandSparkles,
-    },
-    {
-      label: 'Total Spend',
-      value: currency(totalSpend, completedOrders[0]?.currency || 'USD'),
-      subtext: 'Completed orders only',
-      icon: CreditCard,
-    },
-    {
-      label: 'Available Downloads',
-      value: availableDownloads.length,
-      subtext: 'Files currently available to this account',
-      icon: Download,
-    },
-  ];
-
-  return (
-    <div className="space-y-7">
-      <div
-        className="relative overflow-hidden rounded-2xl border border-primary/10 p-6"
-        style={{ background: 'linear-gradient(135deg, #f0fdfa 0%, #ecfeff 50%, #f0f9ff 100%)' }}
-      >
-        <Animated3DBackground variant="subtle" />
-        <div className="absolute top-0 right-0 w-64 h-64 rounded-full bg-primary/5 blur-3xl pointer-events-none" />
-        <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2 mb-1.5">
-              <div className="w-6 h-6 rounded-lg bg-gradient-teal flex items-center justify-center">
-                <Cpu size={12} className="text-white" />
-              </div>
-              <span className="text-xs font-600 text-primary uppercase tracking-wide">SUMMECA Dashboard</span>
-            </div>
-            <h1 className="text-2xl font-700 text-foreground">
-              Welcome back, <span className="text-gradient-primary">{displayName}</span>
-            </h1>
-            <p className="text-sm text-muted-foreground mt-0.5">
-              This dashboard shows only data linked to your signed-in account.
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={loadDashboard}
-              disabled={loading}
-              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-border bg-white text-xs font-600 text-muted-foreground hover:text-foreground disabled:opacity-60"
-            >
-              <RefreshCw size={12} className={loading ? 'animate-spin' : ''} />
-              Refresh
-            </button>
-            <Link href="/products" className="hidden sm:flex items-center gap-1.5 btn-primary text-xs px-3.5 py-2">
-              <Sparkles size={12} />
-              Explore Products
-              <ArrowRight size={11} />
-            </Link>
-          </div>
-        </div>
-      </div>
-
-      {error && (
-        <div className="rounded-xl border border-danger/20 bg-danger/5 px-4 py-3 text-sm text-danger">
-          {error}
-        </div>
-      )}
-
-      {loading ? (
-        <div className="min-h-[320px] flex items-center justify-center text-muted-foreground">
-          <Loader2 size={20} className="animate-spin mr-2" />
-          Loading your account data...
-        </div>
-      ) : (
-        <>
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-            {kpis.map((kpi) => (
-              <div key={kpi.label} className="rounded-2xl border border-border bg-white p-5">
-                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center mb-4">
-                  <kpi.icon size={18} className="text-primary" />
-                </div>
-                <p className="text-xs font-600 text-muted-foreground uppercase tracking-wide">{kpi.label}</p>
-                <p className="text-3xl font-800 text-foreground mt-1 tabular-nums">{kpi.value}</p>
-                <p className="text-xs text-muted-foreground mt-2">{kpi.subtext}</p>
-                {kpi.label === 'AI Requests This Month' && aiLimit > 0 && (
-                  <div className="h-1.5 rounded-full bg-secondary overflow-hidden mt-3">
-                    <div className="h-full bg-primary" style={{ width: `${aiProgress}%` }} />
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-            <section className="bg-card border border-border rounded-2xl overflow-hidden">
-              <div className="flex items-center justify-between px-5 py-4 border-b border-border">
-                <h2 className="text-sm font-700 text-foreground">Recent Orders</h2>
-                <Link href="/user-dashboard/orders" className="text-xs text-primary font-600">View all →</Link>
-              </div>
-              {data.orders.length === 0 ? (
-                <div className="py-12 text-center">
-                  <ShoppingBag size={28} className="mx-auto text-muted-foreground/40 mb-2" />
-                  <p className="text-sm font-600 text-foreground">No orders yet</p>
-                  <p className="text-xs text-muted-foreground mt-1">Purchases for this account will appear here.</p>
-                </div>
-              ) : (
-                <div className="divide-y divide-border">
-                  {data.orders.slice(0, 5).map((order) => (
-                    <div key={order.id} className="px-5 py-3 flex items-center justify-between gap-4">
-                      <div className="min-w-0">
-                        <p className="text-sm font-600 text-foreground truncate">{order.products?.name || 'Product'}</p>
-                        <p className="text-xs text-muted-foreground">{order.product_plans?.name || 'Order'} · {dateLabel(order.created_at)}</p>
-                      </div>
-                      <div className="text-right flex-shrink-0">
-                        <p className="text-sm font-700 text-foreground">{currency(Number(order.amount || 0), order.currency || 'USD')}</p>
-                        <p className="text-xs text-muted-foreground capitalize">{order.status.replaceAll('_', ' ')}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </section>
-
-            <section className="bg-card border border-border rounded-2xl overflow-hidden">
-              <div className="flex items-center justify-between px-5 py-4 border-b border-border">
-                <h2 className="text-sm font-700 text-foreground">Active Subscriptions</h2>
-                <Link href="/user-dashboard/subscriptions" className="text-xs text-primary font-600">Manage all →</Link>
-              </div>
-              {activeSubscriptions.length === 0 ? (
-                <div className="py-12 text-center">
-                  <CreditCard size={28} className="mx-auto text-muted-foreground/40 mb-2" />
-                  <p className="text-sm font-600 text-foreground">No active subscriptions</p>
-                  <p className="text-xs text-muted-foreground mt-1">Only subscriptions owned by this account are shown.</p>
-                </div>
-              ) : (
-                <div className="divide-y divide-border">
-                  {activeSubscriptions.slice(0, 5).map((sub) => (
-                    <div key={sub.id} className="px-5 py-3 flex items-center justify-between gap-4">
-                      <div className="min-w-0">
-                        <p className="text-sm font-600 text-foreground truncate">{sub.products?.name || 'Subscription'}</p>
-                        <p className="text-xs text-muted-foreground">{sub.product_plans?.name || 'Plan'}</p>
-                      </div>
-                      <div className="text-right flex-shrink-0">
-                        <p className="text-xs font-600 text-success capitalize">{sub.status}</p>
-                        <p className="text-xs text-muted-foreground">Renews {dateLabel(sub.current_period_end)}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </section>
-          </div>
-
-          <section className="bg-card border border-border rounded-2xl overflow-hidden">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-border">
-              <h2 className="text-sm font-700 text-foreground">Available Downloads</h2>
-              <Link href="/user-dashboard/downloads" className="text-xs text-primary font-600">All downloads →</Link>
-            </div>
-            {availableDownloads.length === 0 ? (
-              <div className="py-12 text-center">
-                <Download size={28} className="mx-auto text-muted-foreground/40 mb-2" />
-                <p className="text-sm font-600 text-foreground">No downloads available</p>
-                <p className="text-xs text-muted-foreground mt-1">Purchased files for this account will appear here.</p>
-              </div>
-            ) : (
-              <div className="divide-y divide-border">
-                {availableDownloads.slice(0, 5).map((item) => (
-                  <div key={item.id} className="px-5 py-3 flex items-center justify-between gap-4">
-                    <div className="min-w-0">
-                      <p className="text-sm font-600 text-foreground truncate">{item.products?.name || item.file_name || 'Download'}</p>
-                      <p className="text-xs text-muted-foreground truncate">{item.file_name || 'File'} · {item.download_count || 0} downloads</p>
-                    </div>
-                    <span className="text-xs font-600 text-success capitalize">{item.status}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </section>
-        </>
-      )}
-    </div>
-  );
+export default function DashboardOverview(){
+ const {user}=useAuth(); const supabase=useMemo(()=>createClient(),[]); const [data,setData]=useState<DashboardData>(emptyData); const [loading,setLoading]=useState(true); const [error,setError]=useState<string|null>(null);
+ const displayName=user?.user_metadata?.full_name||user?.email?.split('@')?.[0]||'there';
+ const loadDashboard=useCallback(async()=>{
+  if(!user?.id){setData(emptyData);setLoading(false);return}
+  setLoading(true);setError(null);
+  const currentMonth=new Date().toISOString().slice(0,7)+'-01';
+  const [ordersResult,subscriptionsResult,downloadsResult,aiUsageResult]=await Promise.all([
+   supabase.from('orders').select('id, product_id, created_at, amount, currency, status, products ( name ), product_plans ( name )').eq('user_id',user.id).order('created_at',{ascending:false}).limit(20),
+   supabase.from('subscriptions').select('id, product_id, status, current_period_end, products ( name ), product_plans ( name, price, currency, billing_period )').eq('user_id',user.id).order('created_at',{ascending:false}).limit(20),
+   supabase.from('downloads').select('id, product_id, file_name, file_size, status, download_count, created_at, products ( name )').eq('user_id',user.id).order('created_at',{ascending:false}).limit(20),
+   supabase.from('ai_usage').select('requests_count, tokens_used, monthly_limit, period_start, period_end').eq('user_id',user.id).gte('period_start',currentMonth).order('period_start',{ascending:false}).limit(1).maybeSingle(),
+  ]);
+  // Each section is independent: a denied/missing optional relation must not erase
+  // valid account data from the other sections.
+  const orders=ordersResult.error?[]:(ordersResult.data??[]).map((row:any)=>({...row,products:unwrapRelation(row.products),product_plans:unwrapRelation(row.product_plans)})) as DashboardOrder[];
+  const subscriptions=subscriptionsResult.error?[]:(subscriptionsResult.data??[]).map((row:any)=>({...row,products:unwrapRelation(row.products),product_plans:unwrapRelation(row.product_plans)})) as DashboardSubscription[];
+  const downloads=downloadsResult.error?[]:(downloadsResult.data??[]).map((row:any)=>({...row,products:unwrapRelation(row.products)})) as DashboardDownload[];
+  const aiUsage=aiUsageResult.error?null:(aiUsageResult.data as DashboardAiUsage|null)??null;
+  setData({orders,subscriptions,downloads,aiUsage});
+  const failures=[ordersResult.error&&'orders',subscriptionsResult.error&&'subscriptions',downloadsResult.error&&'downloads',aiUsageResult.error&&'AI usage'].filter(Boolean);
+  // Empty new accounts are valid. Only show a non-blocking message when every core
+  // account query failed; never replace the dashboard with demo/fallback data.
+  if(failures.length>=3) setError('Some account data is temporarily unavailable. Please refresh in a moment.');
+  setLoading(false);
+ },[supabase,user?.id]);
+ useEffect(()=>{loadDashboard()},[loadDashboard]);
+ const completedOrders=data.orders.filter(o=>o.status==='completed'); const totalSpend=completedOrders.reduce((s,o)=>s+Number(o.amount||0),0); const activeSubscriptions=data.subscriptions.filter(s=>['active','trialing'].includes(s.status)); const availableDownloads=data.downloads.filter(i=>i.status==='available'); const ownedProductIds=new Set<string>(); completedOrders.forEach(o=>o.product_id&&ownedProductIds.add(o.product_id));activeSubscriptions.forEach(s=>s.product_id&&ownedProductIds.add(s.product_id)); const aiRequests=Number(data.aiUsage?.requests_count||0);const aiLimit=Number(data.aiUsage?.monthly_limit||0);const aiProgress=aiLimit>0?Math.min(100,Math.round(aiRequests/aiLimit*100)):0;
+ const kpis=[{label:'Active Products',value:ownedProductIds.size,subtext:'Purchased or currently subscribed',icon:Package},{label:'AI Requests This Month',value:aiRequests,subtext:aiLimit>0?`${aiRequests.toLocaleString()} of ${aiLimit.toLocaleString()} used`:'No AI usage recorded',icon:WandSparkles},{label:'Total Spend',value:currency(totalSpend,completedOrders[0]?.currency||'USD'),subtext:'Completed orders only',icon:CreditCard},{label:'Available Downloads',value:availableDownloads.length,subtext:'Files currently available to this account',icon:Download}];
+ return <div className="space-y-7">
+  <div className="relative overflow-hidden rounded-2xl border border-primary/10 p-6" style={{background:'linear-gradient(135deg, #f0fdfa 0%, #ecfeff 50%, #f0f9ff 100%)'}}><Animated3DBackground variant="subtle"/><div className="absolute top-0 right-0 w-64 h-64 rounded-full bg-primary/5 blur-3xl pointer-events-none"/><div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4"><div><div className="flex items-center gap-2 mb-1.5"><div className="w-6 h-6 rounded-lg bg-gradient-teal flex items-center justify-center"><Cpu size={12} className="text-white"/></div><span className="text-xs font-600 text-primary uppercase tracking-wide">SUMMECA Dashboard</span></div><h1 className="text-2xl font-700 text-foreground">Welcome back, <span className="text-gradient-primary">{displayName}</span></h1><p className="text-sm text-muted-foreground mt-0.5">This dashboard shows only data linked to your signed-in account.</p></div><div className="flex items-center gap-2"><button onClick={loadDashboard} disabled={loading} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-border bg-white text-xs font-600 text-muted-foreground hover:text-foreground disabled:opacity-60"><RefreshCw size={12} className={loading?'animate-spin':''}/>Refresh</button><Link href="/products" className="hidden sm:flex items-center gap-1.5 btn-primary text-xs px-3.5 py-2"><Sparkles size={12}/>Explore Products<ArrowRight size={11}/></Link></div></div></div>
+  {error&&<div className="rounded-xl border border-warning/20 bg-warning/5 px-4 py-3 text-sm text-muted-foreground">{error}</div>}
+  {loading?<div className="min-h-[320px] flex items-center justify-center text-muted-foreground"><Loader2 size={20} className="animate-spin mr-2"/>Loading your account data...</div>:<>
+   <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">{kpis.map(k=><div key={k.label} className="rounded-2xl border border-border bg-white p-5"><div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center mb-4"><k.icon size={18} className="text-primary"/></div><p className="text-xs font-600 text-muted-foreground uppercase tracking-wide">{k.label}</p><p className="text-3xl font-800 text-foreground mt-1 tabular-nums">{k.value}</p><p className="text-xs text-muted-foreground mt-2">{k.subtext}</p>{k.label==='AI Requests This Month'&&aiLimit>0&&<div className="h-1.5 rounded-full bg-secondary overflow-hidden mt-3"><div className="h-full bg-primary" style={{width:`${aiProgress}%`}}/></div>}</div>)}</div>
+   <div className="grid grid-cols-1 xl:grid-cols-2 gap-6"><section className="bg-card border border-border rounded-2xl overflow-hidden"><div className="flex items-center justify-between px-5 py-4 border-b border-border"><h2 className="text-sm font-700">Recent Orders</h2><Link href="/user-dashboard/orders" className="text-xs text-primary font-600">View all →</Link></div>{data.orders.length===0?<div className="py-12 text-center"><ShoppingBag size={28} className="mx-auto text-muted-foreground/40 mb-2"/><p className="text-sm font-600">No orders yet</p><p className="text-xs text-muted-foreground mt-1">Purchases for this account will appear here.</p></div>:<div className="divide-y divide-border">{data.orders.slice(0,5).map(o=><div key={o.id} className="px-5 py-3 flex justify-between gap-4"><div className="min-w-0"><p className="text-sm font-600 truncate">{o.products?.name||'Product'}</p><p className="text-xs text-muted-foreground">{o.product_plans?.name||'Order'} · {dateLabel(o.created_at)}</p></div><div className="text-right"><p className="text-sm font-700">{currency(Number(o.amount||0),o.currency||'USD')}</p><p className="text-xs text-muted-foreground capitalize">{o.status.replaceAll('_',' ')}</p></div></div>)}</div>}</section>
+   <section className="bg-card border border-border rounded-2xl overflow-hidden"><div className="flex items-center justify-between px-5 py-4 border-b border-border"><h2 className="text-sm font-700">Active Subscriptions</h2><Link href="/user-dashboard/subscriptions" className="text-xs text-primary font-600">Manage all →</Link></div>{activeSubscriptions.length===0?<div className="py-12 text-center"><CreditCard size={28} className="mx-auto text-muted-foreground/40 mb-2"/><p className="text-sm font-600">No active subscriptions</p><p className="text-xs text-muted-foreground mt-1">Only subscriptions owned by this account are shown.</p></div>:<div className="divide-y divide-border">{activeSubscriptions.slice(0,5).map(s=><div key={s.id} className="px-5 py-3 flex justify-between gap-4"><div><p className="text-sm font-600">{s.products?.name||'Subscription'}</p><p className="text-xs text-muted-foreground">{s.product_plans?.name||'Plan'}</p></div><div className="text-right"><p className="text-xs font-600 text-success capitalize">{s.status}</p><p className="text-xs text-muted-foreground">Renews {dateLabel(s.current_period_end)}</p></div></div>)}</div>}</section></div>
+   <section className="bg-card border border-border rounded-2xl overflow-hidden"><div className="flex items-center justify-between px-5 py-4 border-b border-border"><h2 className="text-sm font-700">Available Downloads</h2><Link href="/user-dashboard/downloads" className="text-xs text-primary font-600">All downloads →</Link></div>{availableDownloads.length===0?<div className="py-12 text-center"><Download size={28} className="mx-auto text-muted-foreground/40 mb-2"/><p className="text-sm font-600">No downloads available</p><p className="text-xs text-muted-foreground mt-1">Purchased files for this account will appear here.</p></div>:<div className="divide-y divide-border">{availableDownloads.slice(0,5).map(i=><div key={i.id} className="px-5 py-3 flex justify-between gap-4"><div><p className="text-sm font-600">{i.products?.name||i.file_name||'Download'}</p><p className="text-xs text-muted-foreground">{i.file_name||'File'} · {i.download_count||0} downloads</p></div><span className="text-xs font-600 text-success capitalize">{i.status}</span></div>)}</div>}</section>
+  </>}
+ </div>
 }
