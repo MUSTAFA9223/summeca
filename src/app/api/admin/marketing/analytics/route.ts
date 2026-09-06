@@ -1,43 +1,30 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-
-async function requireAdmin(supabase: Awaited<ReturnType<typeof createClient>>) {
-  const { data: { user }, error } = await supabase.auth.getUser();
-  if (error || !user) return null;
-  const meta = user.user_metadata ?? {};
-  const appMeta = user.app_metadata ?? {};
-  if (meta.role !== 'admin' && appMeta.role !== 'admin') return null;
-  return user;
-}
+import { requireAdmin } from '@/lib/auth/requireAdmin';
 
 export async function GET() {
   const supabase = await createClient();
   const user = await requireAdmin(supabase);
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-  // Total campaigns
   const { count: totalCampaigns } = await supabase
     .from('marketing_campaigns')
     .select('*', { count: 'exact', head: true });
 
-  // Total logs (sent)
   const { count: totalSent } = await supabase
     .from('campaign_logs')
     .select('*', { count: 'exact', head: true });
 
-  // Opened
   const { count: totalOpened } = await supabase
     .from('campaign_logs')
     .select('*', { count: 'exact', head: true })
     .not('opened_at', 'is', null);
 
-  // Clicked
   const { count: totalClicked } = await supabase
     .from('campaign_logs')
     .select('*', { count: 'exact', head: true })
     .not('clicked_at', 'is', null);
 
-  // Recent campaigns with log counts
   const { data: recentCampaigns } = await supabase
     .from('marketing_campaigns')
     .select('id, name, campaign_type, status, target_type, created_at')
