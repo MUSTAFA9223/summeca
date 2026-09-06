@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { Eye, EyeOff, Copy, Check } from 'lucide-react';
+import { Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
@@ -18,40 +18,20 @@ interface LoginFormProps {
   onSwitchToSignup: () => void;
 }
 
-const DEMO_CREDENTIALS = {
-  email: 'alex.morgan@summeca.dev',
-  password: 'SummecaDemo2026!',
-};
-
 export default function LoginForm({ onForgotPassword, onSwitchToSignup }: LoginFormProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [copiedField, setCopiedField] = useState<string | null>(null);
   const { signIn } = useAuth();
   const router = useRouter();
 
   const {
     register,
     handleSubmit,
-    setValue,
     formState: { errors },
     setError,
   } = useForm<LoginFormData>({
     defaultValues: { email: '', password: '', rememberMe: false },
   });
-
-  const handleCopy = (field: 'email' | 'password') => {
-    const value = field === 'email' ? DEMO_CREDENTIALS.email : DEMO_CREDENTIALS.password;
-    navigator.clipboard.writeText(value).then(() => {
-      setCopiedField(field);
-      setTimeout(() => setCopiedField(null), 2000);
-    });
-  };
-
-  const fillDemo = () => {
-    setValue('email', DEMO_CREDENTIALS.email);
-    setValue('password', DEMO_CREDENTIALS.password);
-  };
 
   const onSubmit = async (data: LoginFormData) => {
     setIsLoading(true);
@@ -203,43 +183,6 @@ export default function LoginForm({ onForgotPassword, onSwitchToSignup }: LoginF
           Sign up free
         </button>
       </p>
-
-      {/* Demo credentials */}
-      <div className="mt-6 p-4 rounded-xl bg-primary/5 border border-primary/20">
-        <div className="flex items-center justify-between mb-3">
-          <p className="text-xs font-700 text-primary uppercase tracking-wide">Demo Account</p>
-          <button
-            onClick={fillDemo}
-            className="text-xs font-600 text-primary hover:text-primary/80 px-2.5 py-1 rounded-lg bg-primary/10 hover:bg-primary/20 transition-all duration-150"
-          >
-            Auto-fill
-          </button>
-        </div>
-        <div className="space-y-2">
-          {[
-            { label: 'Email', value: DEMO_CREDENTIALS.email, field: 'email' as const },
-            { label: 'Password', value: DEMO_CREDENTIALS.password, field: 'password' as const },
-          ].map(({ label, value, field }) => (
-            <div key={`demo-${field}`} className="flex items-center justify-between gap-2">
-              <div className="flex-1 min-w-0">
-                <span className="text-xs text-muted-foreground">{label}: </span>
-                <span className="text-xs font-mono font-600 text-foreground truncate">{value}</span>
-              </div>
-              <button
-                onClick={() => handleCopy(field)}
-                className="flex-shrink-0 w-6 h-6 rounded-md bg-primary/10 flex items-center justify-center hover:bg-primary/20 transition-all duration-150"
-                aria-label={`Copy ${label}`}
-              >
-                {copiedField === field ? (
-                  <Check size={11} className="text-success" />
-                ) : (
-                  <Copy size={11} className="text-primary" />
-                )}
-              </button>
-            </div>
-          ))}
-        </div>
-      </div>
     </div>
   );
 }
