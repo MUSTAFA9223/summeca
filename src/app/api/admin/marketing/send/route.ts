@@ -1,16 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { requireAdmin } from '@/lib/auth/requireAdmin';
 
-async function requireAdmin(supabase: Awaited<ReturnType<typeof createClient>>) {
-  const { data: { user }, error } = await supabase.auth.getUser();
-  if (error || !user) return null;
-  const meta = user.user_metadata ?? {};
-  const appMeta = user.app_metadata ?? {};
-  if (meta.role !== 'admin' && appMeta.role !== 'admin') return null;
-  return user;
-}
+const ALLOWED_SEGMENTS = new Set(['all', 'new_customers', 'subscription_users', 'trial_users']);
 
-// Segment → SQL filter mapping
 function buildSegmentFilter(supabase: Awaited<ReturnType<typeof createClient>>, segment: string) {
   const base = supabase.from('user_profiles').select('id, email, full_name');
   switch (segment) {
@@ -28,17 +21,23 @@ function buildSegmentFilter(supabase: Awaited<ReturnType<typeof createClient>>, 
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
   const user = await requireAdmin(supabase);
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
   let body: Record<string, unknown>;
-  try { body = await request.json(); } catch {
+  try {
+    body = await request.json();
+  } catch {
     return NextResponse.json({ error: 'Invalid body' }, { status: 400 });
   }
 
-  const { campaign_id, segment } = body as { campaign_id: string; segment: string };
+  const { campaign_id, segment } = body as { campaign_id?: string; segment?: string };
   if (!campaign_id) return NextResponse.json({ error: 'campaign_id is required' }, { status: 400 });
 
-  // Fetch campaign
+  const safeSegment = segment ?? 'all';
+  if (!ALLOWED_SEGMENTS.has(safeSegment)) {
+    return NextResponse.json({ error: 'Invalid segment' }, { status: 400 });
+  }
+
   const { data: campaign, error: campErr } = await supabase
     .from('marketing_campaigns')
     .select('*')
@@ -47,44 +46,40 @@ export async function POST(request: NextRequest) {
 
   if (campErr || !campaign) return NextResponse.json({ error: 'Campaign not found' }, { status: 404 });
 
-  // Fetch target users
-  const query = buildSegmentFilter(supabase, segment ?? 'all');
+  const query = buildSegmentFilter(supabase, safeSegment);
   const { data: users, error: usersErr } = await query.limit(500);
   if (usersErr) return NextResponse.json({ error: usersErr.message }, { status: 500 });
 
   const targetUsers = users ?? [];
-
-  // Check email preferences and log sends
-  let sent = 0;
+  let queued = 0;
   const logs = [];
-  for (const u of targetUsers) {
-    // Check marketing email preference
+
+  for (const target of targetUsers) {
     const { data: pref } = await supabase
       .from('notification_preferences')
       .select('email_marketing')
-      .eq('user_id', u.id)
+      .eq('user_id', target.id)
       .maybeSingle();
 
-    const canSend = pref ? (pref.email_marketing !== false) : true;
-    if (!canSend) continue;
+    if (pref?.email_marketing === false) continue;
 
     logs.push({
       campaign_id,
-      user_id: u.id,
-      email_status: 'sent',
+      user_id: target.id,
+      email_status: 'queued',
     });
-    sent++;
+    queued++;
   }
 
   if (logs.length > 0) {
-    await supabase.from('campaign_logs').insert(logs);
+    const { error: logError } = await supabase.from('campaign_logs').insert(logs);
+    if (logError) return NextResponse.json({ error: logError.message }, { status: 500 });
   }
 
-  // Update campaign status to sent
   await supabase
     .from('marketing_campaigns')
-    .update({ status: 'sent' })
+    .update({ status: queued > 0 ? 'queued' : campaign.status })
     .eq('id', campaign_id);
 
-  return NextResponse.json({ success: true, sent, total: targetUsers.length });
+  return NextResponse.json({ success: true, queued, total: targetUsers.length });
 }
