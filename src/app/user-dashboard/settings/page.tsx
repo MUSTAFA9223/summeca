@@ -41,7 +41,7 @@ interface AccountPreferences {
   timezone: string;
 }
 
-const TABS: { id: Tab; label: string; icon: React.ElementType }[] = [
+const TABS: { id: Tab; label: string; icon: React.ComponentType<any> }[] = [
   { id: 'profile', label: 'Profile', icon: User },
   { id: 'security', label: 'Security', icon: Shield },
   { id: 'billing', label: 'Billing Address', icon: MapPin },
@@ -49,7 +49,7 @@ const TABS: { id: Tab; label: string; icon: React.ElementType }[] = [
   { id: 'preferences', label: 'Preferences', icon: Settings2 },
 ];
 
-function SectionCard({ title, icon: Icon, children }: { title: string; icon: React.ElementType; children: React.ReactNode }) {
+function SectionCard({ title, icon: Icon, children }: { title: string; icon: React.ComponentType<any>; children: React.ReactNode }) {
   return (
     <div className="bg-card border border-border rounded-2xl p-6">
       <h3 className="text-sm font-700 text-foreground mb-5 flex items-center gap-2">
@@ -80,7 +80,7 @@ function InputField({
   placeholder?: string;
   disabled?: boolean;
   hint?: string;
-  icon?: React.ElementType;
+  icon?: React.ComponentType<any>;
 }) {
   return (
     <div>

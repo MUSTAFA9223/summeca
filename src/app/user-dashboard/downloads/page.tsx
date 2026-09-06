@@ -37,7 +37,7 @@ interface DownloadRow {
 
 type StatusFilter = 'all' | 'available' | 'expired' | 'revoked';
 
-const statusConfig: Record<string, { label: string; icon: React.ElementType; cls: string }> = {
+const statusConfig: Record<string, { label: string; icon: React.ComponentType<any>; cls: string }> = {
   available: { label: 'Available', icon: CheckCircle, cls: 'bg-success/10 text-success border border-success/20' },
   expired: { label: 'Expired', icon: Clock, cls: 'bg-warning/10 text-warning border border-warning/20' },
   revoked: { label: 'Revoked', icon: XCircle, cls: 'bg-danger/10 text-danger border border-danger/20' },

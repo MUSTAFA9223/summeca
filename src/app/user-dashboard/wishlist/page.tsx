@@ -48,7 +48,7 @@ function formatPrice(price: number | null): string {
   return `$${price % 1 === 0 ? price : price.toFixed(2)}`;
 }
 
-const TYPE_ICON: Record<string, React.ElementType> = {
+const TYPE_ICON: Record<string, React.ComponentType<any>> = {
   ai_tool: Zap,
   api: Zap,
   plugin: Zap,
