@@ -12,6 +12,7 @@ function getSafeNext(value: string | null): string {
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get('code');
+  const flowId = searchParams.get('sb_flow_id');
   const requestedNext = getSafeNext(searchParams.get('next'));
 
   if (!code) {
@@ -21,7 +22,10 @@ export async function GET(request: NextRequest) {
   }
 
   const supabase = await createClient();
-  const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+  const { data, error } = await supabase.auth.exchangeCodeForSession(
+    code,
+    flowId ? { flowId } : undefined,
+  );
 
   if (error || !data.user) {
     console.error('Google OAuth callback failed:', error?.message || 'No user returned');
