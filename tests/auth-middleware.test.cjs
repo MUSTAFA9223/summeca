@@ -82,3 +82,14 @@ test('same-origin API request and external payment webhook reach their handlers'
 test('password recovery remains reachable for an authenticated user', async () => {
   assert.equal((await harness({ user: { id: 'customer' } }).run('/reset-password')).status, 200);
 });
+test('password recovery email redirects directly to reset page', () => {
+  const source = fs.readFileSync('src/contexts/AuthContext.tsx', 'utf8');
+  assert.match(source, /redirectTo:\s*`\$\{getSiteUrl\(\)\}\/reset-password`/);
+  assert.doesNotMatch(source, /resetPasswordForEmail[\s\S]*auth\/callback\?next=\/reset-password/);
+});
+test('reset page exchanges a PKCE recovery code before validating the user', () => {
+  const source = fs.readFileSync('src/app/reset-password/page.tsx', 'utf8');
+  assert.match(source, /searchParams\.get\('code'\)/);
+  assert.match(source, /exchangeCodeForSession\(code\)/);
+  assert.match(source, /auth\.updateUser\(\{ password \}\)/);
+});
