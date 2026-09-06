@@ -14,21 +14,28 @@ export async function GET(request: NextRequest) {
   const code = searchParams.get('code');
   const requestedNext = getSafeNext(searchParams.get('next'));
 
-  if (code) {
-    const supabase = await createClient();
-    const { data, error } = await supabase.auth.exchangeCodeForSession(code);
-
-    if (!error && data.user) {
-      const { data: profile } = await supabase
-        .from('user_profiles')
-        .select('is_admin')
-        .eq('id', data.user.id)
-        .maybeSingle();
-
-      const destination = profile?.is_admin ? '/admin' : requestedNext;
-      return NextResponse.redirect(`${origin}${destination}`);
-    }
+  if (!code) {
+    const loginUrl = new URL('/sign-up-login-screen', origin);
+    loginUrl.searchParams.set('oauth_error', 'missing_code');
+    return NextResponse.redirect(loginUrl);
   }
 
-  return NextResponse.redirect(`${origin}/sign-up-login-screen`);
+  const supabase = await createClient();
+  const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+
+  if (error || !data.user) {
+    console.error('Google OAuth callback failed:', error?.message || 'No user returned');
+    const loginUrl = new URL('/sign-up-login-screen', origin);
+    loginUrl.searchParams.set('oauth_error', 'callback_failed');
+    return NextResponse.redirect(loginUrl);
+  }
+
+  const { data: profile } = await supabase
+    .from('user_profiles')
+    .select('is_admin')
+    .eq('id', data.user.id)
+    .maybeSingle();
+
+  const destination = profile?.is_admin ? '/admin' : requestedNext;
+  return NextResponse.redirect(new URL(destination, origin));
 }
