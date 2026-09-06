@@ -4,6 +4,17 @@ export function createClient() {
   return createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { cookieOptions: { sameSite: 'lax', secure: process.env.NODE_ENV === 'production', httpOnly: false } }
+    {
+      cookieOptions: {
+        sameSite: 'lax',
+        secure: process.env.NODE_ENV === 'production',
+        httpOnly: false,
+      },
+      auth: {
+        experimental: {
+          appendPkceFlowIdToRedirects: true,
+        },
+      },
+    }
   );
 }
