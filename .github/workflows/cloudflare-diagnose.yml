@@ -29,40 +29,20 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Install current dependencies
+      - name: Install dependencies
         run: npm install --no-audit --no-fund
 
-      - name: Apply OpenNext migration in CI workspace
-        run: npx --yes @opennextjs/cloudflare@latest migrate
+      - name: Type check
+        run: npm run type-check
 
-      - name: Show migration changes
+      - name: Build production Worker
+        run: npm run build
+
+      - name: Verify OpenNext output
         run: |
-          git diff -- package.json next.config.mjs wrangler.jsonc open-next.config.ts || true
-          echo '--- package.json ---'
-          cat package.json
-          echo '--- wrangler.jsonc ---'
-          cat wrangler.jsonc
-          echo '--- open-next.config.ts ---'
-          cat open-next.config.ts
-
-      - name: Install migrated dependencies
-        run: npm install --no-audit --no-fund
-
-      - name: Build OpenNext worker
-        run: npx opennextjs-cloudflare build
-
-      - name: Inspect OpenNext output
-        run: |
-          find .open-next -maxdepth 2 -type d -print | sort | head -80
-          find .open-next -maxdepth 2 -type f -print | sort | head -80
-
-      - name: Prepare legacy dist assets directory
-        run: |
-          rm -rf dist
-          mkdir -p dist
-          if [ -d .open-next/assets ]; then cp -a .open-next/assets/. dist/; fi
+          test -f .open-next/worker.js
           test -d dist
-          ls -la dist | head -50
+          echo 'Worker and assets output are present.'
 
-      - name: Test existing Cloudflare deploy command with worker config
+      - name: Test current Cloudflare deploy command
         run: npx wrangler deploy --dry-run --assets=dist
