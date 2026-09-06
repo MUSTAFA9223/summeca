@@ -18,21 +18,29 @@ jobs:
       NEXT_PUBLIC_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVuY3J2aWhwZGt2dWJ4eXZwaGx0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgzMjg1NjAsImV4cCI6MjEwMzkwNDU2MH0.1J7aufKi5bTjhAohMNeScLfU3Gj3EALoNHwWgBo6Y2c
       NEXT_PUBLIC_SITE_URL: https://summeca.com
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
     steps:
-      - name: Verify Cloudflare deployment credentials
+      - name: Verify Cloudflare deployment token
         shell: bash
         run: |
           if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
             echo "CLOUDFLARE_API_TOKEN is not configured in GitHub Actions secrets."
             exit 21
           fi
-          if [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
-            echo "CLOUDFLARE_ACCOUNT_ID is not configured in GitHub Actions secrets."
+          echo "Cloudflare deployment token is configured."
+
+      - name: Resolve Cloudflare account automatically
+        shell: bash
+        run: |
+          RESPONSE="$(curl -fsS -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" https://api.cloudflare.com/client/v4/accounts)"
+          ACCOUNT_ID="$(printf '%s' "$RESPONSE" | jq -r '.result[0].id // empty')"
+          ACCOUNT_NAME="$(printf '%s' "$RESPONSE" | jq -r '.result[0].name // empty')"
+          if [ -z "$ACCOUNT_ID" ]; then
+            echo "Could not resolve a Cloudflare account from the API token."
             exit 22
           fi
-          echo "Cloudflare deployment credentials are configured."
+          echo "CLOUDFLARE_ACCOUNT_ID=$ACCOUNT_ID" >> "$GITHUB_ENV"
+          echo "Resolved Cloudflare account: $ACCOUNT_NAME"
 
       - name: Checkout
         uses: actions/checkout@v4
