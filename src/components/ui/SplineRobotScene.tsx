@@ -8,6 +8,8 @@ const RUNTIME_URL = 'https://unpkg.com/@splinetool/runtime@1.9.82/build/runtime.
 type SplineApplication = {
   load: (url: string) => Promise<void>;
   setZoom: (zoom: number) => void;
+  setBackgroundColor: (color: string) => void;
+  setGlobalEvents?: (global: boolean) => void;
   stop?: () => void;
   dispose?: () => void;
 };
@@ -104,10 +106,14 @@ export default function SplineRobotScene() {
           return;
         }
 
-        // The original scene camera is framed too tightly for this hero.
-        // Zoom the actual Spline camera out so the robot is visible head-to-toe.
+        // Force the exported Spline scene/canvas to composite over the SUMMECA hero
+        // instead of painting its own white rectangle.
+        app.setBackgroundColor('rgba(0, 0, 0, 0)');
+        app.setGlobalEvents?.(true);
+
+        // Keep the complete robot, including its feet, inside the hero frame.
         const compact = window.matchMedia('(max-width: 767px)').matches;
-        app.setZoom(compact ? 0.7 : 0.76);
+        app.setZoom(compact ? 0.58 : 0.64);
 
         canvas.style.opacity = '1';
         setReady(true);
