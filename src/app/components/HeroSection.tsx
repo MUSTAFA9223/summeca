@@ -66,9 +66,9 @@ export default function HeroSection() {
           </div>
 
           <h1 className="max-w-[720px] text-[clamp(3.1rem,5vw,5.8rem)] font-extrabold uppercase leading-[0.91] tracking-[-0.065em] text-[#101820]">
-            <span className="block">The Platform</span>
-            <span className="block">For Smarter</span>
-            <span className="block bg-gradient-to-r from-[#08c5d1] to-[#0aaebd] bg-clip-text pb-2 text-transparent">
+            <span className="block sm:whitespace-nowrap">The Platform</span>
+            <span className="block sm:whitespace-nowrap">For Smarter</span>
+            <span className="block bg-gradient-to-r from-[#08c5d1] to-[#0aaebd] bg-clip-text pb-2 text-transparent sm:whitespace-nowrap">
               Digital Work
             </span>
           </h1>
