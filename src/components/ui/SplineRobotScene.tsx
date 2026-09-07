@@ -3,7 +3,8 @@
 import { useEffect, useRef, useState } from 'react';
 
 const SCENE_URL = 'https://prod.spline.design/H69K35LVSzZ9WcEG/scene.splinecode';
-const VIEWER_SCRIPT = 'https://unpkg.com/@splinetool/viewer@1.9.82/build/spline-viewer.js';
+const VIEWER_SCRIPT = 'https://cdn.spline.design/@splinetool/viewer@1.9.82/build/spline-viewer.js';
+const FALLBACK_IMAGE = '/assets/images/summeca-robot.webp';
 
 type NavigatorWithDeviceMemory = Navigator & { deviceMemory?: number };
 type WindowWithSplinePromise = Window & { __summecaSplineViewerPromise?: Promise<void> };
@@ -16,6 +17,10 @@ function loadSplineViewer() {
   win.__summecaSplineViewerPromise = new Promise<void>((resolve, reject) => {
     const existing = document.querySelector<HTMLScriptElement>('script[data-summeca-spline-viewer]');
     if (existing) {
+      if (customElements.get('spline-viewer')) {
+        resolve();
+        return;
+      }
       existing.addEventListener('load', () => resolve(), { once: true });
       existing.addEventListener('error', () => reject(new Error('Spline viewer failed to load')), {
         once: true,
@@ -35,19 +40,6 @@ function loadSplineViewer() {
   return win.__summecaSplineViewerPromise;
 }
 
-function StaticFallback() {
-  return (
-    <div className="absolute inset-0 flex items-center justify-center">
-      <img
-        src="/assets/images/summeca-robot.webp"
-        alt=""
-        className="h-[82%] w-auto object-contain opacity-95 drop-shadow-[0_28px_48px_rgba(0,0,0,0.32)]"
-        aria-hidden="true"
-      />
-    </div>
-  );
-}
-
 export default function SplineRobotScene() {
   const hostRef = useRef<HTMLDivElement>(null);
   const [enabled, setEnabled] = useState(false);
@@ -65,7 +57,21 @@ export default function SplineRobotScene() {
 
     const host = hostRef.current;
     let cancelled = false;
-    let revealTimer: number | undefined;
+    let loadTimeout: number | undefined;
+
+    const markLoaded = () => {
+      if (cancelled) return;
+      if (loadTimeout !== undefined) window.clearTimeout(loadTimeout);
+      setSceneVisible(true);
+      setFailed(false);
+    };
+
+    const markFailed = () => {
+      if (cancelled) return;
+      if (loadTimeout !== undefined) window.clearTimeout(loadTimeout);
+      setSceneVisible(false);
+      setFailed(true);
+    };
 
     const mountScene = () => {
       loadSplineViewer()
@@ -76,7 +82,8 @@ export default function SplineRobotScene() {
           const viewer = document.createElement('spline-viewer');
           viewer.setAttribute('url', SCENE_URL);
           viewer.setAttribute('events-target', 'global');
-          viewer.setAttribute('loading', 'lazy');
+          viewer.setAttribute('loading', 'eager');
+          viewer.setAttribute('loading-anim-type', 'spinner-small-light');
           viewer.setAttribute('background', 'transparent');
           viewer.setAttribute('aria-hidden', 'true');
           viewer.style.display = 'block';
@@ -86,13 +93,14 @@ export default function SplineRobotScene() {
           viewer.style.background = 'transparent';
           viewer.style.pointerEvents = 'auto';
           viewer.style.touchAction = 'pan-y';
+
+          viewer.addEventListener('load-complete', markLoaded, { once: true });
+          viewer.addEventListener('context-loss', markFailed, { once: true });
           host.appendChild(viewer);
 
-          revealTimer = window.setTimeout(() => setSceneVisible(true), 650);
+          loadTimeout = window.setTimeout(markFailed, 15000);
         })
-        .catch(() => {
-          if (!cancelled) setFailed(true);
-        });
+        .catch(markFailed);
     };
 
     const observer = new IntersectionObserver(
@@ -101,7 +109,7 @@ export default function SplineRobotScene() {
         observer.disconnect();
         mountScene();
       },
-      { rootMargin: '180px', threshold: 0.01 },
+      { rootMargin: '240px', threshold: 0.01 },
     );
 
     observer.observe(host);
@@ -109,25 +117,26 @@ export default function SplineRobotScene() {
     return () => {
       cancelled = true;
       observer.disconnect();
-      if (revealTimer !== undefined) window.clearTimeout(revealTimer);
+      if (loadTimeout !== undefined) window.clearTimeout(loadTimeout);
       host.replaceChildren();
     };
   }, []);
 
-  if (!enabled || failed) {
-    return (
-      <div className="relative h-full w-full overflow-hidden bg-transparent">
-        <StaticFallback />
-      </div>
-    );
-  }
-
   return (
     <div className="relative h-full w-full overflow-hidden bg-transparent">
+      <img
+        src={FALLBACK_IMAGE}
+        alt=""
+        aria-hidden="true"
+        className={`absolute inset-0 h-full w-full object-contain object-center transition-opacity duration-500 ${
+          enabled && sceneVisible && !failed ? 'opacity-0' : 'opacity-100'
+        }`}
+      />
+
       <div
         ref={hostRef}
         className={`absolute inset-0 bg-transparent transition-opacity duration-500 ${
-          sceneVisible ? 'opacity-100' : 'opacity-0'
+          enabled && sceneVisible && !failed ? 'opacity-100' : 'opacity-0'
         }`}
       />
     </div>
