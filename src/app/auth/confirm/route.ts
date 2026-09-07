@@ -1,6 +1,6 @@
+import { createServerClient } from '@supabase/ssr';
 import { type EmailOtpType } from '@supabase/supabase-js';
 import { type NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
 
 export const dynamic = 'force-dynamic';
 
@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
 
   const successUrl = request.nextUrl.clone();
   successUrl.search = '';
-  successUrl.pathname = type === 'recovery' ? '/reset-password' : '/dashboard';
+  successUrl.pathname = type === 'recovery' ? '/reset-password' : '/user-dashboard';
 
   const errorUrl = request.nextUrl.clone();
   errorUrl.search = '';
@@ -33,8 +33,30 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(errorUrl, { status: 303 });
   }
 
+  const pendingCookies: Array<{
+    name: string;
+    value: string;
+    options?: Record<string, unknown>;
+  }> = [];
+  const pendingHeaders: Record<string, string> = {};
+
   try {
-    const supabase = await createClient();
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() {
+            return request.cookies.getAll();
+          },
+          setAll(cookiesToSet, headers) {
+            pendingCookies.splice(0, pendingCookies.length, ...cookiesToSet);
+            if (headers) Object.assign(pendingHeaders, headers);
+          },
+        },
+      },
+    );
+
     const { error } = await supabase.auth.verifyOtp({
       token_hash: tokenHash,
       type,
@@ -46,6 +68,15 @@ export async function GET(request: NextRequest) {
     }
 
     const response = NextResponse.redirect(successUrl, { status: 303 });
+    pendingCookies.forEach(({ name, value, options }) => {
+      response.cookies.set(name, value, {
+        ...(options as any),
+        sameSite: 'lax',
+        secure: process.env.NODE_ENV === 'production',
+        httpOnly: false,
+      });
+    });
+    Object.entries(pendingHeaders).forEach(([key, value]) => response.headers.set(key, value));
     response.headers.set('Cache-Control', 'private, no-store, max-age=0');
     response.headers.set('Pragma', 'no-cache');
     return response;
