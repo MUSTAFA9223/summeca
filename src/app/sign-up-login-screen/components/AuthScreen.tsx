@@ -1,116 +1,94 @@
 'use client';
 
 import React, { useState } from 'react';
+import Link from 'next/link';
+import { ArrowLeft, Sparkles } from 'lucide-react';
 import LoginForm from './LoginForm';
 import SignupForm from './SignupForm';
 import ForgotPasswordForm from './ForgotPasswordForm';
 import AppLogo from '@/components/ui/AppLogo';
-import Link from 'next/link';
-import { Shield, Download, ArrowLeft } from 'lucide-react';
-import Icon from '@/components/ui/AppIcon';
-
+import SplineRobotScene from '@/components/ui/SplineRobotScene';
 
 type AuthView = 'login' | 'signup' | 'forgot';
 
 export default function AuthScreen() {
   const [view, setView] = useState<AuthView>('login');
 
-  const benefits = [
-    { icon: Shield, text: 'Secure, private AI processing — your data stays yours' },
-    { icon: Download, text: 'Lifetime access to purchased digital products' },
-  ];
-
   return (
-    <div className="min-h-screen flex bg-background">
-      {/* Left panel — brand */}
-      <div className="hidden lg:flex lg:w-[45%] xl:w-[40%] bg-foreground flex-col justify-between p-10 xl:p-14 relative overflow-hidden">
-        {/* Background decoration */}
-        <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute -top-40 -left-40 w-80 h-80 rounded-full bg-primary/15 blur-3xl"></div>
-          <div className="absolute -bottom-40 -right-20 w-80 h-80 rounded-full bg-accent/15 blur-3xl"></div>
-        </div>
+    <main className="relative min-h-screen overflow-hidden bg-[#050807] text-white">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_22%,rgba(20,184,166,0.16),transparent_30%),radial-gradient(circle_at_78%_76%,rgba(45,212,191,0.10),transparent_32%)]" />
+      <div className="pointer-events-none absolute inset-0 opacity-[0.14] [background-image:linear-gradient(rgba(255,255,255,.08)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.08)_1px,transparent_1px)] [background-size:48px_48px] [mask-image:linear-gradient(to_bottom,black,transparent_90%)]" />
 
-        <div className="relative z-10">
-          <Link href="/" className="flex items-center gap-2 mb-14">
-            <AppLogo size={36} />
-            <span className="font-extrabold text-xl text-white">SUMMECA</span>
-          </Link>
+      <header className="absolute inset-x-0 top-0 z-30 flex items-center justify-between px-5 py-5 sm:px-8 lg:px-12">
+        <Link href="/" className="group flex items-center gap-2.5" aria-label="SUMMECA home">
+          <AppLogo size={34} />
+          <span className="text-lg font-extrabold tracking-[0.14em] text-white">SUMMECA</span>
+        </Link>
+        <Link href="/" className="flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-xs font-semibold text-white/70 backdrop-blur-xl transition hover:border-teal-300/30 hover:text-white">
+          <ArrowLeft size={14} />
+          Back home
+        </Link>
+      </header>
 
-          <div className="mb-10">
-            <h2 className="text-3xl xl:text-4xl font-800 text-white leading-tight mb-4">
-              Build smarter.<br />Work faster.
-            </h2>
-            <p className="text-sm text-slate-400 leading-relaxed max-w-sm">
-              Access premium AI tools, SaaS applications, and digital products — all managed from one powerful dashboard.
+      <div className="relative z-10 mx-auto grid min-h-screen w-full max-w-[1500px] items-center gap-4 px-5 pb-8 pt-24 sm:px-8 lg:grid-cols-[1.12fr_.88fr] lg:gap-8 lg:px-12 lg:pb-10 lg:pt-20">
+        <section className="relative hidden h-[min(82vh,820px)] min-h-[620px] lg:block">
+          <div className="absolute inset-[4%] rounded-[3rem] border border-white/[0.07] bg-white/[0.018] shadow-[inset_0_1px_0_rgba(255,255,255,.06),0_40px_120px_rgba(0,0,0,.35)] backdrop-blur-[2px]" />
+          <div className="pointer-events-none absolute left-[8%] top-[10%] z-20 max-w-md">
+            <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-teal-300/20 bg-teal-300/[0.08] px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-teal-200">
+              <Sparkles size={13} /> Interactive workspace
+            </div>
+            <h1 className="text-4xl font-black leading-[1.04] tracking-[-0.04em] xl:text-6xl">
+              Your digital world,
+              <span className="block bg-gradient-to-r from-white via-teal-100 to-teal-400 bg-clip-text text-transparent">ready when you are.</span>
+            </h1>
+            <p className="mt-5 max-w-sm text-sm leading-6 text-white/48 xl:text-base">
+              Sign in to access your SUMMECA tools, products and workspace from one secure place.
             </p>
           </div>
 
-          <div className="space-y-4">
-            {benefits.map(({ icon: Icon, text }) => (
-              <div key={`benefit-${text.slice(0, 20)}`} className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-primary/20 flex items-center justify-center flex-shrink-0">
-                  <Icon size={16} className="text-primary" />
-                </div>
-                <span className="text-sm text-slate-300">{text}</span>
-              </div>
-            ))}
+          <div className="absolute inset-x-[-4%] bottom-[-4%] top-[22%] z-10">
+            <SplineRobotScene />
           </div>
-        </div>
-      </div>
+          <div className="pointer-events-none absolute bottom-[7%] left-[13%] right-[13%] h-16 rounded-[50%] bg-teal-300/10 blur-3xl" />
+        </section>
 
-      {/* Right panel — form */}
-      <div className="flex-1 flex flex-col justify-center px-6 py-10 sm:px-10 lg:px-14 xl:px-20">
-        {/* Mobile logo */}
-        <div className="lg:hidden flex items-center justify-between mb-8">
-          <Link href="/" className="flex items-center gap-2">
-            <AppLogo size={28} />
-            <span className="font-extrabold text-lg text-foreground">SUMMECA</span>
-          </Link>
-        </div>
-
-        <div className="w-full max-w-md mx-auto">
-          {view === 'forgot' ? (
-            <div>
-              <button
-                onClick={() => setView('login')}
-                className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-6 transition-colors"
-              >
-                <ArrowLeft size={14} />
-                Back to login
-              </button>
-              <ForgotPasswordForm />
-            </div>
-          ) : (
-            <>
-              {/* Tab switcher */}
-              <div className="flex bg-secondary rounded-xl p-1 mb-8">
-                <button
-                  onClick={() => setView('login')}
-                  className={`flex-1 py-2 rounded-lg text-sm font-600 transition-all duration-150 ${
-                    view === 'login' ?'bg-card text-foreground shadow-card' :'text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  Log in
-                </button>
-                <button
-                  onClick={() => setView('signup')}
-                  className={`flex-1 py-2 rounded-lg text-sm font-600 transition-all duration-150 ${
-                    view === 'signup' ?'bg-card text-foreground shadow-card' :'text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  Sign up
-                </button>
+        <section className="relative mx-auto flex w-full max-w-[510px] items-center justify-center py-6 lg:py-0">
+          <div className="absolute -inset-12 -z-10 rounded-full bg-teal-400/[0.06] blur-3xl" />
+          <div className="w-full rounded-[2rem] border border-white/[0.09] bg-[#0b0f0e]/80 p-5 shadow-[0_30px_100px_rgba(0,0,0,.45)] backdrop-blur-2xl sm:p-8">
+            <div className="mb-7 lg:hidden">
+              <div className="relative mx-auto mb-4 h-36 w-full max-w-xs overflow-hidden rounded-3xl border border-white/[0.06] bg-white/[0.02]">
+                <SplineRobotScene />
               </div>
+              <p className="text-center text-xs font-semibold uppercase tracking-[0.18em] text-teal-300/80">Welcome to SUMMECA</p>
+            </div>
 
-              {view === 'login' ? (
-                <LoginForm onForgotPassword={() => setView('forgot')} onSwitchToSignup={() => setView('signup')} />
-              ) : (
-                <SignupForm onSwitchToLogin={() => setView('login')} />
-              )}
-            </>
-          )}
-        </div>
+            {view === 'forgot' ? (
+              <div>
+                <button onClick={() => setView('login')} className="mb-6 flex items-center gap-1.5 text-sm text-white/50 transition-colors hover:text-white">
+                  <ArrowLeft size={14} /> Back to login
+                </button>
+                <ForgotPasswordForm />
+              </div>
+            ) : (
+              <>
+                <div className="mb-8 flex rounded-2xl border border-white/[0.06] bg-black/30 p-1.5">
+                  <button onClick={() => setView('login')} className={`flex-1 rounded-xl py-2.5 text-sm font-semibold transition-all ${view === 'login' ? 'bg-white text-black shadow-lg' : 'text-white/45 hover:text-white'}`}>
+                    Log in
+                  </button>
+                  <button onClick={() => setView('signup')} className={`flex-1 rounded-xl py-2.5 text-sm font-semibold transition-all ${view === 'signup' ? 'bg-white text-black shadow-lg' : 'text-white/45 hover:text-white'}`}>
+                    Sign up
+                  </button>
+                </div>
+                {view === 'login' ? (
+                  <LoginForm onForgotPassword={() => setView('forgot')} onSwitchToSignup={() => setView('signup')} />
+                ) : (
+                  <SignupForm onSwitchToLogin={() => setView('login')} />
+                )}
+              </>
+            )}
+          </div>
+        </section>
       </div>
-    </div>
+    </main>
   );
 }
