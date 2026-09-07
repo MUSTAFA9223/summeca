@@ -1,17 +1,13 @@
 /**
  * SUMMECA AI Provider Abstraction Layer
  *
- * This module provides a provider-agnostic interface for AI operations.
- * All AI calls go through this layer so the underlying provider can be
- * swapped (OpenAI → Anthropic → Gemini) without touching feature code.
- *
- * SECURITY CONTRACT:
- * - This file runs SERVER-SIDE ONLY (API routes / Server Actions)
- * - API keys are NEVER exposed to the frontend
- * - All calls go through /api/ai/* routes
+ * Production AI runs through the Cloudflare Workers AI binding so customer and
+ * admin AI features do not require paid third-party API keys.
  */
 
-export type AIProvider = 'OPEN_AI' | 'ANTHROPIC' | 'GEMINI';
+import { DEFAULT_WORKERS_AI_MODEL, runWorkersAI } from './workersAI';
+
+export type AIProvider = 'CLOUDFLARE';
 
 export interface AIMessage {
   role: 'system' | 'user' | 'assistant';
@@ -31,87 +27,36 @@ export interface AIGenerationResult {
   durationMs: number;
 }
 
-// ─── Provider configuration ───────────────────────────────────────────────────
-
-const DEFAULT_PROVIDER: AIProvider = 'OPEN_AI';
-const DEFAULT_MODEL = 'gpt-4.1';
-
 export function getActiveProvider(): AIProvider {
-  return (process.env.AI_PROVIDER as AIProvider) ?? DEFAULT_PROVIDER;
+  return 'CLOUDFLARE';
 }
 
-export function getDefaultModel(provider?: AIProvider): string {
-  const p = provider ?? getActiveProvider();
-  switch (p) {
-    case 'OPEN_AI':    return process.env.AI_DEFAULT_MODEL ?? DEFAULT_MODEL;
-    case 'ANTHROPIC':  return 'claude-opus-4-5';
-    case 'GEMINI':     return 'gemini-2.5-pro';
-    default:           return DEFAULT_MODEL;
-  }
+export function getDefaultModel(): string {
+  return process.env.AI_DEFAULT_MODEL || DEFAULT_WORKERS_AI_MODEL;
 }
-
-// ─── Internal fetch helper (server-side only) ─────────────────────────────────
 
 async function callChatRoute(
   messages: AIMessage[],
-  options: AIGenerationOptions = {}
+  options: AIGenerationOptions = {},
 ): Promise<AIGenerationResult> {
-  const provider = getActiveProvider();
-  const model    = options.model ?? getDefaultModel(provider);
-  const start    = Date.now();
-
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000';
-
-  const res = await fetch(`${baseUrl}/api/ai/chat-completion`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      provider,
-      model,
-      messages,
-      stream: false,
-      parameters: {
-        max_completion_tokens: options.maxTokens ?? 1500,
-        ...(options.temperature !== undefined && provider !== 'OPEN_AI'
-          ? { temperature: options.temperature }
-          : {}),
-      },
-    }),
+  return runWorkersAI(messages, {
+    maxTokens: options.maxTokens,
+    temperature: options.temperature,
+    model: options.model || getDefaultModel(),
   });
-
-  if (!res.ok) {
-    const err = await res.text();
-    throw new Error(`AI provider error (${res.status}): ${err}`);
-  }
-
-  const data = await res.json();
-
-  if (data.error) throw new Error(data.error);
-
-  const text: string = data.choices?.[0]?.message?.content ?? '';
-  const tokensUsed: number = data.usage?.total_tokens ?? 0;
-
-  return {
-    text,
-    tokensUsed,
-    model,
-    durationMs: Date.now() - start,
-  };
 }
-
-// ─── Public generation helpers ────────────────────────────────────────────────
 
 export async function generateText(
   systemPrompt: string,
   userPrompt: string,
-  options?: AIGenerationOptions
+  options?: AIGenerationOptions,
 ): Promise<AIGenerationResult> {
   return callChatRoute(
     [
       { role: 'system', content: systemPrompt },
-      { role: 'user',   content: userPrompt },
+      { role: 'user', content: userPrompt },
     ],
-    options
+    options,
   );
 }
 
@@ -122,8 +67,9 @@ export async function generateProductContent(input: {
   mainFeatures: string;
   price: string;
 }): Promise<AIGenerationResult> {
-  const system = `You are an expert e-commerce copywriter and marketing specialist for SUMMECA, a digital products marketplace. 
-Generate professional, conversion-optimized marketing content. 
+  const system = `You are an expert e-commerce copywriter and product marketer for SUMMECA, a digital products marketplace.
+Generate professional, conversion-focused content using only the product facts supplied by the user.
+Never invent discounts, guarantees, testimonials, usage statistics, or product capabilities.
 Always respond with valid JSON matching the requested schema.`;
 
   const user = `Generate complete marketing content for this product:
@@ -145,10 +91,10 @@ Return a JSON object with these exact keys:
   "seoTitle": "SEO meta title (max 60 chars)",
   "seoKeywords": ["keyword1", "keyword2", "keyword3", "keyword4", "keyword5"],
   "metaDescription": "Meta description (max 160 chars)",
-  "socialCaption": "Engaging social media caption with emojis"
+  "socialCaption": "Engaging social media caption"
 }`;
 
-  return generateText(system, user, { maxTokens: 2000 });
+  return generateText(system, user, { maxTokens: 1800, temperature: 0.55 });
 }
 
 export async function generateSEOContent(input: {
@@ -156,8 +102,8 @@ export async function generateSEOContent(input: {
   description: string;
   category: string;
 }): Promise<AIGenerationResult> {
-  const system = `You are an SEO expert specializing in e-commerce and digital products. 
-Generate Google-friendly SEO content. Respond with valid JSON only.`;
+  const system = `You are an SEO specialist for SUMMECA digital products.
+Create useful search-focused content without inventing product claims. Respond with valid JSON only.`;
 
   const user = `Generate SEO optimization for:
 
@@ -177,7 +123,7 @@ Return JSON:
   "internalLinkSuggestions": ["anchor text 1", "anchor text 2"]
 }`;
 
-  return generateText(system, user, { maxTokens: 1000 });
+  return generateText(system, user, { maxTokens: 1000, temperature: 0.35 });
 }
 
 export async function generateMarketingCampaign(input: {
@@ -186,8 +132,9 @@ export async function generateMarketingCampaign(input: {
   goal: string;
   budget?: string;
 }): Promise<AIGenerationResult> {
-  const system = `You are a digital marketing strategist for SUMMECA marketplace. 
-Create comprehensive, actionable marketing campaigns. Respond with valid JSON only.`;
+  const system = `You are SUMMECA's senior product marketer.
+Create persuasive but factual campaigns. Do not invent discounts, scarcity, guarantees, reviews, or results.
+Respond with valid JSON only.`;
 
   const user = `Create a marketing campaign for:
 
@@ -217,7 +164,7 @@ Return JSON:
   "kpis": ["KPI 1", "KPI 2", "KPI 3"]
 }`;
 
-  return generateText(system, user, { maxTokens: 2000 });
+  return generateText(system, user, { maxTokens: 1800, temperature: 0.65 });
 }
 
 export async function generateProductAnalysis(input: {
@@ -230,8 +177,8 @@ export async function generateProductAnalysis(input: {
 }): Promise<AIGenerationResult> {
   const conversionRate = input.views > 0 ? ((input.sales / input.views) * 100).toFixed(2) : '0';
 
-  const system = `You are a product analytics expert for SUMMECA digital marketplace. 
-Analyze product performance and provide actionable recommendations. Respond with valid JSON only.`;
+  const system = `You are a product analytics specialist for SUMMECA.
+Analyze only the supplied metrics and give practical recommendations. Respond with valid JSON only.`;
 
   const user = `Analyze this product performance:
 
@@ -258,7 +205,7 @@ Return JSON:
   "ctaImprovement": "Better call-to-action suggestion"
 }`;
 
-  return generateText(system, user, { maxTokens: 1200 });
+  return generateText(system, user, { maxTokens: 1200, temperature: 0.3 });
 }
 
 export async function generateCustomerInsights(input: {
@@ -268,8 +215,8 @@ export async function generateCustomerInsights(input: {
   activeSubscriptions: number;
   refundRate: number;
 }): Promise<AIGenerationResult> {
-  const system = `You are a business intelligence analyst for SUMMECA digital marketplace. 
-Analyze business data and provide strategic recommendations. Respond with valid JSON only.`;
+  const system = `You are SUMMECA's business intelligence analyst.
+Use only the supplied business data and provide actionable growth ideas. Respond with valid JSON only.`;
 
   const user = `Analyze this business data:
 
@@ -292,30 +239,56 @@ Return JSON:
   "nextSteps": ["action 1", "action 2", "action 3"]
 }`;
 
-  return generateText(system, user, { maxTokens: 1500 });
+  return generateText(system, user, { maxTokens: 1400, temperature: 0.35 });
 }
 
 export async function generateStoreAssistantResponse(input: {
   userMessage: string;
   conversationHistory: AIMessage[];
-  products: Array<{ name: string; description: string; price: number; slug: string }>;
+  products: Array<{
+    name: string;
+    description: string;
+    slug: string;
+    category?: string;
+    plans?: Array<{
+      name: string;
+      price: number;
+      currency: string;
+      billingPeriod: string;
+      features?: string[];
+    }>;
+  }>;
 }): Promise<AIGenerationResult> {
   const productContext = input.products
-    .map((p) => `- ${p.name}: ${p.description} (Price: $${p.price}, URL: /products/${p.slug})`)
+    .map((product) => {
+      const plans = (product.plans ?? [])
+        .map((plan) => {
+          const featureText = plan.features?.length ? `; features: ${plan.features.join(', ')}` : '';
+          return `${plan.name}: ${plan.price} ${plan.currency} (${plan.billingPeriod})${featureText}`;
+        })
+        .join(' | ');
+      return `- ${product.name} [${product.category || 'digital product'}]: ${product.description}. Plans: ${plans || 'price unavailable'}. URL: /products/${product.slug}`;
+    })
     .join('\n');
 
-  const system = `You are a helpful customer assistant for SUMMECA, a digital products marketplace.
-You help customers find products, answer questions, and guide purchase decisions.
+  const system = `You are SUMMECA's AI sales specialist for a digital products marketplace.
+Your job is to understand the customer's need, recommend the best-fit product, explain the value clearly, compare relevant plans, and help the customer move confidently toward a purchase without pressure.
+Reply in the same language the customer uses. If the customer writes Arabic, answer in clear natural Arabic.
 
-AVAILABLE PRODUCTS:
-${productContext}
+AVAILABLE PRODUCTS AND VERIFIED STORE FACTS:
+${productContext || '- No active products are currently available.'}
 
-RULES:
-- Only recommend products from the list above
-- Never invent product features not in the description
-- If you cannot answer, say "I'll connect you with our support team"
-- Keep responses concise and friendly
-- Include product links when recommending`;
+SALES RULES:
+- Only recommend products and plans listed above.
+- Never invent features, prices, discounts, reviews, guarantees, availability, integrations, or results.
+- Ask one short clarifying question when the customer's need is unclear.
+- Recommend at most 3 products at a time and explain why each fits.
+- When price is a concern, offer the lowest-cost relevant verified option rather than inventing a discount.
+- When comparing plans, state the billing period and price exactly as supplied.
+- When the customer is ready, give the direct product URL.
+- Do not claim that a payment succeeded or access was granted.
+- If a question cannot be answered from the verified facts, say so and direct the customer to SUMMECA support.
+- Keep normal replies concise and useful; avoid aggressive sales language.`;
 
   const messages: AIMessage[] = [
     { role: 'system', content: system },
@@ -323,5 +296,5 @@ RULES:
     { role: 'user', content: input.userMessage },
   ];
 
-  return callChatRoute(messages, { maxTokens: 600 });
+  return callChatRoute(messages, { maxTokens: 650, temperature: 0.45 });
 }
