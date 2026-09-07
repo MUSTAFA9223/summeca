@@ -91,7 +91,7 @@ export default function SplineRobotScene() {
       if ('requestIdleCallback' in window) {
         idleHandle = window.requestIdleCallback(start, { timeout: 900 });
       } else {
-        revealTimer = window.setTimeout(start, 120);
+        revealTimer = globalThis.setTimeout(start, 120);
       }
     };
 
