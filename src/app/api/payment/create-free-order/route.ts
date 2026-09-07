@@ -112,7 +112,7 @@ export async function POST(request: NextRequest) {
     return response({ error: 'Authentication required.' }, { status: 401 });
   }
 
-  let body: { productId?: string; planId?: string };
+  let body: { productId?: string; planId?: string; couponId?: string | null };
   try {
     body = await request.json();
   } catch {
@@ -121,6 +121,7 @@ export async function POST(request: NextRequest) {
 
   const productId = body.productId?.trim();
   const planId = body.planId?.trim();
+  const couponId = body.couponId?.trim() || null;
   if (!productId || !planId) {
     return response({ error: 'productId and planId are required.' }, { status: 400 });
   }
@@ -157,10 +158,45 @@ export async function POST(request: NextRequest) {
     return response({ error: 'Invalid product price.' }, { status: 500 });
   }
 
-  if (pricing.finalPrice !== 0) {
-    return response({ error: 'This plan is not free.' }, { status: 409 });
+  const basePrice = pricing.finalPrice;
+  let couponDiscountAmount = 0;
+  let appliedCouponId: string | null = null;
+
+  if (couponId) {
+    const { data: coupon } = await supabase
+      .from('coupons')
+      .select('id, coupon_type, discount_value, applies_to, max_uses, used_count, valid_from, valid_until, is_active')
+      .eq('id', couponId)
+      .eq('is_active', true)
+      .maybeSingle();
+
+    if (!coupon) {
+      return response({ error: 'Coupon is invalid or inactive.' }, { status: 409 });
+    }
+
+    const now = new Date();
+    const startsInFuture = coupon.valid_from && new Date(coupon.valid_from) > now;
+    const expired = coupon.valid_until && new Date(coupon.valid_until) < now;
+    const exhausted = coupon.max_uses !== null && coupon.used_count >= coupon.max_uses;
+    const applies = !coupon.applies_to || coupon.applies_to === productId;
+
+    if (startsInFuture || expired || exhausted || !applies) {
+      return response({ error: 'Coupon is not valid for this order.' }, { status: 409 });
+    }
+
+    const discountValue = Number(coupon.discount_value);
+    couponDiscountAmount = coupon.coupon_type === 'percentage'
+      ? Math.min(basePrice, Math.max(0, (basePrice * discountValue) / 100))
+      : Math.min(basePrice, Math.max(0, discountValue));
+    appliedCouponId = coupon.id;
   }
 
+  const finalAmount = Number(Math.max(0, basePrice - couponDiscountAmount).toFixed(2));
+  if (finalAmount !== 0) {
+    return response({ error: 'This order still requires payment.' }, { status: 409 });
+  }
+
+  const totalDiscountAmount = Number((pricing.discountAmount + couponDiscountAmount).toFixed(2));
   const { data: existingOrder } = await supabase
     .from('orders')
     .select('id, status')
@@ -195,11 +231,11 @@ export async function POST(request: NextRequest) {
       user_id: user.id,
       product_id: productId,
       plan_id: planId,
-      coupon_id: null,
+      coupon_id: appliedCouponId,
       status: 'pending',
       amount: 0,
       currency: String(plan.currency || 'USD').toUpperCase(),
-      discount_amount: pricing.discountAmount,
+      discount_amount: totalDiscountAmount,
       provider_payment_ref: '',
       receipt_url: '',
       metadata: {
@@ -211,6 +247,7 @@ export async function POST(request: NextRequest) {
         regular_price: pricing.regularPrice,
         sale_price: pricing.salePrice,
         sale_discount_amount: pricing.discountAmount,
+        coupon_discount_amount: Number(couponDiscountAmount.toFixed(2)),
       },
       created_at: now,
       updated_at: now,
