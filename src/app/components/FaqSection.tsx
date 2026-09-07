@@ -10,16 +10,6 @@ const faqs = [
     answer: 'SUMMECA offers three product categories: AI Tools (intelligent automation for writing, analysis, and business tasks), SaaS Applications (cloud-based software subscriptions), and Digital Products (templates, planners, and prompt packs available as one-time purchases).',
   },
   {
-    id: 'faq-02',
-    question: 'How does the free tier work?',
-    answer: 'The Free tier gives you access to 100 AI requests per month across select tools. No credit card required to get started. You can upgrade to Pro or Business at any time to unlock higher limits and additional features.',
-  },
-  {
-    id: 'faq-03',
-    question: 'Can I cancel my subscription at any time?',
-    answer: 'Yes, you can cancel at any time from your dashboard. Your subscription will remain active until the end of the current billing period. We do not charge cancellation fees.',
-  },
-  {
     id: 'faq-04',
     question: 'How do digital product downloads work?',
     answer: 'After purchasing a digital product, it appears in your Downloads section. Download links are securely generated and tied to your account. You can re-download purchased files at any time from your dashboard.',
@@ -28,11 +18,6 @@ const faqs = [
     id: 'faq-05',
     question: 'What AI providers power the tools?',
     answer: 'SUMMECA uses an AI gateway that abstracts across multiple providers including OpenAI, Anthropic, and Google. This means tools can route to the best model for each task without you needing to manage individual API keys.',
-  },
-  {
-    id: 'faq-06',
-    question: 'Is there a trial period for paid plans?',
-    answer: 'The Pro plan includes a 7-day free trial. Business plans can be trialed with a custom arrangement — contact our sales team for details.',
   },
 ];
 
