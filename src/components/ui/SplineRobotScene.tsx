@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from 'react';
 
 const SCENE_URL = 'https://prod.spline.design/H69K35LVSzZ9WcEG/scene.splinecode';
 const VIEWER_SCRIPT = 'https://unpkg.com/@splinetool/viewer@1.9.82/build/spline-viewer.js';
-const FALLBACK_IMAGE = '/assets/images/summeca-robot.webp';
 
 type NavigatorWithDeviceMemory = Navigator & { deviceMemory?: number };
 type WindowWithSplinePromise = Window & { __summecaSplineViewerPromise?: Promise<void> };
@@ -75,7 +74,7 @@ export default function SplineRobotScene() {
           viewer.style.pointerEvents = 'auto';
           host.appendChild(viewer);
 
-          revealTimer = window.setTimeout(() => setSceneVisible(true), 900);
+          revealTimer = window.setTimeout(() => setSceneVisible(true), 650);
         })
         .catch(() => setSceneVisible(false));
     };
@@ -100,19 +99,11 @@ export default function SplineRobotScene() {
   }, []);
 
   return (
-    <div className="relative h-full w-full overflow-hidden">
-      <img
-        src={FALLBACK_IMAGE}
-        alt=""
-        aria-hidden="true"
-        className={`absolute inset-0 h-full w-full object-cover object-center transition-opacity duration-700 ${
-          enabled && sceneVisible ? 'opacity-0' : 'opacity-100'
-        }`}
-      />
+    <div className="relative h-full w-full overflow-hidden bg-[radial-gradient(circle_at_50%_42%,rgba(246,250,251,0.98)_0%,rgba(226,237,240,0.92)_46%,rgba(17,47,55,0.9)_100%)]">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_46%,rgba(8,197,209,0.08),transparent_44%)]" />
       <div
         ref={hostRef}
-        className={`absolute inset-0 transition-opacity duration-700 ${
+        className={`absolute inset-0 transition-opacity duration-500 ${
           enabled && sceneVisible ? 'opacity-100' : 'opacity-0'
         }`}
       />
