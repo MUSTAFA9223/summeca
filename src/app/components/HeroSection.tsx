@@ -2,38 +2,12 @@
 
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
-import type { CSSProperties, PointerEvent as ReactPointerEvent } from 'react';
-import { useRef } from 'react';
-import {
-  ArrowRight,
-  BarChart3,
-  Bot,
-  Boxes,
-  Cloud,
-  Headphones,
-  ShieldCheck,
-  Workflow,
-  Zap,
-} from 'lucide-react';
+import { ArrowRight, Boxes, Headphones, ShieldCheck, Zap } from 'lucide-react';
 
 const SplineRobotScene = dynamic(() => import('@/components/ui/SplineRobotScene'), {
   ssr: false,
   loading: () => null,
 });
-
-const categoryCards = [
-  { label: 'AI Tools', icon: Bot, className: 'left-[2%] top-[18%] sm:left-[5%]' },
-  { label: 'Cloud', icon: Cloud, className: 'right-[2%] top-[24%] sm:right-[4%]' },
-  { label: 'Analytics', icon: BarChart3, className: 'left-[1%] bottom-[24%] sm:left-[4%]' },
-  { label: 'Automation', icon: Workflow, className: 'right-[1%] bottom-[19%] sm:right-[3%]' },
-];
-
-const heroMotionStyle = {
-  '--hero-x': '0px',
-  '--hero-y': '0px',
-  '--hero-rx': '0deg',
-  '--hero-ry': '0deg',
-} as CSSProperties;
 
 const servicePoints = [
   { icon: Zap, title: 'Instant Access', text: 'Get started in minutes' },
@@ -42,42 +16,6 @@ const servicePoints = [
 ];
 
 export default function HeroSection() {
-  const visualRef = useRef<HTMLDivElement>(null);
-  const animationFrameRef = useRef<number | null>(null);
-
-  const handlePointerMove = (event: ReactPointerEvent<HTMLDivElement>) => {
-    const visual = visualRef.current;
-    if (
-      !visual ||
-      window.matchMedia('(prefers-reduced-motion: reduce)').matches ||
-      window.matchMedia('(pointer: coarse)').matches
-    )
-      return;
-
-    if (animationFrameRef.current !== null) cancelAnimationFrame(animationFrameRef.current);
-
-    const { clientX, clientY } = event;
-    animationFrameRef.current = requestAnimationFrame(() => {
-      const bounds = visual.getBoundingClientRect();
-      const x = ((clientX - bounds.left) / bounds.width - 0.5) * 12;
-      const y = ((clientY - bounds.top) / bounds.height - 0.5) * 10;
-      visual.style.setProperty('--hero-x', `${x}px`);
-      visual.style.setProperty('--hero-y', `${y}px`);
-      visual.style.setProperty('--hero-rx', `${y * -0.28}deg`);
-      visual.style.setProperty('--hero-ry', `${x * 0.32}deg`);
-      animationFrameRef.current = null;
-    });
-  };
-
-  const resetPointer = () => {
-    const visual = visualRef.current;
-    if (!visual) return;
-    visual.style.setProperty('--hero-x', '0px');
-    visual.style.setProperty('--hero-y', '0px');
-    visual.style.setProperty('--hero-rx', '0deg');
-    visual.style.setProperty('--hero-ry', '0deg');
-  };
-
   return (
     <section className="relative isolate min-h-[760px] overflow-hidden bg-[#f7f9fa] pt-[68px] lg:min-h-screen">
       <div className="pointer-events-none absolute inset-0 hidden bg-[linear-gradient(108deg,#ffffff_0%,#f7f9fa_53%,#dce8ea_100%)] lg:block" />
@@ -143,34 +81,12 @@ export default function HeroSection() {
 
         <div className="relative min-h-[520px] self-stretch overflow-hidden bg-[radial-gradient(circle_at_50%_40%,#23434a_0%,#152b31_48%,#10232a_100%)] lg:min-h-[692px] lg:bg-none">
           <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_48%_45%,rgba(8,197,209,0.21),transparent_35%),linear-gradient(135deg,rgba(255,255,255,0.08),transparent_42%)]" />
-          <div
-            ref={visualRef}
-            onPointerMove={handlePointerMove}
-            onPointerLeave={resetPointer}
-            className="relative h-full min-h-[520px] w-full touch-pan-y lg:min-h-[692px]"
-            style={heroMotionStyle}
-            aria-hidden="true"
-          >
+          <div className="relative h-full min-h-[520px] w-full touch-pan-y lg:min-h-[692px]" aria-hidden="true">
             <div className="absolute inset-[4%] rounded-[50%] border border-[#8eeef3]/10 blur-[0.2px]" />
             <div className="absolute inset-0 z-10">
               <SplineRobotScene />
             </div>
             <div className="pointer-events-none absolute left-1/2 top-[48%] z-0 h-56 w-56 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#08c5d1]/25 blur-[70px]" />
-
-            {categoryCards.map(({ label, icon: Icon, className }, index) => (
-              <div
-                key={label}
-                className={`group absolute z-20 ${className} hidden items-center gap-2.5 rounded-2xl border border-white/65 bg-white/80 px-3.5 py-3 text-[#17262d] shadow-[0_18px_55px_rgba(0,0,0,0.2)] backdrop-blur-xl transition-[transform,border-color,background-color,box-shadow] duration-500 hover:border-[#66edf4] hover:bg-white/95 hover:shadow-[0_18px_55px_rgba(8,197,209,0.22)] sm:flex`}
-                style={{
-                  transform: `translate3d(calc(var(--hero-x) * ${index % 2 === 0 ? -0.55 : 0.7}), calc(var(--hero-y) * ${index < 2 ? -0.5 : 0.62}), 0)`,
-                }}
-              >
-                <span className="flex h-9 w-9 items-center justify-center rounded-xl border border-[#6bdde4]/35 bg-[#dcf8fa] text-[#078e99] shadow-[inset_0_0_20px_rgba(8,197,209,0.08)] transition-transform duration-500 group-hover:-translate-y-1 group-hover:rotate-3">
-                  <Icon size={17} />
-                </span>
-                <span className="text-xs font-semibold tracking-wide">{label}</span>
-              </div>
-            ))}
           </div>
         </div>
       </div>
