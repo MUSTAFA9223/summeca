@@ -80,8 +80,8 @@ export default function HeroSection() {
 
   return (
     <section className="relative isolate min-h-[760px] overflow-hidden bg-[#f7f9fa] pt-[68px] lg:min-h-screen">
-      <div className="pointer-events-none absolute inset-0 hidden bg-[linear-gradient(103deg,#ffffff_0%,#f7f9fa_43%,#e7eff0_51%,#183139_68%,#10232a_100%)] lg:block" />
-      <div className="pointer-events-none absolute inset-y-0 right-0 hidden w-[43%] bg-[linear-gradient(145deg,rgba(255,255,255,0.06),transparent_38%)] [clip-path:polygon(18%_0,100%_0,100%_100%,0_100%)] lg:block" />
+      <div className="pointer-events-none absolute inset-0 hidden bg-[linear-gradient(108deg,#ffffff_0%,#f7f9fa_53%,#dce8ea_100%)] lg:block" />
+      <div className="pointer-events-none absolute inset-y-0 right-0 hidden w-[49%] bg-[radial-gradient(circle_at_20%_43%,#25474e_0%,#183139_42%,#10232a_100%)] [clip-path:polygon(30%_0,100%_0,100%_100%,0_100%)] lg:block" />
       <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-24 bg-gradient-to-b from-white via-white/90 to-transparent" />
       <div className="pointer-events-none absolute inset-0 opacity-35 [background-image:radial-gradient(circle_at_center,rgba(8,197,209,0.18)_1px,transparent_1px)] [background-size:28px_28px] [mask-image:linear-gradient(to_right,black,transparent_48%)]" />
 
@@ -171,15 +171,6 @@ export default function HeroSection() {
                 <span className="text-xs font-semibold tracking-wide">{label}</span>
               </div>
             ))}
-
-            <div className="pointer-events-none absolute bottom-[8%] left-1/2 z-20 -translate-x-1/2 text-center">
-              <div className="text-[9px] font-semibold uppercase tracking-[0.38em] text-white/45">
-                Intelligent infrastructure
-              </div>
-              <div className="mt-1 text-[10px] font-bold tracking-[0.3em] text-[#70eaf0]">
-                SUMMECA CORE
-              </div>
-            </div>
           </div>
         </div>
       </div>
