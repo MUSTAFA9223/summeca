@@ -5,7 +5,12 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
 
-type MotionSettings = { reduced: boolean; visible: boolean; interactive: boolean };
+type MotionSettings = {
+  reduced: boolean;
+  visible: boolean;
+  interactive: boolean;
+  compact: boolean;
+};
 
 const satellites = [
   [-2.18, 0.65, 0.15, 0.18],
@@ -52,7 +57,103 @@ function MetallicS() {
   );
 }
 
-function CoreScene({ reduced, visible, interactive }: MotionSettings) {
+function MechanicalFace({ compact }: { compact: boolean }) {
+  const teeth = compact ? 14 : 26;
+  const nodes = compact ? 8 : 16;
+
+  return (
+    <group>
+      {Array.from({ length: teeth }, (_, index) => {
+        const angle = (index / teeth) * Math.PI * 2;
+        return (
+          <mesh
+            key={`tooth-${index}`}
+            position={[Math.cos(angle) * 1.07, Math.sin(angle) * 1.07, 1.315]}
+            rotation={[0, 0, angle]}
+          >
+            <boxGeometry args={[0.07, 0.2, 0.1]} />
+            <meshStandardMaterial color="#b9c8cb" metalness={0.94} roughness={0.2} />
+          </mesh>
+        );
+      })}
+
+      {[0.12, 1.76, 3.38, 5].map((start, index) => (
+        <mesh
+          key={`face-segment-${start}`}
+          position={[0, 0, 1.365]}
+          rotation={[0, 0, index * 0.02]}
+        >
+          <ringGeometry args={[0.98, 1.16, 56, 1, start, 1.13]} />
+          <meshStandardMaterial
+            color={index % 2 ? '#eef5f6' : '#c2d0d2'}
+            metalness={0.92}
+            roughness={0.16}
+            side={THREE.DoubleSide}
+          />
+        </mesh>
+      ))}
+
+      {Array.from({ length: nodes }, (_, index) => {
+        const angle = (index / nodes) * Math.PI * 2 + 0.16;
+        return (
+          <mesh
+            key={`node-${index}`}
+            position={[Math.cos(angle) * 1.27, Math.sin(angle) * 1.27, 1.08]}
+          >
+            <sphereGeometry args={[index % 4 === 0 ? 0.055 : 0.035, 12, 12]} />
+            <meshStandardMaterial
+              color={index % 4 === 0 ? '#67f4fa' : '#edf9fa'}
+              emissive="#08c5d1"
+              emissiveIntensity={index % 4 === 0 ? 2.4 : 0.55}
+              metalness={0.55}
+              roughness={0.18}
+            />
+          </mesh>
+        );
+      })}
+    </group>
+  );
+}
+
+function ShellArchitecture({ compact }: { compact: boolean }) {
+  const ribs = compact ? 4 : 7;
+
+  return (
+    <group>
+      {Array.from({ length: ribs }, (_, index) => {
+        const spread = (index - (ribs - 1) / 2) * 0.105;
+        return (
+          <mesh key={`rib-${index}`} rotation={[0.06, 0.58 + spread, spread * 0.5]}>
+            <torusGeometry args={[1.38 + Math.abs(spread) * 0.22, 0.035, 8, 80]} />
+            <meshStandardMaterial
+              color={index % 2 ? '#f8ffff' : '#a8bdc1'}
+              metalness={0.92}
+              roughness={0.18}
+            />
+          </mesh>
+        );
+      })}
+
+      <mesh rotation={[0.08, -0.61, -0.04]}>
+        <torusGeometry args={[1.47, 0.12, 14, 112]} />
+        <meshPhysicalMaterial
+          color="#e9ffff"
+          transparent
+          opacity={0.76}
+          metalness={0.58}
+          roughness={0.1}
+          clearcoat={1}
+        />
+      </mesh>
+      <mesh rotation={[0.08, -0.61, -0.04]} scale={1.035}>
+        <torusGeometry args={[1.47, 0.018, 6, 112]} />
+        <meshStandardMaterial color="#53f1f7" emissive="#08c5d1" emissiveIntensity={2} />
+      </mesh>
+    </group>
+  );
+}
+
+function CoreScene({ reduced, visible, interactive, compact }: MotionSettings) {
   const assembly = useRef<THREE.Group>(null);
   const glassCore = useRef<THREE.Mesh>(null);
   const orbitOne = useRef<THREE.Mesh>(null);
@@ -138,7 +239,7 @@ function CoreScene({ reduced, visible, interactive }: MotionSettings) {
       <pointLight position={[2.6, -0.7, 2.2]} intensity={18} distance={6} color="#a7fbff" />
 
       <group ref={assembly} position={[0, 0.32, 0]}>
-        <mesh scale={0.92}>
+        <mesh scale={0.89}>
           <sphereGeometry args={[1.16, 56, 40]} />
           <meshStandardMaterial
             color="#08c5d1"
@@ -168,6 +269,11 @@ function CoreScene({ reduced, visible, interactive }: MotionSettings) {
           <meshBasicMaterial color="#aef6fa" wireframe transparent opacity={0.15} />
         </mesh>
 
+        <mesh scale={1.02} rotation={[0, 0.2, 0]}>
+          <sphereGeometry args={[1.22, compact ? 28 : 48, compact ? 20 : 32]} />
+          <meshBasicMaterial color="#d5fbfd" wireframe transparent opacity={0.08} />
+        </mesh>
+
         <mesh position={[0, 0, 1.12]} rotation={[Math.PI / 2, 0, 0]}>
           <cylinderGeometry args={[0.93, 0.93, 0.28, 64]} />
           <meshStandardMaterial color="#f4f8f8" metalness={0.9} roughness={0.17} />
@@ -176,23 +282,14 @@ function CoreScene({ reduced, visible, interactive }: MotionSettings) {
           <torusGeometry args={[0.91, 0.08, 14, 96]} />
           <meshStandardMaterial color="#ffffff" metalness={0.82} roughness={0.16} />
         </mesh>
+        <mesh position={[0, 0, 1.19]} rotation={[Math.PI / 2, 0, 0]}>
+          <torusGeometry args={[0.74, 0.018, 8, 80]} />
+          <meshStandardMaterial color="#53f4fa" emissive="#08c5d1" emissiveIntensity={2.2} />
+        </mesh>
+        <MechanicalFace compact={compact} />
         <MetallicS />
 
-        <mesh rotation={[0.1, 0.62, 0.08]}>
-          <torusGeometry args={[1.39, 0.16, 16, 112]} />
-          <meshStandardMaterial color="#f6fbfb" metalness={0.88} roughness={0.18} />
-        </mesh>
-        <mesh rotation={[0.1, -0.58, -0.08]}>
-          <torusGeometry args={[1.48, 0.09, 14, 112]} />
-          <meshPhysicalMaterial
-            color="#d9f6f7"
-            transparent
-            opacity={0.72}
-            metalness={0.5}
-            roughness={0.12}
-            clearcoat={1}
-          />
-        </mesh>
+        <ShellArchitecture compact={compact} />
 
         <mesh ref={orbitOne} rotation={[1.13, 0.26, 0.15]}>
           <torusGeometry args={[1.91, 0.045, 10, 128]} />
@@ -244,6 +341,14 @@ function CoreScene({ reduced, visible, interactive }: MotionSettings) {
       </points>
 
       <group position={[0, -1.98, 0]}>
+        <mesh position={[0, -0.28, 0]} scale={[1.12, 0.18, 0.72]}>
+          <sphereGeometry args={[2.05, 42, 18]} />
+          <meshBasicMaterial color="#06171c" transparent opacity={0.32} depthWrite={false} />
+        </mesh>
+        <mesh position={[0, -0.16, 0]}>
+          <cylinderGeometry args={[1.94, 2.18, 0.22, 72]} />
+          <meshStandardMaterial color="#879ca0" metalness={0.9} roughness={0.22} />
+        </mesh>
         <mesh>
           <cylinderGeometry args={[1.75, 2.12, 0.48, 72]} />
           <meshStandardMaterial color="#dce6e8" metalness={0.76} roughness={0.2} />
@@ -255,6 +360,14 @@ function CoreScene({ reduced, visible, interactive }: MotionSettings) {
         <mesh position={[0, 0.28, 0]} rotation={[-Math.PI / 2, 0, 0]}>
           <circleGeometry args={[1.52, 72]} />
           <meshStandardMaterial color="#b8c7ca" metalness={0.88} roughness={0.2} />
+        </mesh>
+        <mesh position={[0, 0.3, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+          <ringGeometry args={[0.72, 1.34, 64]} />
+          <meshBasicMaterial color="#bffcff" transparent opacity={0.28} side={THREE.DoubleSide} />
+        </mesh>
+        <mesh position={[0, 0.315, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+          <ringGeometry args={[1.07, 1.11, 64]} />
+          <meshStandardMaterial color="#3ef5fb" emissive="#08c5d1" emissiveIntensity={2.5} />
         </mesh>
       </group>
     </>
@@ -311,16 +424,21 @@ export default function SummecaAiCore() {
   const [visible, setVisible] = useState(true);
   const [reduced, setReduced] = useState(false);
   const [interactive, setInteractive] = useState(true);
+  const [compact, setCompact] = useState(false);
 
   useEffect(() => {
     const motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
     const pointerQuery = window.matchMedia('(pointer: coarse)');
+    const compactQuery = window.matchMedia('(max-width: 767px)');
     const updateMotion = () => setReduced(motionQuery.matches);
     const updatePointer = () => setInteractive(!pointerQuery.matches);
+    const updateDetail = () => setCompact(compactQuery.matches);
     updateMotion();
     updatePointer();
+    updateDetail();
     motionQuery.addEventListener('change', updateMotion);
     pointerQuery.addEventListener('change', updatePointer);
+    compactQuery.addEventListener('change', updateDetail);
 
     try {
       const canvas = document.createElement('canvas');
@@ -338,6 +456,7 @@ export default function SummecaAiCore() {
     return () => {
       motionQuery.removeEventListener('change', updateMotion);
       pointerQuery.removeEventListener('change', updatePointer);
+      compactQuery.removeEventListener('change', updateDetail);
       observer.disconnect();
     };
   }, []);
@@ -354,7 +473,12 @@ export default function SummecaAiCore() {
           gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
           fallback={<StaticFallback />}
         >
-          <CoreScene reduced={reduced} visible={visible} interactive={interactive} />
+          <CoreScene
+            reduced={reduced}
+            visible={visible}
+            interactive={interactive}
+            compact={compact}
+          />
         </Canvas>
       )}
     </div>
