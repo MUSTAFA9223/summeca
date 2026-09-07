@@ -420,7 +420,7 @@ function StaticFallback() {
 
 export default function SummecaAiCore() {
   const wrapperRef = useRef<HTMLDivElement>(null);
-  const [supported, setSupported] = useState(true);
+  const [supported, setSupported] = useState<boolean | null>(null);
   const [visible, setVisible] = useState(true);
   const [reduced, setReduced] = useState(false);
   const [interactive, setInteractive] = useState(true);
@@ -463,8 +463,8 @@ export default function SummecaAiCore() {
 
   return (
     <div ref={wrapperRef} className="relative h-full w-full">
-      <StaticFallback />
-      {supported && (
+      {supported !== true && <StaticFallback />}
+      {supported === true && (
         <Canvas
           className="relative z-10"
           camera={{ position: [0, 0.16, 6.65], fov: 44, near: 0.1, far: 30 }}
