@@ -141,7 +141,7 @@ export default function HeroSection() {
           </div>
         </div>
 
-        <div className="relative min-h-[520px] self-stretch overflow-hidden bg-[radial-gradient(circle_at_50%_40%,#23434a_0%,#152b31_48%,#10232a_100%)] lg:min-h-[692px] lg:bg-transparent">
+        <div className="relative min-h-[520px] self-stretch overflow-hidden bg-[radial-gradient(circle_at_50%_40%,#23434a_0%,#152b31_48%,#10232a_100%)] lg:min-h-[692px] lg:bg-none">
           <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_48%_45%,rgba(8,197,209,0.21),transparent_35%),linear-gradient(135deg,rgba(255,255,255,0.08),transparent_42%)]" />
           <div
             ref={visualRef}
