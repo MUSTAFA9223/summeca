@@ -22,13 +22,28 @@ export default function ResetPasswordPage() {
     async function verifyRecoverySession() {
       try {
         const url = new URL(window.location.href);
+        const tokenHash = url.searchParams.get('token_hash');
+        const type = url.searchParams.get('type');
         const code = url.searchParams.get('code');
         const flowId = url.searchParams.get('sb_flow_id');
 
-        // @supabase/ssr uses PKCE. The browser client owns the verifier, so
-        // exchange the recovery code here and preserve a flow id when Supabase
-        // supplies one. Do not exchange the same one twice.
-        if (code) {
+        // Preferred recovery path: token_hash verification works on any browser/device
+        // and does not depend on a PKCE verifier stored in the browser that requested
+        // the email. The Supabase recovery email template should link directly to:
+        // /reset-password?token_hash={{ .TokenHash }}&type=recovery
+        if (tokenHash && type === 'recovery') {
+          const { error: verifyError } = await supabase.auth.verifyOtp({
+            type: 'recovery',
+            token_hash: tokenHash,
+          });
+          if (verifyError) throw verifyError;
+
+          url.searchParams.delete('token_hash');
+          url.searchParams.delete('type');
+          window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
+        } else if (code) {
+          // Backward compatibility for older PKCE recovery emails. These links only
+          // work reliably in the browser that originally requested the reset email.
           const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(
             code,
             flowId ? { flowId } : undefined,
@@ -38,7 +53,7 @@ export default function ResetPasswordPage() {
           url.searchParams.delete('sb_flow_id');
           window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
         } else if (window.location.hash) {
-          // Backward compatibility for an implicit recovery link.
+          // Backward compatibility for legacy implicit recovery links.
           const hash = new URLSearchParams(window.location.hash.replace(/^#/, ''));
           const accessToken = hash.get('access_token');
           const refreshToken = hash.get('refresh_token');
