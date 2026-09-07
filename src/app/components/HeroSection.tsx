@@ -4,7 +4,17 @@ import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import type { CSSProperties, PointerEvent as ReactPointerEvent } from 'react';
 import { useRef } from 'react';
-import { ArrowRight, BarChart3, Bot, Boxes, Cloud, Workflow } from 'lucide-react';
+import {
+  ArrowRight,
+  BarChart3,
+  Bot,
+  Boxes,
+  Cloud,
+  Headphones,
+  ShieldCheck,
+  Workflow,
+  Zap,
+} from 'lucide-react';
 
 const SummecaAiCore = dynamic(() => import('@/components/ui/SummecaAiCore'), {
   ssr: false,
@@ -21,7 +31,15 @@ const categoryCards = [
 const heroMotionStyle = {
   '--hero-x': '0px',
   '--hero-y': '0px',
+  '--hero-rx': '0deg',
+  '--hero-ry': '0deg',
 } as CSSProperties;
+
+const servicePoints = [
+  { icon: Zap, title: 'Instant Access', text: 'Get started in minutes' },
+  { icon: ShieldCheck, title: 'Secure Payments', text: 'Payoneer or Crypto' },
+  { icon: Headphones, title: 'Customer Support', text: 'Help when you need it' },
+];
 
 export default function HeroSection() {
   const visualRef = useRef<HTMLDivElement>(null);
@@ -45,6 +63,8 @@ export default function HeroSection() {
       const y = ((clientY - bounds.top) / bounds.height - 0.5) * 10;
       visual.style.setProperty('--hero-x', `${x}px`);
       visual.style.setProperty('--hero-y', `${y}px`);
+      visual.style.setProperty('--hero-rx', `${y * -0.28}deg`);
+      visual.style.setProperty('--hero-ry', `${x * 0.32}deg`);
       animationFrameRef.current = null;
     });
   };
@@ -54,11 +74,14 @@ export default function HeroSection() {
     if (!visual) return;
     visual.style.setProperty('--hero-x', '0px');
     visual.style.setProperty('--hero-y', '0px');
+    visual.style.setProperty('--hero-rx', '0deg');
+    visual.style.setProperty('--hero-ry', '0deg');
   };
 
   return (
     <section className="relative isolate min-h-[760px] overflow-hidden bg-[#f7f9fa] pt-[68px] lg:min-h-screen">
-      <div className="pointer-events-none absolute inset-0 hidden bg-[linear-gradient(102deg,#ffffff_0%,#f7f9fa_43%,#dce8e9_52%,#152b31_72%,#10232a_100%)] lg:block" />
+      <div className="pointer-events-none absolute inset-0 hidden bg-[linear-gradient(103deg,#ffffff_0%,#f7f9fa_43%,#e7eff0_51%,#183139_68%,#10232a_100%)] lg:block" />
+      <div className="pointer-events-none absolute inset-y-0 right-0 hidden w-[43%] bg-[linear-gradient(145deg,rgba(255,255,255,0.06),transparent_38%)] [clip-path:polygon(18%_0,100%_0,100%_100%,0_100%)] lg:block" />
       <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-24 bg-gradient-to-b from-white via-white/90 to-transparent" />
       <div className="pointer-events-none absolute inset-0 opacity-35 [background-image:radial-gradient(circle_at_center,rgba(8,197,209,0.18)_1px,transparent_1px)] [background-size:28px_28px] [mask-image:linear-gradient(to_right,black,transparent_48%)]" />
 
@@ -102,6 +125,20 @@ export default function HeroSection() {
               Browse AI Tools
             </Link>
           </div>
+
+          <div className="mt-11 grid max-w-[650px] grid-cols-1 gap-4 border-t border-[#dfe7e9] pt-7 sm:grid-cols-3">
+            {servicePoints.map(({ icon: Icon, title, text }) => (
+              <div key={title} className="flex items-start gap-3">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#e8fbfc] text-[#08aebb]">
+                  <Icon size={17} />
+                </span>
+                <span>
+                  <span className="block text-xs font-bold text-[#152129]">{title}</span>
+                  <span className="mt-1 block text-[11px] leading-4 text-[#71818b]">{text}</span>
+                </span>
+              </div>
+            ))}
+          </div>
         </div>
 
         <div className="relative min-h-[520px] self-stretch overflow-hidden bg-[radial-gradient(circle_at_50%_40%,#23434a_0%,#152b31_48%,#10232a_100%)] lg:min-h-[692px] lg:bg-transparent">
@@ -123,12 +160,12 @@ export default function HeroSection() {
             {categoryCards.map(({ label, icon: Icon, className }, index) => (
               <div
                 key={label}
-                className={`group absolute z-20 ${className} hidden items-center gap-2.5 rounded-2xl border border-white/20 bg-white/10 px-3.5 py-3 text-white shadow-[0_18px_55px_rgba(0,0,0,0.22)] backdrop-blur-xl transition-[transform,border-color,background-color,box-shadow] duration-500 hover:border-[#66edf4]/70 hover:bg-white/15 hover:shadow-[0_18px_55px_rgba(8,197,209,0.2)] sm:flex`}
+                className={`group absolute z-20 ${className} hidden items-center gap-2.5 rounded-2xl border border-white/65 bg-white/80 px-3.5 py-3 text-[#17262d] shadow-[0_18px_55px_rgba(0,0,0,0.2)] backdrop-blur-xl transition-[transform,border-color,background-color,box-shadow] duration-500 hover:border-[#66edf4] hover:bg-white/95 hover:shadow-[0_18px_55px_rgba(8,197,209,0.22)] sm:flex`}
                 style={{
                   transform: `translate3d(calc(var(--hero-x) * ${index % 2 === 0 ? -0.55 : 0.7}), calc(var(--hero-y) * ${index < 2 ? -0.5 : 0.62}), 0)`,
                 }}
               >
-                <span className="flex h-9 w-9 items-center justify-center rounded-xl border border-[#78edf3]/20 bg-[#08c5d1]/15 text-[#74eff5] shadow-[inset_0_0_20px_rgba(8,197,209,0.08)] transition-transform duration-500 group-hover:-translate-y-1 group-hover:rotate-3">
+                <span className="flex h-9 w-9 items-center justify-center rounded-xl border border-[#6bdde4]/35 bg-[#dcf8fa] text-[#078e99] shadow-[inset_0_0_20px_rgba(8,197,209,0.08)] transition-transform duration-500 group-hover:-translate-y-1 group-hover:rotate-3">
                   <Icon size={17} />
                 </span>
                 <span className="text-xs font-semibold tracking-wide">{label}</span>
