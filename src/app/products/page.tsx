@@ -6,6 +6,7 @@ import PublicNav from '@/components/PublicNav';
 import PublicFooter from '@/components/PublicFooter';
 import { createClient } from '@/lib/supabase/client';
 import { trackSearch } from '@/lib/analytics';
+import { getEffectivePrice } from '@/lib/pricing';
 import {
   Star, SlidersHorizontal, Search, Zap, LayoutDashboard, FileText, X,
   ArrowUpDown, Package, Sparkles, TrendingUp, Clock, Award, ChevronDown,
@@ -17,9 +18,15 @@ import WishlistButton from '@/components/WishlistButton';
 
 interface ProductPlan {
   price: number;
-  billing_period: string;
+  currency: string;
+  billing_period: 'one_time' | 'monthly' | 'yearly' | 'lifetime';
   is_active: boolean;
   sort_order: number;
+  sale_price: number | null;
+  sale_discount_type: 'percentage' | 'fixed_amount' | null;
+  sale_discount_value: number | null;
+  sale_starts_at: string | null;
+  sale_ends_at: string | null;
 }
 
 interface Product {
@@ -46,7 +53,6 @@ type PriceRange = 'all' | 'free' | 'under_10' | 'under_50' | 'over_50';
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const AI_CATEGORIES = ['ai_tool', 'api', 'plugin'];
-const SAAS_CATEGORIES = ['course', 'other'];
 const DIGITAL_CATEGORIES = ['template', 'dataset'];
 
 const FILTER_TABS: { key: FilterType; label: string; icon: React.ComponentType<any> }[] = [
@@ -98,17 +104,54 @@ function getProductType(category: string): FilterType {
   return 'saas';
 }
 
-function getLowestPrice(plans?: ProductPlan[]): number | null {
-  if (!plans || plans.length === 0) return null;
-  const active = plans.filter((p) => p.is_active);
-  if (active.length === 0) return null;
-  return Math.min(...active.map((p) => p.price));
+function getPlanPricing(plan: ProductPlan) {
+  try {
+    return getEffectivePrice(plan);
+  } catch {
+    const regularPrice = Number(plan.price) || 0;
+    return {
+      regularPrice,
+      salePrice: null,
+      finalPrice: regularPrice,
+      discountAmount: 0,
+      discountPercent: 0,
+      onSale: false,
+    };
+  }
 }
 
-function formatPrice(price: number | null): string {
-  if (price === null) return 'Free';
+function getLowestPlan(plans?: ProductPlan[]): ProductPlan | null {
+  if (!plans?.length) return null;
+  const active = plans.filter((plan) => plan.is_active);
+  if (!active.length) return null;
+  return active.reduce((lowest, plan) =>
+    getPlanPricing(plan).finalPrice < getPlanPricing(lowest).finalPrice ? plan : lowest,
+  );
+}
+
+function getLowestPrice(plans?: ProductPlan[]): number | null {
+  const plan = getLowestPlan(plans);
+  return plan ? getPlanPricing(plan).finalPrice : null;
+}
+
+function formatCurrency(price: number, currency = 'USD'): string {
   if (price === 0) return 'Free';
-  return `$${price % 1 === 0 ? price : price.toFixed(2)}`;
+  try {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: currency || 'USD',
+      minimumFractionDigits: price % 1 === 0 ? 0 : 2,
+    }).format(price);
+  } catch {
+    return `${currency || 'USD'} ${price % 1 === 0 ? price : price.toFixed(2)}`;
+  }
+}
+
+function billingSuffix(period: ProductPlan['billing_period']): string {
+  if (period === 'monthly') return '/mo';
+  if (period === 'yearly') return '/yr';
+  if (period === 'lifetime') return ' lifetime';
+  return '';
 }
 
 function isFeatured(product: Product): boolean {
@@ -158,7 +201,9 @@ function ProductCard({ product, isRecommended, wishlistIds, onCompare }: {
   onCompare?: (product: Product) => void;
 }) {
   const type = getProductType(product.category);
-  const lowestPrice = getLowestPrice(product.plans);
+  const lowestPlan = getLowestPlan(product.plans);
+  const pricing = lowestPlan ? getPlanPricing(lowestPlan) : null;
+  const lowestPrice = pricing?.finalPrice ?? null;
   const badge = TYPE_BADGE[product.category] ?? { label: 'Product', cls: 'bg-secondary text-secondary-foreground' };
   const gradient = TYPE_GRADIENT[type] ?? 'bg-card';
   const CategoryIcon = type === 'ai' ? Zap : type === 'digital' ? FileText : LayoutDashboard;
@@ -176,7 +221,6 @@ function ProductCard({ product, isRecommended, wishlistIds, onCompare }: {
         </div>
       )}
 
-      {/* Wishlist button */}
       <div className="absolute top-3 right-3">
         <WishlistButton
           productId={product.id}
@@ -230,14 +274,21 @@ function ProductCard({ product, isRecommended, wishlistIds, onCompare }: {
           <div className="mb-3 h-4" />
         )}
         <div className="flex items-center justify-between">
-          <div>
-            {lowestPrice === 0 || lowestPrice === null ? (
+          <div className="min-w-0">
+            {lowestPrice === 0 || lowestPrice === null || !lowestPlan ? (
               <span className="text-sm font-700 text-success">Free</span>
             ) : (
-              <span className="text-sm font-700 text-foreground tabular-nums">
-                {formatPrice(lowestPrice)}
-                <span className="text-xs font-400 text-muted-foreground">/mo</span>
-              </span>
+              <div className="flex flex-wrap items-baseline gap-x-1.5">
+                {pricing?.onSale && (
+                  <span className="text-[10px] text-muted-foreground line-through tabular-nums">
+                    {formatCurrency(pricing.regularPrice, lowestPlan.currency)}
+                  </span>
+                )}
+                <span className="text-sm font-700 text-foreground tabular-nums">
+                  {formatCurrency(lowestPrice, lowestPlan.currency)}
+                  <span className="text-xs font-400 text-muted-foreground">{billingSuffix(lowestPlan.billing_period)}</span>
+                </span>
+              </div>
             )}
           </div>
           <span className="text-xs font-600 text-primary group-hover:underline">
@@ -246,7 +297,6 @@ function ProductCard({ product, isRecommended, wishlistIds, onCompare }: {
         </div>
       </Link>
 
-      {/* Compare button */}
       {onCompare && (
         <button
           onClick={() => onCompare(product)}
@@ -329,7 +379,10 @@ export default function ProductsPage() {
         .select(`
           id, name, slug, short_desc, description, category, status,
           thumbnail_url, tags, metadata, created_at,
-          plans:product_plans(price, billing_period, is_active, sort_order)
+          plans:product_plans(
+            price, currency, billing_period, is_active, sort_order,
+            sale_price, sale_discount_type, sale_discount_value, sale_starts_at, sale_ends_at
+          )
         `)
         .eq('status', 'active')
         .order('created_at', { ascending: false });
@@ -356,10 +409,7 @@ export default function ProductsPage() {
       }));
 
       setProducts(enriched);
-
-      // Fetch AI recommendations on load
       fetchRecommendations();
-      // Fetch wishlist IDs
       fetchWishlistIds();
     } catch (err) {
       setError('Failed to load products. Please try again.');
@@ -377,7 +427,7 @@ export default function ProductsPage() {
         setWishlistIds(data.wishlistIds ?? []);
       }
     } catch {
-      // Silently fail
+      // Optional enhancement.
     }
   };
 
@@ -401,7 +451,7 @@ export default function ProductsPage() {
         setRecommendedIds((data.recommendations ?? []).map((p) => p.id));
       }
     } catch {
-      // Silently fail — recommendations are optional
+      // Optional enhancement.
     }
   };
 
@@ -409,7 +459,6 @@ export default function ProductsPage() {
     fetchProducts();
   }, [fetchProducts]);
 
-  // Debounce search input
   useEffect(() => {
     if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
     searchDebounceRef.current = setTimeout(() => {
@@ -420,7 +469,6 @@ export default function ProductsPage() {
     };
   }, [search]);
 
-  // Semantic search when query is long enough
   useEffect(() => {
     if (semanticDebounceRef.current) clearTimeout(semanticDebounceRef.current);
     if (debouncedSearch.length >= 3) {
@@ -452,7 +500,6 @@ export default function ProductsPage() {
     };
   }, [debouncedSearch]);
 
-  // Close suggestions on outside click
   useEffect(() => {
     function handleClick(e: MouseEvent) {
       if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
@@ -462,8 +509,6 @@ export default function ProductsPage() {
     document.addEventListener('mousedown', handleClick);
     return () => document.removeEventListener('mousedown', handleClick);
   }, []);
-
-  // ── Filter + Sort ──────────────────────────────────────────────────────────
 
   const filtered = products.filter((p) => {
     const matchesType = filter === 'all' || getProductType(p.category) === filter;
@@ -506,7 +551,6 @@ export default function ProductsPage() {
     <div className="min-h-screen bg-background flex flex-col">
       <PublicNav />
 
-      {/* ── Hero Banner ──────────────────────────────────────────────────── */}
       <section className="pt-24 pb-10 bg-gradient-hero border-b border-border">
         <div className="max-w-screen-xl mx-auto px-6 lg:px-8">
           <div className="max-w-2xl">
@@ -519,7 +563,6 @@ export default function ProductsPage() {
             <p className="text-base text-secondary-foreground leading-relaxed mb-6">
               Browse AI tools, SaaS apps, and digital products — all in one place.
             </p>
-            {/* Hero search bar */}
             <div ref={searchRef} className="relative max-w-lg">
               <div className="flex items-center gap-2 bg-white border border-border rounded-2xl px-4 py-3 shadow-card focus-within:ring-2 focus-within:ring-primary/30 focus-within:border-primary transition-all">
                 {semanticLoading ? (
@@ -558,7 +601,6 @@ export default function ProductsPage() {
         </div>
       </section>
 
-      {/* ── AI Recommendations Strip ─────────────────────────────────────── */}
       {recommendedProducts.length > 0 && !debouncedSearch && (
         <div className="bg-gradient-to-r from-primary/5 via-accent/5 to-primary/5 border-b border-primary/10">
           <div className="max-w-screen-xl mx-auto px-6 lg:px-8 py-5">
@@ -578,11 +620,9 @@ export default function ProductsPage() {
         </div>
       )}
 
-      {/* ── Filters + Search Bar ─────────────────────────────────────────── */}
       <div className="sticky top-16 z-30 bg-white/95 backdrop-blur-md border-b border-border shadow-sm">
         <div className="max-w-screen-xl mx-auto px-6 lg:px-8">
           <div className="flex flex-col sm:flex-row sm:items-center gap-3 py-3">
-            {/* Type filter tabs */}
             <div className="flex items-center gap-1 flex-shrink-0">
               {FILTER_TABS.map(({ key, label, icon }) => {
                 const TabIcon = icon;
@@ -606,11 +646,10 @@ export default function ProductsPage() {
 
             <div className="flex-1" />
 
-            {/* Advanced Filters toggle */}
             <button
               onClick={() => setShowFilters(!showFilters)}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-600 transition-all duration-150 ${
-                showFilters || priceRange !== 'all' ?'border-primary bg-primary/5 text-primary' :'border-border text-secondary-foreground hover:text-foreground hover:border-primary/40'
+                showFilters || priceRange !== 'all' ? 'border-primary bg-primary/5 text-primary' : 'border-border text-secondary-foreground hover:text-foreground hover:border-primary/40'
               }`}
             >
               <Filter size={13} />
@@ -620,7 +659,6 @@ export default function ProductsPage() {
               )}
             </button>
 
-            {/* Sort dropdown */}
             <div className="relative flex-shrink-0">
               <button
                 onClick={() => setSortOpen(!sortOpen)}
@@ -638,7 +676,8 @@ export default function ProductsPage() {
                       onClick={() => { setSort(opt.key); setSortOpen(false); }}
                       className={`w-full flex items-center gap-2 text-left px-3 py-2 rounded-lg text-xs font-500 transition-all duration-150 ${
                         sort === opt.key
-                          ? 'bg-primary/10 text-primary font-600' :'text-secondary-foreground hover:bg-secondary hover:text-foreground'
+                          ? 'bg-primary/10 text-primary font-600'
+                          : 'text-secondary-foreground hover:bg-secondary hover:text-foreground'
                       }`}
                     >
                       <opt.icon size={12} />
@@ -650,11 +689,9 @@ export default function ProductsPage() {
             </div>
           </div>
 
-          {/* Advanced Filters Panel */}
           {showFilters && (
             <div className="pb-3 border-t border-border pt-3 fade-in">
               <div className="flex flex-wrap gap-4">
-                {/* Price Range */}
                 <div>
                   <p className="text-xs font-700 text-muted-foreground uppercase tracking-wide mb-2">Price Range</p>
                   <div className="flex flex-wrap gap-1.5">
@@ -664,7 +701,8 @@ export default function ProductsPage() {
                         onClick={() => setPriceRange(range.key)}
                         className={`px-3 py-1 rounded-lg text-xs font-600 transition-all duration-150 ${
                           priceRange === range.key
-                            ? 'bg-primary text-white' :'bg-secondary text-secondary-foreground hover:bg-secondary/80 hover:text-foreground border border-border'
+                            ? 'bg-primary text-white'
+                            : 'bg-secondary text-secondary-foreground hover:bg-secondary/80 hover:text-foreground border border-border'
                         }`}
                       >
                         {range.label}
@@ -673,7 +711,6 @@ export default function ProductsPage() {
                   </div>
                 </div>
 
-                {/* Quick filters */}
                 <div>
                   <p className="text-xs font-700 text-muted-foreground uppercase tracking-wide mb-2">Quick Filters</p>
                   <div className="flex flex-wrap gap-1.5">
@@ -717,9 +754,7 @@ export default function ProductsPage() {
         </div>
       </div>
 
-      {/* ── Main Content ─────────────────────────────────────────────────── */}
       <main className="flex-1 max-w-screen-xl mx-auto px-6 lg:px-8 py-10 w-full">
-        {/* Result count + semantic search indicator */}
         {!loading && !error && (
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
@@ -799,7 +834,6 @@ export default function ProductsPage() {
 
       <PublicFooter />
 
-      {/* Compare floating bar */}
       {compareList.length >= 2 && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-white rounded-2xl border border-primary/30 shadow-xl px-5 py-3 flex items-center gap-4">
           <div className="flex items-center gap-2">
@@ -817,7 +851,7 @@ export default function ProductsPage() {
             ))}
           </div>
           <Link
-            href={`/compare`}
+            href="/compare"
             className="bg-primary text-white text-xs font-700 px-4 py-2 rounded-xl hover:bg-primary/90 transition-colors flex items-center gap-1.5"
           >
             <GitCompare size={12} /> Compare Now
