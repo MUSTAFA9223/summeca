@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 
 const SCENE_URL = 'https://prod.spline.design/H69K35LVSzZ9WcEG/scene.splinecode';
-const VIEWER_SCRIPT = 'https://cdn.spline.design/@splinetool/viewer@1.9.82/build/spline-viewer.js';
+const VIEWER_SCRIPT = 'https://unpkg.com/@splinetool/viewer@1.9.82/build/spline-viewer.js';
 const FALLBACK_IMAGE = '/assets/images/summeca-robot.webp';
 
 type NavigatorWithDeviceMemory = Navigator & { deviceMemory?: number };
@@ -22,9 +22,7 @@ function loadSplineViewer() {
         return;
       }
       existing.addEventListener('load', () => resolve(), { once: true });
-      existing.addEventListener('error', () => reject(new Error('Spline viewer failed to load')), {
-        once: true,
-      });
+      existing.addEventListener('error', () => reject(new Error('Spline viewer failed to load')), { once: true });
       return;
     }
 
@@ -49,7 +47,7 @@ export default function SplineRobotScene() {
   useEffect(() => {
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const deviceMemory = (navigator as NavigatorWithDeviceMemory).deviceMemory;
-    const veryLowMemory = typeof deviceMemory === 'number' && deviceMemory <= 2;
+    const veryLowMemory = typeof deviceMemory === 'number' && deviceMemory <= 1;
     const shouldEnable = !reducedMotion && !veryLowMemory;
 
     setEnabled(shouldEnable);
@@ -57,21 +55,7 @@ export default function SplineRobotScene() {
 
     const host = hostRef.current;
     let cancelled = false;
-    let loadTimeout: number | undefined;
-
-    const markLoaded = () => {
-      if (cancelled) return;
-      if (loadTimeout !== undefined) window.clearTimeout(loadTimeout);
-      setSceneVisible(true);
-      setFailed(false);
-    };
-
-    const markFailed = () => {
-      if (cancelled) return;
-      if (loadTimeout !== undefined) window.clearTimeout(loadTimeout);
-      setSceneVisible(false);
-      setFailed(true);
-    };
+    let revealTimer: number | undefined;
 
     const mountScene = () => {
       loadSplineViewer()
@@ -93,14 +77,23 @@ export default function SplineRobotScene() {
           viewer.style.background = 'transparent';
           viewer.style.pointerEvents = 'auto';
           viewer.style.touchAction = 'pan-y';
-
-          viewer.addEventListener('load-complete', markLoaded, { once: true });
-          viewer.addEventListener('context-loss', markFailed, { once: true });
           host.appendChild(viewer);
 
-          loadTimeout = window.setTimeout(markFailed, 15000);
+          // Match the original working implementation: reveal the live viewer
+          // shortly after mounting instead of waiting for a lifecycle event.
+          revealTimer = window.setTimeout(() => {
+            if (!cancelled) {
+              setSceneVisible(true);
+              setFailed(false);
+            }
+          }, 700);
         })
-        .catch(markFailed);
+        .catch(() => {
+          if (!cancelled) {
+            setFailed(true);
+            setSceneVisible(false);
+          }
+        });
     };
 
     const observer = new IntersectionObserver(
@@ -117,7 +110,7 @@ export default function SplineRobotScene() {
     return () => {
       cancelled = true;
       observer.disconnect();
-      if (loadTimeout !== undefined) window.clearTimeout(loadTimeout);
+      if (revealTimer !== undefined) window.clearTimeout(revealTimer);
       host.replaceChildren();
     };
   }, []);
