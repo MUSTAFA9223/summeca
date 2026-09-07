@@ -1,6 +1,6 @@
 'use client';
 
-import React, { Suspense, useCallback, useEffect, useState } from 'react';
+import React, { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
@@ -9,6 +9,7 @@ import {
   Bitcoin,
   CheckCircle2,
   ChevronRight,
+  CreditCard,
   ExternalLink,
   Info,
   Loader2,
@@ -21,13 +22,13 @@ import {
   Wallet,
   X,
   Zap,
-  CreditCard,
 } from 'lucide-react';
 import PublicNav from '@/components/PublicNav';
 import PublicFooter from '@/components/PublicFooter';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { trackCheckoutStarted } from '@/lib/analytics';
+import { getEffectivePrice } from '@/lib/pricing';
 
 interface ProductPlan {
   id: string;
@@ -38,6 +39,11 @@ interface ProductPlan {
   billing_period: 'one_time' | 'monthly' | 'yearly' | 'lifetime';
   features: string[];
   is_active: boolean;
+  sale_price: number | null;
+  sale_discount_type: 'percentage' | 'fixed_amount' | null;
+  sale_discount_value: number | null;
+  sale_starts_at: string | null;
+  sale_ends_at: string | null;
 }
 
 interface Product {
@@ -109,7 +115,7 @@ function CheckoutInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, loading: authLoading } = useAuth();
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
 
   const productIdParam = searchParams.get('product_id');
   const planIdParam = searchParams.get('plan_id');
@@ -124,7 +130,7 @@ function CheckoutInner() {
   const [pageLoading, setPageLoading] = useState(true);
   const [pageError, setPageError] = useState('');
   const [payoneerStatus, setPayoneerStatus] = useState<PayoneerStatus>('checking');
-  const [payoneerRedirecting, setPayoneerRedirecting] = useState(false);
+  const [checkoutSubmitting, setCheckoutSubmitting] = useState(false);
   const [checkoutTracked, setCheckoutTracked] = useState(false);
 
   useEffect(() => {
@@ -135,7 +141,7 @@ function CheckoutInner() {
           setPayoneerStatus('unavailable');
           return;
         }
-        const data = await res.json() as { available?: boolean };
+        const data = (await res.json()) as { available?: boolean };
         setPayoneerStatus(data.available === true ? 'available' : 'unavailable');
       } catch {
         setPayoneerStatus('unavailable');
@@ -168,7 +174,7 @@ function CheckoutInner() {
 
       const { data: plans, error: plansError } = await supabase
         .from('product_plans')
-        .select('id, name, description, price, currency, billing_period, features, is_active')
+        .select('id, name, description, price, currency, billing_period, features, is_active, sale_price, sale_discount_type, sale_discount_value, sale_starts_at, sale_ends_at')
         .eq('product_id', productIdParam)
         .eq('is_active', true)
         .order('sort_order', { ascending: true });
@@ -194,27 +200,55 @@ function CheckoutInner() {
     if (!authLoading) void loadCartItem();
   }, [authLoading, loadCartItem]);
 
+  const pricing = useMemo(() => {
+    if (!cartItem) return null;
+    try {
+      return getEffectivePrice(cartItem.plan);
+    } catch {
+      const price = Number(cartItem.plan.price || 0);
+      return {
+        regularPrice: price,
+        salePrice: null,
+        finalPrice: price,
+        discountAmount: 0,
+        discountPercent: 0,
+        onSale: false,
+      };
+    }
+  }, [cartItem]);
+
+  const basePrice = Number(pricing?.finalPrice ?? 0);
+  const regularPrice = Number(pricing?.regularPrice ?? basePrice);
+  const currency = cartItem?.plan.currency ?? 'USD';
+  const couponDiscountAmount = appliedCoupon
+    ? appliedCoupon.coupon_type === 'percentage'
+      ? Math.min(basePrice, Math.max(0, (basePrice * Number(appliedCoupon.discount_value)) / 100))
+      : Math.min(basePrice, Math.max(0, Number(appliedCoupon.discount_value)))
+    : 0;
+  const finalAmount = Number(Math.max(0, basePrice - couponDiscountAmount).toFixed(2));
+  const isFreeOrder = finalAmount === 0;
+
   useEffect(() => {
-    if (cartItem && !checkoutTracked) {
+    if (cartItem && pricing && !checkoutTracked) {
       trackCheckoutStarted({
         id: cartItem.product.id,
         name: cartItem.product.name,
-        price: cartItem.plan.price,
+        price: pricing.finalPrice,
         planName: cartItem.plan.name,
       });
       setCheckoutTracked(true);
     }
-  }, [cartItem, checkoutTracked]);
+  }, [cartItem, checkoutTracked, pricing]);
 
   const handleBillingSwitch = (frequency: 'monthly' | 'yearly') => {
     if (!cartItem) return;
     const matchingPlan = allPlans.find(
-      (plan) => plan.billing_period === (frequency === 'monthly' ? 'monthly' : 'yearly')
+      (plan) => plan.billing_period === (frequency === 'monthly' ? 'monthly' : 'yearly'),
     );
     if (!matchingPlan) return;
 
     setBillingFrequency(frequency);
-    setCartItem((current) => current ? { ...current, plan: matchingPlan } : current);
+    setCartItem((current) => (current ? { ...current, plan: matchingPlan } : current));
     setAppliedCoupon(null);
     setCouponCode('');
     setCouponError('');
@@ -266,18 +300,26 @@ function CheckoutInner() {
     }
   };
 
-  const handlePayoneerCheckout = async () => {
+  const handleCheckout = async () => {
     if (!user) {
-      router.push('/sign-up-login-screen');
+      const next = new URLSearchParams();
+      if (productIdParam) next.set('product_id', productIdParam);
+      if (cartItem?.plan.id) next.set('plan_id', cartItem.plan.id);
+      const checkoutPath = `/checkout?${next.toString()}`;
+      router.push(`/sign-up-login-screen?next=${encodeURIComponent(checkoutPath)}`);
       return;
     }
-    if (!cartItem || payoneerStatus !== 'available') return;
+    if (!cartItem) return;
+    if (!isFreeOrder && payoneerStatus !== 'available') return;
 
-    setPayoneerRedirecting(true);
+    setCheckoutSubmitting(true);
     setPageError('');
 
     try {
-      const res = await fetch('/api/payment/create-payoneer-session', {
+      const endpoint = isFreeOrder
+        ? '/api/payment/create-free-order'
+        : '/api/payment/create-payoneer-session';
+      const res = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -287,35 +329,43 @@ function CheckoutInner() {
         }),
       });
 
-      const data = await res.json() as { redirectUrl?: string; error?: string };
-      if (!res.ok || !data.redirectUrl) {
-        setPageError(data.error ?? 'Failed to start Payoneer checkout. Please try again.');
+      const data = (await res.json()) as {
+        orderId?: string;
+        redirectUrl?: string;
+        alreadyOwned?: boolean;
+        error?: string;
+      };
+
+      if (!res.ok || !data.orderId) {
+        setPageError(data.error ?? 'Failed to start checkout. Please try again.');
         return;
       }
 
+      if (isFreeOrder) {
+        router.push(`/checkout/success?order_id=${encodeURIComponent(data.orderId)}&free=1`);
+        return;
+      }
+
+      if (!data.redirectUrl) {
+        setPageError('Payment provider did not return a checkout URL.');
+        return;
+      }
       window.location.assign(data.redirectUrl);
     } catch {
-      setPageError('Failed to start Payoneer checkout. Please try again.');
+      setPageError('Failed to start checkout. Please try again.');
     } finally {
-      setPayoneerRedirecting(false);
+      setCheckoutSubmitting(false);
     }
   };
-
-  const basePrice = Number(cartItem?.plan.price ?? 0);
-  const currency = cartItem?.plan.currency ?? 'USD';
-  const discountAmount = appliedCoupon
-    ? appliedCoupon.coupon_type === 'percentage'
-      ? Math.min(basePrice, Math.max(0, (basePrice * Number(appliedCoupon.discount_value)) / 100))
-      : Math.min(basePrice, Math.max(0, Number(appliedCoupon.discount_value)))
-    : 0;
-  const finalAmount = Math.max(0, basePrice - discountAmount);
 
   const hasMonthly = allPlans.some((plan) => plan.billing_period === 'monthly');
   const hasYearly = allPlans.some((plan) => plan.billing_period === 'yearly');
   const monthlyPlan = allPlans.find((plan) => plan.billing_period === 'monthly');
   const yearlyPlan = allPlans.find((plan) => plan.billing_period === 'yearly');
-  const yearlySavings = yearlyPlan && monthlyPlan && monthlyPlan.price > 0
-    ? Math.max(0, Math.round(((monthlyPlan.price * 12 - yearlyPlan.price) / (monthlyPlan.price * 12)) * 100))
+  const monthlyEffective = monthlyPlan ? getEffectivePrice(monthlyPlan).finalPrice : null;
+  const yearlyEffective = yearlyPlan ? getEffectivePrice(yearlyPlan).finalPrice : null;
+  const yearlySavings = monthlyEffective !== null && yearlyEffective !== null && monthlyEffective > 0
+    ? Math.max(0, Math.round(((monthlyEffective * 12 - yearlyEffective) / (monthlyEffective * 12)) * 100))
     : 0;
 
   return (
@@ -335,13 +385,15 @@ function CheckoutInner() {
           </div>
           <div>
             <h1 className="text-2xl font-800 text-foreground">Secure Checkout</h1>
-            <p className="text-sm text-muted-foreground">Payment is completed on the provider&apos;s hosted page.</p>
+            <p className="text-sm text-muted-foreground">
+              {isFreeOrder ? 'No payment is required for this order.' : 'Payment is completed on the provider\'s hosted page.'}
+            </p>
           </div>
         </div>
         <div className="flex items-center gap-2 mt-4 p-3 bg-success/5 border border-success/15 rounded-xl">
           <Shield size={14} className="text-success" />
           <p className="text-xs text-secondary-foreground">
-            SUMMECA does not collect or store full card numbers or CVV. Payment credentials are entered directly with the payment provider.
+            SUMMECA recalculates product pricing, sale windows and coupons on the server before granting access or creating payment.
           </p>
         </div>
       </div>
@@ -385,7 +437,12 @@ function CheckoutInner() {
                     {cartItem.plan.name} · {billingPeriodLabel[cartItem.plan.billing_period]}
                   </div>
                 </div>
-                <div className="font-800 text-foreground">{formatCurrency(basePrice, currency)}</div>
+                <div className="text-right">
+                  {pricing?.onSale && (
+                    <div className="text-xs text-muted-foreground line-through">{formatCurrency(regularPrice, currency)}</div>
+                  )}
+                  <div className="font-800 text-foreground">{basePrice === 0 ? 'Free' : formatCurrency(basePrice, currency)}</div>
+                </div>
               </div>
             </div>
 
@@ -399,13 +456,13 @@ function CheckoutInner() {
                     onClick={() => handleBillingSwitch('monthly')}
                     className={`flex-1 p-3 rounded-xl border text-sm ${billingFrequency === 'monthly' ? 'border-primary bg-primary/5' : 'border-border'}`}
                   >
-                    Monthly {monthlyPlan ? `· ${formatCurrency(monthlyPlan.price, currency)}` : ''}
+                    Monthly {monthlyEffective !== null ? `· ${monthlyEffective === 0 ? 'Free' : formatCurrency(monthlyEffective, monthlyPlan?.currency ?? currency)}` : ''}
                   </button>
                   <button
                     onClick={() => handleBillingSwitch('yearly')}
                     className={`flex-1 p-3 rounded-xl border text-sm ${billingFrequency === 'yearly' ? 'border-primary bg-primary/5' : 'border-border'}`}
                   >
-                    Yearly {yearlyPlan ? `· ${formatCurrency(yearlyPlan.price, currency)}` : ''}
+                    Yearly {yearlyEffective !== null ? `· ${yearlyEffective === 0 ? 'Free' : formatCurrency(yearlyEffective, yearlyPlan?.currency ?? currency)}` : ''}
                     {yearlySavings > 0 && <span className="block text-[10px] text-success mt-1">Save {yearlySavings}%</span>}
                   </button>
                 </div>
@@ -414,48 +471,59 @@ function CheckoutInner() {
 
             <div className="bg-card border border-border rounded-2xl overflow-hidden">
               <div className="px-5 py-3 border-b border-border">
-                <h2 className="text-sm font-700 flex items-center gap-2"><Wallet size={15} /> Payment Method</h2>
+                <h2 className="text-sm font-700 flex items-center gap-2"><Wallet size={15} /> Checkout Method</h2>
               </div>
               <div className="p-5 space-y-3">
-                <div className={`rounded-xl border p-4 flex items-center gap-3 ${payoneerStatus === 'available' ? 'border-primary bg-primary/5' : 'border-border bg-secondary/30'}`}>
-                  <Wallet size={20} className="text-primary" />
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-700 text-sm">Payoneer Checkout</span>
-                      <span className={`text-[10px] px-2 py-0.5 rounded-full ${
-                        payoneerStatus === 'available'
-                          ? 'bg-success/10 text-success'
-                          : payoneerStatus === 'checking'
-                            ? 'bg-secondary text-muted-foreground'
-                            : 'bg-warning/10 text-warning'
-                      }`}>
-                        {payoneerStatus === 'available' ? 'Available' : payoneerStatus === 'checking' ? 'Checking…' : 'Not configured'}
-                      </span>
+                {isFreeOrder ? (
+                  <div className="rounded-xl border border-success/30 bg-success/5 p-4 flex items-center gap-3">
+                    <CheckCircle2 size={20} className="text-success" />
+                    <div className="flex-1">
+                      <div className="font-700 text-sm">Free Access</div>
+                      <p className="text-xs text-muted-foreground mt-1">No payment provider is required. Access is granted securely after server validation.</p>
                     </div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      You will be redirected to Payoneer&apos;s hosted checkout to enter payment details.
-                    </p>
                   </div>
-                  {payoneerStatus === 'available' && <ExternalLink size={14} className="text-muted-foreground" />}
-                </div>
+                ) : (
+                  <div className={`rounded-xl border p-4 flex items-center gap-3 ${payoneerStatus === 'available' ? 'border-primary bg-primary/5' : 'border-border bg-secondary/30'}`}>
+                    <Wallet size={20} className="text-primary" />
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-700 text-sm">Payoneer Checkout</span>
+                        <span className={`text-[10px] px-2 py-0.5 rounded-full ${
+                          payoneerStatus === 'available'
+                            ? 'bg-success/10 text-success'
+                            : payoneerStatus === 'checking'
+                              ? 'bg-secondary text-muted-foreground'
+                              : 'bg-warning/10 text-warning'
+                        }`}>
+                          {payoneerStatus === 'available' ? 'Available' : payoneerStatus === 'checking' ? 'Checking…' : 'Not configured'}
+                        </span>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">You will be redirected to Payoneer&apos;s hosted checkout.</p>
+                    </div>
+                    {payoneerStatus === 'available' && <ExternalLink size={14} className="text-muted-foreground" />}
+                  </div>
+                )}
 
-                <div className="rounded-xl border border-border bg-secondary/20 p-4 flex items-center gap-3 opacity-70">
-                  <CreditCard size={20} />
-                  <div className="flex-1">
-                    <div className="font-700 text-sm">Direct card checkout</div>
-                    <p className="text-xs text-muted-foreground mt-1">Coming soon — card numbers are not collected by SUMMECA.</p>
-                  </div>
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-secondary text-muted-foreground">Coming soon</span>
-                </div>
-
-                <div className="rounded-xl border border-border bg-secondary/20 p-4 flex items-center gap-3 opacity-70">
-                  <Bitcoin size={20} />
-                  <div className="flex-1">
-                    <div className="font-700 text-sm">Crypto · BTC / ETH / USDT</div>
-                    <p className="text-xs text-muted-foreground mt-1">Coming soon — crypto payment processing is not live yet.</p>
-                  </div>
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-secondary text-muted-foreground">Coming soon</span>
-                </div>
+                {!isFreeOrder && (
+                  <>
+                    <div className="rounded-xl border border-border bg-secondary/20 p-4 flex items-center gap-3 opacity-70">
+                      <CreditCard size={20} />
+                      <div className="flex-1">
+                        <div className="font-700 text-sm">Direct card checkout</div>
+                        <p className="text-xs text-muted-foreground mt-1">Coming soon — card numbers are not collected by SUMMECA.</p>
+                      </div>
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-secondary text-muted-foreground">Coming soon</span>
+                    </div>
+                    <div className="rounded-xl border border-border bg-secondary/20 p-4 flex items-center gap-3 opacity-70">
+                      <Bitcoin size={20} />
+                      <div className="flex-1">
+                        <div className="font-700 text-sm">Crypto · BTC / ETH / USDT</div>
+                        <p className="text-xs text-muted-foreground mt-1">Coming soon — crypto payment processing is not live yet.</p>
+                      </div>
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-secondary text-muted-foreground">Coming soon</span>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
 
@@ -470,9 +538,7 @@ function CheckoutInner() {
                       <CheckCircle2 size={16} className="text-success" />
                       <span className="text-sm font-700">{appliedCoupon.code}</span>
                     </div>
-                    <button onClick={() => { setAppliedCoupon(null); setCouponCode(''); }} aria-label="Remove coupon">
-                      <X size={15} />
-                    </button>
+                    <button onClick={() => { setAppliedCoupon(null); setCouponCode(''); }} aria-label="Remove coupon"><X size={15} /></button>
                   </div>
                 ) : (
                   <div>
@@ -502,53 +568,54 @@ function CheckoutInner() {
 
           <div className="lg:col-span-2">
             <div className="bg-card border border-border rounded-2xl overflow-hidden sticky top-24">
-              <div className="px-5 py-4 border-b border-border">
-                <h2 className="text-sm font-700">Order Summary</h2>
-              </div>
+              <div className="px-5 py-4 border-b border-border"><h2 className="text-sm font-700">Order Summary</h2></div>
               <div className="p-5">
                 <div className="space-y-3 mb-5 text-sm">
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">{cartItem.plan.name}</span>
-                    <span>{formatCurrency(basePrice, currency)}</span>
+                    <span className="text-muted-foreground">Regular price</span>
+                    <span>{formatCurrency(regularPrice, currency)}</span>
                   </div>
-                  {discountAmount > 0 && (
+                  {pricing?.discountAmount ? (
                     <div className="flex justify-between text-success">
-                      <span>Discount</span>
-                      <span>-{formatCurrency(discountAmount, currency)}</span>
+                      <span>Sale discount</span>
+                      <span>-{formatCurrency(pricing.discountAmount, currency)}</span>
+                    </div>
+                  ) : null}
+                  {couponDiscountAmount > 0 && (
+                    <div className="flex justify-between text-success">
+                      <span>Coupon discount</span>
+                      <span>-{formatCurrency(couponDiscountAmount, currency)}</span>
                     </div>
                   )}
                   <div className="border-t border-border pt-3 flex justify-between items-end">
                     <span className="font-700">Total</span>
-                    <span className="text-xl font-800">{formatCurrency(finalAmount, currency)}</span>
+                    <span className="text-xl font-800">{finalAmount === 0 ? 'Free' : formatCurrency(finalAmount, currency)}</span>
                   </div>
                 </div>
 
                 <div className="mb-4 p-3 bg-secondary/60 border border-border rounded-xl text-xs text-muted-foreground flex gap-2">
                   <Info size={13} className="flex-shrink-0 mt-0.5" />
-                  <span>The final price and coupon are recalculated on the server before the payment session is created.</span>
+                  <span>The server recalculates the sale price and coupon before access is granted or payment starts.</span>
                 </div>
 
                 {!user && !authLoading && (
-                  <div className="mb-4 p-3 bg-warning/5 border border-warning/20 rounded-xl text-xs text-warning">
-                    Sign in to continue to payment.
-                  </div>
+                  <div className="mb-4 p-3 bg-warning/5 border border-warning/20 rounded-xl text-xs text-warning">Sign in to continue.</div>
                 )}
-
                 {pageError && (
-                  <div className="mb-4 p-3 bg-danger/5 border border-danger/20 rounded-xl text-xs text-danger">
-                    {pageError}
-                  </div>
+                  <div className="mb-4 p-3 bg-danger/5 border border-danger/20 rounded-xl text-xs text-danger">{pageError}</div>
                 )}
 
                 <button
-                  onClick={() => void handlePayoneerCheckout()}
-                  disabled={authLoading || payoneerRedirecting || payoneerStatus !== 'available'}
+                  onClick={() => void handleCheckout()}
+                  disabled={authLoading || checkoutSubmitting || (!isFreeOrder && payoneerStatus !== 'available')}
                   className="w-full py-3.5 bg-gradient-teal text-white font-700 text-sm rounded-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
-                  {payoneerRedirecting ? (
-                    <><Loader2 size={16} className="animate-spin" /> Opening Payoneer…</>
+                  {checkoutSubmitting ? (
+                    <><Loader2 size={16} className="animate-spin" /> Processing…</>
                   ) : !user ? (
                     'Sign In to Continue'
+                  ) : isFreeOrder ? (
+                    <><CheckCircle2 size={15} /> Get Free Access</>
                   ) : payoneerStatus === 'available' ? (
                     <><ExternalLink size={14} /> Pay with Payoneer</>
                   ) : (
@@ -557,13 +624,11 @@ function CheckoutInner() {
                 </button>
 
                 <p className="text-center text-xs text-muted-foreground mt-3 flex items-center justify-center gap-1">
-                  <Lock size={11} /> Payment credentials stay with the provider
+                  <Lock size={11} /> {isFreeOrder ? 'No payment information required' : 'Payment credentials stay with the provider'}
                 </p>
 
                 <div className="mt-5 pt-4 border-t border-border text-center">
-                  <Link href={`/products/${cartItem.product.slug}`} className="text-xs text-muted-foreground hover:text-foreground">
-                    ← Back to product
-                  </Link>
+                  <Link href={`/products/${cartItem.product.slug}`} className="text-xs text-muted-foreground hover:text-foreground">← Back to product</Link>
                 </div>
               </div>
             </div>
@@ -578,9 +643,7 @@ export default function CheckoutPage() {
   return (
     <div className="min-h-screen bg-background">
       <PublicNav />
-      <Suspense fallback={
-        <div className="pt-24 pb-20 max-w-screen-xl mx-auto px-6 lg:px-8"><CheckoutSkeleton /></div>
-      }>
+      <Suspense fallback={<div className="pt-24 pb-20 max-w-screen-xl mx-auto px-6 lg:px-8"><CheckoutSkeleton /></div>}>
         <CheckoutInner />
       </Suspense>
       <PublicFooter />
