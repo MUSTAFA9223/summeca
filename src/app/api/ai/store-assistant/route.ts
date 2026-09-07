@@ -1,56 +1,32 @@
 /**
  * POST /api/ai/store-assistant
  *
- * Public store assistant with strict product grounding, input validation and
- * per-client burst protection. The model call is executed directly on the
- * server so the public assistant does not depend on the admin-only AI route.
+ * Public, rate-limited SUMMECA sales assistant grounded in the live product
+ * catalog. Inference runs on Cloudflare Workers AI through the server binding.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { completion } from '@rocketnew/llm-sdk';
 import { createServiceClient } from '@/lib/supabase/server';
 import { checkRateLimit, getRequestIdentity } from '@/lib/security/rateLimit';
-
-type AIMessage = {
-  role: 'system' | 'user' | 'assistant';
-  content: string;
-};
-
-type StoreProvider = 'OPEN_AI' | 'ANTHROPIC' | 'GEMINI';
+import { generateStoreAssistantResponse, type AIMessage } from '@/lib/ai/aiProvider';
+import { getEffectivePrice } from '@/lib/pricing';
 
 const MAX_HISTORY = 10;
 const ALLOWED_HISTORY_ROLES = new Set(['user', 'assistant']);
 
-const PROVIDER_KEYS: Record<StoreProvider, string | undefined> = {
-  OPEN_AI: process.env.OPENAI_API_KEY,
-  ANTHROPIC: process.env.ANTHROPIC_API_KEY,
-  GEMINI: process.env.GEMINI_API_KEY,
+type PlanRow = {
+  name: string;
+  price: number | string;
+  currency: string;
+  billing_period: string;
+  features: string[] | null;
+  is_active: boolean;
+  sale_price: number | string | null;
+  sale_discount_type: 'percentage' | 'fixed_amount' | null;
+  sale_discount_value: number | string | null;
+  sale_starts_at: string | null;
+  sale_ends_at: string | null;
 };
-
-const DEFAULT_MODELS: Record<StoreProvider, string> = {
-  OPEN_AI: 'gpt-4.1',
-  ANTHROPIC: 'claude-opus-4-5',
-  GEMINI: 'gemini-2.5-pro',
-};
-
-function resolveProvider(): { provider: StoreProvider; apiKey: string; model: string } | null {
-  const configured = process.env.AI_PROVIDER as StoreProvider | undefined;
-  const preferred: StoreProvider[] = configured && configured in PROVIDER_KEYS
-    ? [configured, 'OPEN_AI', 'GEMINI', 'ANTHROPIC']
-    : ['OPEN_AI', 'GEMINI', 'ANTHROPIC'];
-
-  const provider = preferred.find((candidate, index) =>
-    preferred.indexOf(candidate) === index && Boolean(PROVIDER_KEYS[candidate])
-  );
-
-  if (!provider) return null;
-
-  return {
-    provider,
-    apiKey: PROVIDER_KEYS[provider]!,
-    model: process.env.AI_DEFAULT_MODEL || DEFAULT_MODELS[provider],
-  };
-}
 
 export async function POST(request: NextRequest) {
   const rate = checkRateLimit(`store-assistant:${getRequestIdentity(request)}`, {
@@ -85,16 +61,17 @@ export async function POST(request: NextRequest) {
 
   const safeHistory: AIMessage[] = history
     .slice(-MAX_HISTORY)
-    .filter((m) =>
-      m &&
-      typeof m.role === 'string' &&
-      ALLOWED_HISTORY_ROLES.has(m.role) &&
-      typeof m.content === 'string' &&
-      m.content.trim().length > 0
+    .filter(
+      (item) =>
+        item &&
+        typeof item.role === 'string' &&
+        ALLOWED_HISTORY_ROLES.has(item.role) &&
+        typeof item.content === 'string' &&
+        item.content.trim().length > 0,
     )
-    .map((m) => ({
-      role: m.role as AIMessage['role'],
-      content: String(m.content).slice(0, 2000),
+    .map((item) => ({
+      role: item.role as AIMessage['role'],
+      content: String(item.content).slice(0, 2000),
     }));
 
   const supabase = createServiceClient();
@@ -102,7 +79,11 @@ export async function POST(request: NextRequest) {
     .from('products')
     .select(`
       id, name, slug, short_desc, description, category,
-      plans:product_plans(price, billing_period, is_active)
+      plans:product_plans(
+        name, price, currency, billing_period, features, is_active,
+        sale_price, sale_discount_type, sale_discount_value,
+        sale_starts_at, sale_ends_at
+      )
     `)
     .eq('status', 'active')
     .limit(30);
@@ -112,92 +93,57 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Assistant is temporarily unavailable' }, { status: 503 });
   }
 
-  const productList = (products ?? []).map((p) => {
-    const activePlans = (p.plans ?? []).filter((pl: { is_active: boolean }) => pl.is_active);
-    const lowestPrice = activePlans.length > 0
-      ? Math.min(...activePlans.map((pl: { price: number }) => Number(pl.price)))
-      : 0;
-    return {
-      name: p.name,
-      description: p.short_desc || p.description || '',
-      price: Number.isFinite(lowestPrice) ? lowestPrice : 0,
-      slug: p.slug,
-    };
-  });
+  const productList = (products ?? []).map((product) => ({
+    name: product.name,
+    description: product.short_desc || product.description || '',
+    slug: product.slug,
+    category: product.category,
+    plans: ((product.plans ?? []) as PlanRow[])
+      .filter((plan) => plan.is_active)
+      .map((plan) => {
+        let price = Number(plan.price || 0);
+        try {
+          price = getEffectivePrice(plan).finalPrice;
+        } catch {
+          // Fall back to the stored regular price if legacy sale data is malformed.
+        }
+        return {
+          name: plan.name,
+          price: Number.isFinite(price) ? price : 0,
+          currency: String(plan.currency || 'USD').toUpperCase(),
+          billingPeriod: plan.billing_period,
+          features: Array.isArray(plan.features) ? plan.features.slice(0, 8) : [],
+        };
+      }),
+  }));
 
-  const providerConfig = resolveProvider();
-  if (!providerConfig) {
-    console.error('[store-assistant] no AI provider API key is configured');
-    return NextResponse.json({ error: 'Assistant is not configured yet' }, { status: 503 });
-  }
-
-  const productContext = productList
-    .map((p) => `- ${p.name}: ${p.description} (Price: $${p.price}, URL: /products/${p.slug})`)
-    .join('\n');
-
-  const messages: AIMessage[] = [
-    {
-      role: 'system',
-      content: `You are the customer assistant for SUMMECA, a digital products marketplace.
-Help customers find products, answer product questions, and guide purchase decisions.
-Reply in the same language the customer uses.
-
-AVAILABLE PRODUCTS:
-${productContext || '- No active products are currently available.'}
-
-RULES:
-- Only recommend products from the list above.
-- Never invent product features, prices, availability, guarantees, or policies.
-- If the available data does not answer a question, say that you do not have enough information and direct the customer to SUMMECA support.
-- Keep answers concise, friendly and useful.
-- Include the product URL when recommending a product.`,
-    },
-    ...safeHistory,
-    { role: 'user', content: message },
-  ];
-
-  const startedAt = Date.now();
-  let text = '';
-  let tokensUsed = 0;
-
+  let result;
   try {
-    const providerResponse = await completion({
-      model: providerConfig.model,
-      messages,
-      stream: false,
-      api_key: providerConfig.apiKey,
-      max_tokens: 600,
+    result = await generateStoreAssistantResponse({
+      userMessage: message,
+      conversationHistory: safeHistory,
+      products: productList,
     });
-
-    const response = providerResponse as {
-      choices?: Array<{ message?: { content?: string } }>;
-      usage?: { total_tokens?: number };
-    };
-
-    text = response.choices?.[0]?.message?.content?.trim() || '';
-    tokensUsed = Number(response.usage?.total_tokens ?? 0);
-    if (!text) throw new Error('AI provider returned an empty response');
-  } catch (err) {
-    console.error('[store-assistant] generation failed:', err);
+  } catch (error) {
+    console.error('[store-assistant] Workers AI generation failed:', error);
     return NextResponse.json({ error: 'Assistant is temporarily unavailable' }, { status: 502 });
   }
 
-  const durationMs = Date.now() - startedAt;
   const { error: historyError } = await supabase.from('ai_generations').insert({
     user_id: null,
     generation_type: 'store_assistant',
-    model: providerConfig.model,
-    input_data: { message, provider: providerConfig.provider },
-    output_text: text,
-    tokens_used: tokensUsed,
-    duration_ms: durationMs,
+    model: result.model,
+    input_data: { message, provider: 'cloudflare_workers_ai' },
+    output_text: result.text,
+    tokens_used: result.tokensUsed,
+    duration_ms: result.durationMs,
   });
   if (historyError) {
     console.warn('[store-assistant] Failed to save generation history:', historyError.message);
   }
 
   return NextResponse.json(
-    { success: true, reply: text },
-    { headers: { 'Cache-Control': 'no-store' } },
+    { success: true, reply: result.text },
+    { headers: { 'Cache-Control': 'private, no-store' } },
   );
 }
