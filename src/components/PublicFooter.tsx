@@ -41,7 +41,7 @@ function TwitterIcon({ size = 16 }: { size?: number }) {
 
 export default function PublicFooter() {
   const socialLinks = [
-    { Icon: TwitterIcon, href: 'https://twitter.com/summeca', label: 'Twitter' },
+    { Icon: TwitterIcon, href: 'https://x.com/summeca_', label: 'Twitter' },
   ];
 
   const trustBadges = [
