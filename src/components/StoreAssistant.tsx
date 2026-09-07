@@ -1,11 +1,39 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
-import { MessageCircle, X, Send, Loader2, Bot, User, Minimize2, Maximize2 } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { MessageCircle, X, Send, Loader2, Bot, User, Minimize2, Maximize2, Sparkles } from 'lucide-react';
 
 interface Message {
   role: 'user' | 'assistant';
   content: string;
+}
+
+const QUICK_PROMPTS = [
+  'ساعدني أختار المنتج المناسب',
+  'قارن لي الخطط والأسعار',
+  'ما هو أرخص خيار مناسب لي؟',
+];
+
+function MessageContent({ content }: { content: string }) {
+  const parts = content.split(/(\/products\/[A-Za-z0-9._~!$&'()*+,;=:@%/-]+)/g);
+
+  return (
+    <>
+      {parts.map((part, index) =>
+        part.startsWith('/products/') ? (
+          <a
+            key={`${part}-${index}`}
+            href={part}
+            className="font-700 text-primary underline underline-offset-2 hover:opacity-80"
+          >
+            عرض المنتج
+          </a>
+        ) : (
+          <React.Fragment key={index}>{part}</React.Fragment>
+        ),
+      )}
+    </>
+  );
 }
 
 export default function StoreAssistant() {
@@ -14,7 +42,7 @@ export default function StoreAssistant() {
   const [messages, setMessages] = useState<Message[]>([
     {
       role: 'assistant',
-      content: 'Hi! I\'m the SUMMECA assistant. I can help you find the right product, answer questions, and guide your purchase. What are you looking for?',
+      content: 'مرحبًا! أنا موظف مبيعات SUMMECA الذكي. أخبرني ماذا تريد أن تنجز وسأساعدك في اختيار المنتج والخطة الأنسب من منتجاتنا الفعلية.',
     },
   ]);
   const [input, setInput] = useState('');
@@ -27,17 +55,20 @@ export default function StoreAssistant() {
     }
   }, [messages, open, minimized]);
 
-  const sendMessage = async () => {
-    const text = input.trim();
+  const sendMessage = async (preset?: string) => {
+    const text = (preset ?? input).trim();
     if (!text || loading) return;
 
     const userMsg: Message = { role: 'user', content: text };
-    setMessages(prev => [...prev, userMsg]);
+    setMessages((prev) => [...prev, userMsg]);
     setInput('');
     setLoading(true);
 
     try {
-      const history = messages.slice(-8).map(m => ({ role: m.role, content: m.content }));
+      const history = messages.slice(-8).map((message) => ({
+        role: message.role,
+        content: message.content,
+      }));
 
       const res = await fetch('/api/ai/store-assistant', {
         method: 'POST',
@@ -45,66 +76,73 @@ export default function StoreAssistant() {
         body: JSON.stringify({ message: text, history }),
       });
 
-      const data = await res.json();
+      const data = (await res.json()) as { reply?: string; error?: string };
 
-      if (!res.ok || data.error) {
-        setMessages(prev => [...prev, {
-          role: 'assistant',
-          content: 'I\'m having trouble right now. Please try again or contact our support team.',
-        }]);
+      if (!res.ok || data.error || !data.reply) {
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: 'assistant',
+            content: 'تعذر الوصول إلى موظف المبيعات الآن. حاول مرة أخرى بعد قليل، أو تواصل مع دعم SUMMECA.',
+          },
+        ]);
       } else {
-        setMessages(prev => [...prev, { role: 'assistant', content: data.reply }]);
+        setMessages((prev) => [...prev, { role: 'assistant', content: data.reply! }]);
       }
     } catch {
-      setMessages(prev => [...prev, {
-        role: 'assistant',
-        content: 'Connection error. Please check your internet and try again.',
-      }]);
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: 'assistant',
+          content: 'حدث خطأ في الاتصال. حاول مرة أخرى بعد قليل.',
+        },
+      ]);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      sendMessage();
+  const handleKeyDown = (event: React.KeyboardEvent) => {
+    if (event.key === 'Enter' && !event.shiftKey) {
+      event.preventDefault();
+      void sendMessage();
     }
   };
 
   return (
     <>
-      {/* Chat window */}
       {open && (
         <div
-          className={`fixed bottom-20 right-4 z-50 w-80 sm:w-96 bg-card border border-border rounded-2xl shadow-2xl flex flex-col transition-all duration-200 ${
-            minimized ? 'h-14' : 'h-[480px]'
+          className={`fixed bottom-20 right-3 z-50 flex w-[calc(100vw-24px)] max-w-96 flex-col rounded-2xl border border-border bg-card shadow-2xl transition-all duration-200 sm:right-4 ${
+            minimized ? 'h-14' : 'h-[min(520px,72vh)]'
           }`}
+          dir="auto"
         >
-          {/* Header */}
-          <div className="flex items-center justify-between px-4 py-3 border-b border-border rounded-t-2xl bg-primary/5">
+          <div className="flex items-center justify-between rounded-t-2xl border-b border-border bg-primary/5 px-4 py-3">
             <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-full bg-primary flex items-center justify-center">
-                <Bot size={14} className="text-primary-foreground" />
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary">
+                <Bot size={15} className="text-primary-foreground" />
               </div>
               <div>
-                <p className="text-sm font-700 text-foreground">SUMMECA Assistant</p>
-                <p className="text-xs text-success flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-success inline-block" />
-                  Online
+                <p className="text-sm font-700 text-foreground">SUMMECA Sales AI</p>
+                <p className="flex items-center gap-1 text-xs text-success">
+                  <span className="inline-block h-1.5 w-1.5 rounded-full bg-success" />
+                  موظف مبيعات ذكي · متصل
                 </p>
               </div>
             </div>
             <div className="flex items-center gap-1">
               <button
-                onClick={() => setMinimized(p => !p)}
-                className="w-7 h-7 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary transition-all"
+                onClick={() => setMinimized((previous) => !previous)}
+                className="flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground transition-all hover:bg-secondary hover:text-foreground"
+                aria-label={minimized ? 'تكبير المحادثة' : 'تصغير المحادثة'}
               >
                 {minimized ? <Maximize2 size={13} /> : <Minimize2 size={13} />}
               </button>
               <button
                 onClick={() => setOpen(false)}
-                className="w-7 h-7 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary transition-all"
+                className="flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground transition-all hover:bg-secondary hover:text-foreground"
+                aria-label="إغلاق المحادثة"
               >
                 <X size={13} />
               </button>
@@ -113,31 +151,55 @@ export default function StoreAssistant() {
 
           {!minimized && (
             <>
-              {/* Messages */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-3">
-                {messages.map((msg, i) => (
-                  <div key={i} className={`flex items-start gap-2 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
-                    <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${
-                      msg.role === 'assistant' ? 'bg-primary/10' : 'bg-secondary'
-                    }`}>
-                      {msg.role === 'assistant'
-                        ? <Bot size={12} className="text-primary" />
-                        : <User size={12} className="text-muted-foreground" />
-                      }
+              <div className="flex-1 space-y-3 overflow-y-auto p-4">
+                {messages.map((message, index) => (
+                  <div
+                    key={index}
+                    className={`flex items-start gap-2 ${message.role === 'user' ? 'flex-row-reverse' : ''}`}
+                  >
+                    <div
+                      className={`flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full ${
+                        message.role === 'assistant' ? 'bg-primary/10' : 'bg-secondary'
+                      }`}
+                    >
+                      {message.role === 'assistant' ? (
+                        <Bot size={12} className="text-primary" />
+                      ) : (
+                        <User size={12} className="text-muted-foreground" />
+                      )}
                     </div>
-                    <div className={`max-w-[75%] rounded-2xl px-3 py-2 text-sm leading-relaxed ${
-                      msg.role === 'assistant' ?'bg-secondary/60 text-foreground rounded-tl-sm' :'bg-primary text-primary-foreground rounded-tr-sm'
-                    }`}>
-                      {msg.content}
+                    <div
+                      className={`max-w-[78%] whitespace-pre-wrap rounded-2xl px-3 py-2 text-sm leading-relaxed ${
+                        message.role === 'assistant'
+                          ? 'rounded-tl-sm bg-secondary/60 text-foreground'
+                          : 'rounded-tr-sm bg-primary text-primary-foreground'
+                      }`}
+                    >
+                      <MessageContent content={message.content} />
                     </div>
                   </div>
                 ))}
+
+                {messages.length === 1 && !loading && (
+                  <div className="flex flex-wrap gap-2 pt-1">
+                    {QUICK_PROMPTS.map((prompt) => (
+                      <button
+                        key={prompt}
+                        onClick={() => void sendMessage(prompt)}
+                        className="rounded-full border border-primary/20 bg-primary/5 px-3 py-1.5 text-xs font-600 text-primary transition-colors hover:bg-primary/10"
+                      >
+                        {prompt}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
                 {loading && (
                   <div className="flex items-start gap-2">
-                    <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                    <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-primary/10">
                       <Bot size={12} className="text-primary" />
                     </div>
-                    <div className="bg-secondary/60 rounded-2xl rounded-tl-sm px-3 py-2">
+                    <div className="rounded-2xl rounded-tl-sm bg-secondary/60 px-3 py-2">
                       <Loader2 size={14} className="animate-spin text-muted-foreground" />
                     </div>
                   </div>
@@ -145,29 +207,30 @@ export default function StoreAssistant() {
                 <div ref={messagesEndRef} />
               </div>
 
-              {/* Input */}
-              <div className="p-3 border-t border-border">
+              <div className="border-t border-border p-3">
                 <div className="flex items-end gap-2">
                   <textarea
                     rows={1}
                     value={input}
-                    onChange={e => setInput(e.target.value)}
+                    onChange={(event) => setInput(event.target.value)}
                     onKeyDown={handleKeyDown}
-                    placeholder="Ask about our products..."
+                    placeholder="ما الذي تبحث عنه؟"
                     disabled={loading}
-                    className="flex-1 px-3 py-2 rounded-xl border border-border bg-background text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:opacity-50 max-h-24"
+                    maxLength={1000}
+                    className="max-h-24 flex-1 resize-none rounded-xl border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:opacity-50"
                     style={{ minHeight: '38px' }}
                   />
                   <button
-                    onClick={sendMessage}
+                    onClick={() => void sendMessage()}
                     disabled={loading || !input.trim()}
-                    className="w-9 h-9 rounded-xl bg-primary text-primary-foreground flex items-center justify-center hover:bg-primary/90 disabled:opacity-50 transition-colors flex-shrink-0"
+                    className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
+                    aria-label="إرسال"
                   >
                     <Send size={14} />
                   </button>
                 </div>
-                <p className="text-xs text-muted-foreground mt-1.5 text-center">
-                  Powered by SUMMECA AI
+                <p className="mt-1.5 flex items-center justify-center gap-1 text-center text-xs text-muted-foreground">
+                  <Sparkles size={11} /> Cloudflare Workers AI · يعتمد على منتجات SUMMECA الفعلية
                 </p>
               </div>
             </>
@@ -175,11 +238,13 @@ export default function StoreAssistant() {
         </div>
       )}
 
-      {/* Toggle button */}
       <button
-        onClick={() => { setOpen(p => !p); setMinimized(false); }}
-        className="fixed bottom-4 right-4 z-50 w-12 h-12 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center hover:bg-primary/90 transition-all hover:scale-105"
-        aria-label="Open AI assistant"
+        onClick={() => {
+          setOpen((previous) => !previous);
+          setMinimized(false);
+        }}
+        className="fixed bottom-4 right-4 z-50 flex h-12 w-12 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition-all hover:scale-105 hover:bg-primary/90"
+        aria-label="فتح موظف مبيعات SUMMECA"
       >
         {open ? <X size={20} /> : <MessageCircle size={20} />}
       </button>
