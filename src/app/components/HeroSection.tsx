@@ -16,7 +16,7 @@ import {
   Zap,
 } from 'lucide-react';
 
-const SummecaAiCore = dynamic(() => import('@/components/ui/SummecaAiCore'), {
+const SplineRobotScene = dynamic(() => import('@/components/ui/SplineRobotScene'), {
   ssr: false,
   loading: () => null,
 });
@@ -153,7 +153,7 @@ export default function HeroSection() {
           >
             <div className="absolute inset-[4%] rounded-[50%] border border-[#8eeef3]/10 blur-[0.2px]" />
             <div className="absolute inset-0 z-10">
-              <SummecaAiCore />
+              <SplineRobotScene />
             </div>
             <div className="pointer-events-none absolute left-1/2 top-[48%] z-0 h-56 w-56 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#08c5d1]/25 blur-[70px]" />
 
