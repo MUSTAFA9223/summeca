@@ -5,7 +5,6 @@ import HeroSection from '@/app/components/HeroSection';
 import FeaturedProducts from '@/app/components/FeaturedProducts';
 import CategoryShowcase from '@/app/components/CategoryShowcase';
 import HowItWorks from '@/app/components/HowItWorks';
-import PricingSection from '@/app/components/PricingSection';
 import FaqSection from '@/app/components/FaqSection';
 import FinalCta from '@/app/components/FinalCta';
 import HomepagePersonalization from '@/app/components/HomepagePersonalization';
@@ -20,7 +19,6 @@ export default function HomePage() {
         <HomepagePersonalization />
         <CategoryShowcase />
         <HowItWorks />
-        <PricingSection />
         <FaqSection />
         <FinalCta />
       </main>
