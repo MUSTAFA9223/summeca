@@ -71,6 +71,7 @@ export default function SplineRobotScene() {
           viewer.style.width = '100%';
           viewer.style.height = '100%';
           viewer.style.minHeight = '100%';
+          viewer.style.background = 'transparent';
           viewer.style.pointerEvents = 'auto';
           host.appendChild(viewer);
 
@@ -99,11 +100,10 @@ export default function SplineRobotScene() {
   }, []);
 
   return (
-    <div className="relative h-full w-full overflow-hidden bg-[radial-gradient(circle_at_50%_42%,rgba(246,250,251,0.98)_0%,rgba(226,237,240,0.92)_46%,rgba(17,47,55,0.9)_100%)]">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_46%,rgba(8,197,209,0.08),transparent_44%)]" />
+    <div className="relative h-full w-full overflow-hidden bg-transparent">
       <div
         ref={hostRef}
-        className={`absolute inset-0 transition-opacity duration-500 ${
+        className={`absolute inset-0 bg-transparent transition-opacity duration-500 ${
           enabled && sceneVisible ? 'opacity-100' : 'opacity-0'
         }`}
       />
