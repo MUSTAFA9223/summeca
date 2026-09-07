@@ -5,9 +5,9 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
 
-type MotionSettings = { reduced: boolean; visible: boolean };
+type MotionSettings = { reduced: boolean; visible: boolean; interactive: boolean };
 
-function CoreScene({ reduced, visible }: MotionSettings) {
+function CoreScene({ reduced, visible, interactive }: MotionSettings) {
   const core = useRef<THREE.Group>(null);
   const innerCore = useRef<THREE.Mesh>(null);
   const ringOne = useRef<THREE.Mesh>(null);
@@ -31,8 +31,8 @@ function CoreScene({ reduced, visible }: MotionSettings) {
   useFrame((state, delta) => {
     if (!visible) return;
     const elapsed = state.clock.elapsedTime;
-    const targetX = reduced ? 0.06 : pointer.y * 0.17;
-    const targetY = reduced ? -0.2 : pointer.x * 0.28;
+    const targetX = reduced ? 0.06 : interactive ? pointer.y * 0.17 : 0.04;
+    const targetY = reduced ? -0.2 : interactive ? pointer.x * 0.28 : 0;
 
     if (core.current) {
       core.current.rotation.x = THREE.MathUtils.damp(core.current.rotation.x, targetX, 3.2, delta);
@@ -44,13 +44,13 @@ function CoreScene({ reduced, visible }: MotionSettings) {
       );
       core.current.position.x = THREE.MathUtils.damp(
         core.current.position.x,
-        reduced ? 0 : pointer.x * 0.16,
+        reduced || !interactive ? 0 : pointer.x * 0.16,
         3,
         delta
       );
       core.current.position.y = THREE.MathUtils.damp(
         core.current.position.y,
-        reduced ? 0.18 : 0.18 + pointer.y * 0.1,
+        reduced || !interactive ? 0.18 : 0.18 + pointer.y * 0.1,
         3,
         delta
       );
@@ -62,10 +62,15 @@ function CoreScene({ reduced, visible }: MotionSettings) {
       if (ringTwo.current) ringTwo.current.rotation.x -= delta * 0.09;
       if (ringThree.current) ringThree.current.rotation.y += delta * 0.08;
       if (satellites.current) satellites.current.rotation.y -= delta * 0.045;
-      camera.position.x = THREE.MathUtils.damp(camera.position.x, pointer.x * 0.2, 2.5, delta);
+      camera.position.x = THREE.MathUtils.damp(
+        camera.position.x,
+        interactive ? pointer.x * 0.2 : 0,
+        2.5,
+        delta
+      );
       camera.position.y = THREE.MathUtils.damp(
         camera.position.y,
-        0.12 + pointer.y * 0.13,
+        interactive ? 0.12 + pointer.y * 0.13 : 0.12,
         2.5,
         delta
       );
@@ -222,12 +227,17 @@ export default function SummecaAiCore() {
   const [supported, setSupported] = useState(true);
   const [visible, setVisible] = useState(true);
   const [reduced, setReduced] = useState(false);
+  const [interactive, setInteractive] = useState(true);
 
   useEffect(() => {
     const motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const pointerQuery = window.matchMedia('(pointer: coarse)');
     const updateMotion = () => setReduced(motionQuery.matches);
+    const updatePointer = () => setInteractive(!pointerQuery.matches);
     updateMotion();
+    updatePointer();
     motionQuery.addEventListener('change', updateMotion);
+    pointerQuery.addEventListener('change', updatePointer);
 
     try {
       const canvas = document.createElement('canvas');
@@ -244,6 +254,7 @@ export default function SummecaAiCore() {
 
     return () => {
       motionQuery.removeEventListener('change', updateMotion);
+      pointerQuery.removeEventListener('change', updatePointer);
       observer.disconnect();
     };
   }, []);
@@ -260,7 +271,7 @@ export default function SummecaAiCore() {
           gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
           fallback={<StaticFallback />}
         >
-          <CoreScene reduced={reduced} visible={visible} />
+          <CoreScene reduced={reduced} visible={visible} interactive={interactive} />
         </Canvas>
       )}
     </div>

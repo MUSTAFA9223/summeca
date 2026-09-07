@@ -29,7 +29,12 @@ export default function HeroSection() {
 
   const handlePointerMove = (event: ReactPointerEvent<HTMLDivElement>) => {
     const visual = visualRef.current;
-    if (!visual || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    if (
+      !visual ||
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches ||
+      window.matchMedia('(pointer: coarse)').matches
+    )
+      return;
 
     if (animationFrameRef.current !== null) cancelAnimationFrame(animationFrameRef.current);
 
