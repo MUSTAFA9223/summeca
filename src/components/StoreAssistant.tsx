@@ -1,12 +1,24 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
-import { MessageCircle, X, Send, Loader2, Bot, User, Minimize2, Maximize2, Sparkles } from 'lucide-react';
+import {
+  MessageCircle,
+  X,
+  Send,
+  Loader2,
+  Bot,
+  User,
+  Minimize2,
+  Maximize2,
+  Sparkles,
+} from 'lucide-react';
 
 interface Message {
   role: 'user' | 'assistant';
   content: string;
 }
+
+type ServiceStatus = 'ready' | 'error';
 
 const QUICK_PROMPTS = [
   'ساعدني أختار المنتج المناسب',
@@ -39,10 +51,12 @@ function MessageContent({ content }: { content: string }) {
 export default function StoreAssistant() {
   const [open, setOpen] = useState(false);
   const [minimized, setMinimized] = useState(false);
+  const [serviceStatus, setServiceStatus] = useState<ServiceStatus>('ready');
   const [messages, setMessages] = useState<Message[]>([
     {
       role: 'assistant',
-      content: 'مرحبًا! أنا موظف مبيعات SUMMECA الذكي. أخبرني ماذا تريد أن تنجز وسأساعدك في اختيار المنتج والخطة الأنسب من منتجاتنا الفعلية.',
+      content:
+        'مرحبًا! أنا موظف مبيعات SUMMECA الذكي. أخبرني ماذا تريد أن تنجز وسأساعدك في اختيار المنتج والخطة الأنسب من منتجاتنا الفعلية.',
     },
   ]);
   const [input, setInput] = useState('');
@@ -76,25 +90,36 @@ export default function StoreAssistant() {
         body: JSON.stringify({ message: text, history }),
       });
 
-      const data = (await res.json()) as { reply?: string; error?: string };
+      const rawBody = await res.text();
+      let data: { reply?: string; error?: string } = {};
+      if (rawBody) {
+        try {
+          data = JSON.parse(rawBody) as { reply?: string; error?: string };
+        } catch {
+          // A proxy/runtime error can occasionally return HTML or plain text.
+          // Treat it as a server failure rather than mislabeling it as a
+          // customer network problem.
+        }
+      }
 
       if (!res.ok || data.error || !data.reply) {
-        setMessages((prev) => [
-          ...prev,
-          {
-            role: 'assistant',
-            content: 'تعذر الوصول إلى موظف المبيعات الآن. حاول مرة أخرى بعد قليل، أو تواصل مع دعم SUMMECA.',
-          },
-        ]);
+        setServiceStatus('error');
+        const message =
+          res.status === 429
+            ? 'تم الوصول إلى الحد المؤقت للمحادثات. انتظر قليلًا ثم حاول مرة أخرى.'
+            : 'موظف المبيعات غير متاح مؤقتًا من جهة الخادم. حاول مرة أخرى بعد قليل.';
+        setMessages((prev) => [...prev, { role: 'assistant', content: message }]);
       } else {
+        setServiceStatus('ready');
         setMessages((prev) => [...prev, { role: 'assistant', content: data.reply! }]);
       }
     } catch {
+      setServiceStatus('error');
       setMessages((prev) => [
         ...prev,
         {
           role: 'assistant',
-          content: 'حدث خطأ في الاتصال. حاول مرة أخرى بعد قليل.',
+          content: 'تعذر الوصول إلى SUMMECA من جهازك الآن. تحقق من الاتصال ثم حاول مرة أخرى.',
         },
       ]);
     } finally {
@@ -125,9 +150,19 @@ export default function StoreAssistant() {
               </div>
               <div>
                 <p className="text-sm font-700 text-foreground">SUMMECA Sales AI</p>
-                <p className="flex items-center gap-1 text-xs text-success">
-                  <span className="inline-block h-1.5 w-1.5 rounded-full bg-success" />
-                  موظف مبيعات ذكي · متصل
+                <p
+                  className={`flex items-center gap-1 text-xs ${
+                    serviceStatus === 'ready' ? 'text-success' : 'text-destructive'
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-1.5 w-1.5 rounded-full ${
+                      serviceStatus === 'ready' ? 'bg-success' : 'bg-destructive'
+                    }`}
+                  />
+                  {serviceStatus === 'ready'
+                    ? 'موظف مبيعات ذكي · جاهز للمساعدة'
+                    : 'الخدمة غير متاحة مؤقتًا'}
                 </p>
               </div>
             </div>
