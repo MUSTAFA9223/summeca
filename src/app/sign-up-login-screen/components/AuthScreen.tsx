@@ -6,7 +6,7 @@ import SignupForm from './SignupForm';
 import ForgotPasswordForm from './ForgotPasswordForm';
 import AppLogo from '@/components/ui/AppLogo';
 import Link from 'next/link';
-import { Zap, Shield, Download, ArrowLeft } from 'lucide-react';
+import { Shield, Download, ArrowLeft } from 'lucide-react';
 import Icon from '@/components/ui/AppIcon';
 
 
@@ -16,7 +16,6 @@ export default function AuthScreen() {
   const [view, setView] = useState<AuthView>('login');
 
   const benefits = [
-    { icon: Zap, text: 'Instant access to 5 AI tools on sign-up' },
     { icon: Shield, text: 'Secure, private AI processing — your data stays yours' },
     { icon: Download, text: 'Lifetime access to purchased digital products' },
   ];
@@ -55,18 +54,6 @@ export default function AuthScreen() {
                 <span className="text-sm text-slate-300">{text}</span>
               </div>
             ))}
-          </div>
-        </div>
-
-        <div className="relative z-10">
-          <div className="flex items-center gap-3 p-4 rounded-xl bg-white/5 border border-white/10">
-            <div className="w-8 h-8 rounded-full bg-primary/30 flex items-center justify-center flex-shrink-0">
-              <Zap size={14} className="text-primary" />
-            </div>
-            <div>
-              <div className="text-xs font-600 text-white">Free tier available</div>
-              <div className="text-xs text-slate-400">100 AI requests/month at no cost</div>
-            </div>
           </div>
         </div>
       </div>
