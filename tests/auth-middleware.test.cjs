@@ -93,3 +93,13 @@ test('reset page exchanges a PKCE recovery code before validating the user', () 
   assert.match(source, /exchangeCodeForSession\(\s*code\s*,?/);
   assert.match(source, /auth\.updateUser\(\{ password \}\)/);
 });
+test('admin product CRUD stays behind the protected server API', () => {
+  const pageSource = fs.readFileSync('src/app/admin/products/page.tsx', 'utf8');
+  const routeSource = fs.readFileSync('src/app/api/admin/products/route.ts', 'utf8');
+  assert.doesNotMatch(pageSource, /createClient|\.from\(['"]products['"]\)/);
+  assert.match(pageSource, /\/api\/admin\/products/);
+  assert.match(routeSource, /select\(['"]is_admin['"]\)/);
+  assert.match(routeSource, /createServiceClient\(\)/);
+  assert.match(routeSource, /action === 'save_product'/);
+  assert.match(routeSource, /action === 'update_status'/);
+});
