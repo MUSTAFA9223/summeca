@@ -77,6 +77,10 @@ export default function SplineRobotScene() {
           viewer.style.background = 'transparent';
           viewer.style.pointerEvents = 'auto';
           viewer.style.touchAction = 'pan-y';
+          // Brand-grade the live Spline render so the robot's cyan/teal accents
+          // harmonize with SUMMECA's #08c5d1 -> #0aaebd headline gradient.
+          // This preserves the scene geometry, motion and pointer interactions.
+          viewer.style.filter = 'saturate(1.5) contrast(1.09) brightness(1.02)';
           host.appendChild(viewer);
 
           // Match the original working implementation: reveal the live viewer
@@ -127,8 +131,18 @@ export default function SplineRobotScene() {
       />
 
       <div
+        className={`pointer-events-none absolute inset-0 z-[1] transition-opacity duration-500 ${
+          enabled && sceneVisible && !failed ? 'opacity-100' : 'opacity-0'
+        }`}
+        aria-hidden="true"
+      >
+        <div className="absolute left-1/2 top-[46%] h-[58%] w-[58%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#08c5d1]/12 blur-[64px]" />
+        <div className="absolute left-1/2 top-[52%] h-[34%] w-[34%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#0aaebd]/10 blur-[46px]" />
+      </div>
+
+      <div
         ref={hostRef}
-        className={`absolute inset-0 bg-transparent transition-opacity duration-500 ${
+        className={`absolute inset-0 z-[2] bg-transparent transition-opacity duration-500 ${
           enabled && sceneVisible && !failed ? 'opacity-100' : 'opacity-0'
         }`}
       />
