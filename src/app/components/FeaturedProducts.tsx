@@ -1,6 +1,6 @@
 import React from 'react';
 import Link from 'next/link';
-import { ArrowRight, Star, Zap, LayoutDashboard, FileText, TrendingUp, Brain, Sparkles, Shield } from 'lucide-react';
+import { ArrowRight, Star, Zap, LayoutDashboard, TrendingUp, Brain, Sparkles, Shield } from 'lucide-react';
 import Icon from '@/components/ui/AppIcon';
 
 
@@ -72,23 +72,6 @@ const products = [
     icon: LayoutDashboard,
     badge: 'SaaS',
     span: '',
-  },
-  {
-    id: 'prod-005',
-    name: 'Teacher Planner 2026',
-    slug: 'teacher-planner-2026',
-    type: 'digital' as const,
-    category: 'Education',
-    shortDesc: 'Complete digital planner for educators — lesson plans, grade tracking, and schedules.',
-    rating: 4.9,
-    reviewCount: 318,
-    price: 12,
-    proPice: 12,
-    isFree: false,
-    isFeatured: true,
-    icon: FileText,
-    badge: 'Digital',
-    span: 'lg:col-span-2',
   },
 ];
 
