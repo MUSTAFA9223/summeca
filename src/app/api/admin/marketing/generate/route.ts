@@ -3,31 +3,39 @@ import { createClient } from '@/lib/supabase/server';
 import { requireAdmin } from '@/lib/auth/requireAdmin';
 import { generateText } from '@/lib/ai/aiProvider';
 
-const SYSTEM_PROMPT = `You are a senior digital marketing strategist for SUMMECA, a premium AI digital products marketplace.
-Create compelling, conversion-focused marketing content. Always respond with valid JSON only.`;
+const SYSTEM_PROMPT = `You are SUMMECA's senior AI product marketer for a premium digital products marketplace.
+Create conversion-focused marketing that stays strictly factual.
+Use the verified catalog facts when supplied. Never invent discounts, scarcity, guarantees, reviews, customer counts, revenue claims, integrations, or product capabilities.
+If the source facts do not support a claim, omit it.
+Write in the same language as the campaign inputs; when the inputs are Arabic, produce natural professional Arabic.
+Always respond with valid JSON only.`;
 
 function buildUserPrompt(
   product: string,
   audience: string,
   goal: string,
   tone: string,
-  campaignType: string
+  campaignType: string,
+  verifiedContext: string,
 ): string {
   const typeInstructions: Record<string, string> = {
-    email: 'Focus on email subject line and body copy with clear CTA.',
-    product_announcement: 'Focus on announcing a new product with excitement and key benefits.',
-    promotional: 'Focus on discount/offer messaging with urgency.',
-    seo: 'Focus on SEO-optimized copy with target keywords.',
-    social_media: 'Focus on social media posts for Twitter, LinkedIn, and Instagram.',
+    email: 'Focus on email subject line and body copy with a clear factual CTA.',
+    product_announcement: 'Announce the product using verified benefits and a clear reason to explore it.',
+    promotional: 'Promote the product without inventing a discount or deadline. Only mention an offer if it appears in the verified facts.',
+    seo: 'Create SEO-focused copy based on the real product category, description and benefits.',
+    social_media: 'Create platform-specific posts for X/Twitter, LinkedIn and Instagram without fabricated social proof.',
   };
 
-  return `Create a ${campaignType.replace('_', ' ')} marketing campaign.
+  return `Create a ${campaignType.replace('_', ' ')} marketing campaign for SUMMECA.
 
-Product: ${product}
+Product requested: ${product}
 Target Audience: ${audience}
 Campaign Goal: ${goal}
 Tone: ${tone}
 ${typeInstructions[campaignType] ?? ''}
+
+VERIFIED PRODUCT CONTEXT:
+${verifiedContext}
 
 Return JSON:
 {
@@ -36,11 +44,11 @@ Return JSON:
   "subheadline": "Supporting subheadline",
   "emailSubject": "Email subject line (max 80 chars)",
   "emailPreview": "Email preview text (max 100 chars)",
-  "emailBody": "Full email body with HTML formatting",
+  "emailBody": "Full email body with simple HTML formatting",
   "socialPosts": {
-    "twitter": "Tweet (max 280 chars)",
-    "linkedin": "LinkedIn post (2-3 paragraphs)",
-    "instagram": "Instagram caption with hashtags"
+    "twitter": "Post (max 280 chars)",
+    "linkedin": "LinkedIn post (2-3 short paragraphs)",
+    "instagram": "Instagram caption with relevant hashtags"
   },
   "seoKeywords": ["keyword1", "keyword2", "keyword3"],
   "cta": "Call to action button text",
@@ -78,11 +86,60 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Input is too long or invalid' }, { status: 400 });
   }
 
+  let verifiedContext = `No exact active catalog match was found for "${product.trim()}". Use only the product facts explicitly written by the admin in the campaign inputs and do not invent missing details.`;
+
+  const { data: catalogProduct, error: catalogError } = await supabase
+    .from('products')
+    .select(`
+      name, slug, short_desc, description, category,
+      plans:product_plans(name, price, currency, billing_period, features, is_active)
+    `)
+    .eq('name', product.trim())
+    .eq('status', 'active')
+    .maybeSingle();
+
+  if (catalogError) {
+    console.warn('[marketing/generate] product grounding lookup failed:', catalogError.message);
+  } else if (catalogProduct) {
+    const activePlans = (catalogProduct.plans ?? []).filter(
+      (plan: { is_active: boolean }) => plan.is_active,
+    );
+    const planText = activePlans.length
+      ? activePlans
+          .map(
+            (plan: {
+              name: string;
+              price: number;
+              currency: string;
+              billing_period: string;
+              features?: string[] | null;
+            }) =>
+              `${plan.name}: ${Number(plan.price)} ${String(plan.currency || 'USD').toUpperCase()} (${plan.billing_period})${Array.isArray(plan.features) && plan.features.length ? `; features: ${plan.features.slice(0, 8).join(', ')}` : ''}`,
+          )
+          .join(' | ')
+      : 'No active plans are listed.';
+
+    verifiedContext = [
+      `Name: ${catalogProduct.name}`,
+      `Category: ${catalogProduct.category || 'digital product'}`,
+      `URL: /products/${catalogProduct.slug}`,
+      `Description: ${catalogProduct.short_desc || catalogProduct.description || 'No description supplied.'}`,
+      `Plans: ${planText}`,
+    ].join('\n');
+  }
+
   try {
     const result = await generateText(
       SYSTEM_PROMPT,
-      buildUserPrompt(product, audience ?? 'general audience', goal, tone, campaign_type),
-      { maxTokens: 2000 }
+      buildUserPrompt(
+        product,
+        audience ?? 'general audience',
+        goal,
+        tone,
+        campaign_type,
+        verifiedContext,
+      ),
+      { maxTokens: 1800, temperature: 0.6 },
     );
 
     let parsed: unknown = result.text;
@@ -90,7 +147,7 @@ export async function POST(request: NextRequest) {
       const cleaned = result.text.replace(/^```json\s*/i, '').replace(/\s*```$/i, '').trim();
       parsed = JSON.parse(cleaned);
     } catch {
-      // Return raw text if not valid JSON.
+      // Return raw text if the model did not produce valid JSON.
     }
 
     return NextResponse.json({
@@ -98,9 +155,15 @@ export async function POST(request: NextRequest) {
       output: parsed,
       raw: result.text,
       tokensUsed: result.tokensUsed,
+      model: result.model,
+      provider: 'cloudflare_workers_ai',
+      grounded: Boolean(catalogProduct),
     });
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'AI generation failed';
-    return NextResponse.json({ error: message }, { status: 500 });
+  } catch (error) {
+    console.error('[marketing/generate] Workers AI generation failed:', error);
+    return NextResponse.json(
+      { error: 'AI marketer is temporarily unavailable. Please try again shortly.' },
+      { status: 502 },
+    );
   }
 }
