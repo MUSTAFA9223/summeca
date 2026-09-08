@@ -106,14 +106,14 @@ export default function SplineRobotScene() {
           return;
         }
 
-        // Force the exported Spline scene/canvas to composite over the SUMMECA hero
-        // instead of painting its own white rectangle.
         app.setBackgroundColor('rgba(0, 0, 0, 0)');
         app.setGlobalEvents?.(true);
 
-        // Keep the complete robot, including its feet, inside the hero frame.
+        // Frame the robot as a true full-body hero. The previous zoom cropped the
+        // lower legs/feet on production aspect ratios. Keep generous breathing
+        // room below the boots while preserving mouse interaction with the scene.
         const compact = window.matchMedia('(max-width: 767px)').matches;
-        app.setZoom(compact ? 0.58 : 0.64);
+        app.setZoom(compact ? 0.44 : 0.5);
 
         canvas.style.opacity = '1';
         setReady(true);
@@ -144,15 +144,15 @@ export default function SplineRobotScene() {
 
   return (
     <div className="relative h-full w-full overflow-hidden bg-transparent">
-      {/* No static robot fallback: the hero background remains clean while 3D loads. */}
       <div
         className={`pointer-events-none absolute inset-0 transition-opacity duration-500 ${
           ready ? 'opacity-100' : 'opacity-70'
         }`}
         aria-hidden="true"
       >
-        <div className="absolute left-1/2 top-[48%] h-[58%] w-[58%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#08c5d1]/12 blur-[64px]" />
-        <div className="absolute left-1/2 top-[54%] h-[34%] w-[34%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#0aaebd]/10 blur-[46px]" />
+        <div className="absolute left-1/2 top-[45%] h-[62%] w-[62%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#08c5d1]/12 blur-[68px]" />
+        <div className="absolute left-1/2 top-[58%] h-[36%] w-[36%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#0aaebd]/10 blur-[48px]" />
+        <div className="absolute bottom-[4%] left-1/2 h-12 w-[44%] -translate-x-1/2 rounded-[50%] bg-black/20 blur-2xl" />
       </div>
 
       <div ref={hostRef} className="absolute inset-0 z-[2] bg-transparent" />
