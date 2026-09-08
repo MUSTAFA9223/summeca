@@ -22,6 +22,13 @@ const PAY_CURRENCY: Record<string, string> = {
   crypto_usdc_polygon: 'usdcmatic',
 };
 
+const USD_STABLE_PAY_CURRENCIES = new Set([
+  'usdttrc20',
+  'usdterc20',
+  'usdc',
+  'usdcmatic',
+]);
+
 type NowPaymentsCreateResponse = {
   payment_id?: number | string;
   payment_status?: string;
@@ -190,6 +197,12 @@ export class CryptoProvider implements IPaymentProvider {
       return { success: false, error: 'Unsupported cryptocurrency or network.' };
     }
 
+    const priceAmount = Number(input.amount.toFixed(2));
+    const exactStablecoinAmount =
+      input.currency.toUpperCase() === 'USD' && USD_STABLE_PAY_CURRENCIES.has(payCurrency)
+        ? priceAmount
+        : undefined;
+
     const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL ?? 'https://summeca.com').replace(/\/$/, '');
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 15_000);
@@ -202,9 +215,10 @@ export class CryptoProvider implements IPaymentProvider {
           'x-api-key': apiKey,
         },
         body: JSON.stringify({
-          price_amount: Number(input.amount.toFixed(2)),
+          price_amount: priceAmount,
           price_currency: input.currency.toLowerCase(),
           pay_currency: payCurrency,
+          ...(exactStablecoinAmount !== undefined ? { pay_amount: exactStablecoinAmount } : {}),
           ipn_callback_url: `${siteUrl}/api/payment/webhook?provider=crypto`,
           order_id: input.orderId,
           order_description: `${input.productName} — ${input.planName}`.slice(0, 250),
