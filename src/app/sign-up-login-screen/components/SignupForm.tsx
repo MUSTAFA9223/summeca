@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form';
 import { Eye, EyeOff, Check, Mail } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import GoogleOAuthButton from './GoogleOAuthButton';
 
 interface SignupFormData {
@@ -40,6 +40,8 @@ export default function SignupForm({ onSwitchToLogin }: SignupFormProps) {
   const [registeredEmail, setRegisteredEmail] = useState('');
   const { signUp } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const referralCode = (searchParams.get('ref') || '').trim().toUpperCase();
 
   const {
     register,
@@ -57,7 +59,10 @@ export default function SignupForm({ onSwitchToLogin }: SignupFormProps) {
   const onSubmit = async (data: SignupFormData) => {
     setIsLoading(true);
     try {
-      const result = await signUp(data.email, data.password, { fullName: data.fullName });
+      const result = await signUp(data.email, data.password, {
+        fullName: data.fullName,
+        referralCode,
+      });
       if (result?.session) {
         toast.success('Account created! Welcome to SUMMECA.');
         router.push('/user-dashboard');
