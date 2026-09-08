@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient, createServiceClient } from '@/lib/supabase/server';
 import { getProvider } from '@/lib/payment/registry';
+import { getCryptoMinimumCheck } from '@/lib/payment/providers/crypto';
 import { sendOrderConfirmation } from '@/lib/email/sendEmail';
 
 interface CreateCryptoSessionRequest {
@@ -15,6 +16,8 @@ const SUPPORTED_METHODS = new Set([
   'crypto_usdt_erc20',
   'crypto_usdc',
   'crypto_usdc_polygon',
+  'crypto_trx',
+  'crypto_ltc',
   'crypto_btc',
   'crypto_eth',
 ]);
@@ -106,6 +109,24 @@ export async function POST(request: NextRequest) {
   const finalAmount = Number(quoteRecord.final_amount ?? 0);
   if (!Number.isFinite(finalAmount) || finalAmount <= 0) {
     return noStoreJson({ error: 'Zero-value orders require the free checkout flow.' }, { status: 422 });
+  }
+
+  const orderCurrencyPreview = String(quoteRecord.currency ?? plan.currency).toUpperCase();
+  const minimumCheck = await getCryptoMinimumCheck({
+    paymentMethodType,
+    priceCurrency: orderCurrencyPreview,
+  });
+  if (
+    minimumCheck.checked
+    && minimumCheck.minimumFiat !== undefined
+    && finalAmount + 0.005 < minimumCheck.minimumFiat
+  ) {
+    return noStoreJson({
+      error: `This payment method currently requires at least ${minimumCheck.minimumFiat.toFixed(2)} ${orderCurrencyPreview}. Try TRON (TRX) or Litecoin (LTC).`,
+      minimumAmount: minimumCheck.minimumFiat,
+      minimumCurrency: orderCurrencyPreview,
+      payCurrency: minimumCheck.payCurrency,
+    }, { status: 422 });
   }
 
   const { data: orderData, error: orderError } = await supabase.rpc('create_priced_order', {
