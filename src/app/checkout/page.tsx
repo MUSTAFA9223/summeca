@@ -68,7 +68,22 @@ interface Coupon {
   applies_to: string | null;
 }
 
-type PayoneerStatus = 'checking' | 'available' | 'unavailable';
+type ProviderStatus = 'checking' | 'available' | 'unavailable';
+type CheckoutMethod = 'payoneer' | 'crypto';
+type CryptoPaymentMethod =
+  | 'crypto_usdt_trc20'
+  | 'crypto_usdt_erc20'
+  | 'crypto_usdc_polygon'
+  | 'crypto_btc'
+  | 'crypto_eth';
+
+const cryptoOptions: Array<{ value: CryptoPaymentMethod; label: string; detail: string }> = [
+  { value: 'crypto_usdt_trc20', label: 'USDT', detail: 'TRC20 · Recommended' },
+  { value: 'crypto_usdc_polygon', label: 'USDC', detail: 'Polygon' },
+  { value: 'crypto_btc', label: 'BTC', detail: 'Bitcoin' },
+  { value: 'crypto_eth', label: 'ETH', detail: 'Ethereum' },
+  { value: 'crypto_usdt_erc20', label: 'USDT', detail: 'ERC20' },
+];
 
 const categoryLabel: Record<string, string> = {
   ai_tool: 'AI Tool',
@@ -129,26 +144,37 @@ function CheckoutInner() {
   const [couponLoading, setCouponLoading] = useState(false);
   const [pageLoading, setPageLoading] = useState(true);
   const [pageError, setPageError] = useState('');
-  const [payoneerStatus, setPayoneerStatus] = useState<PayoneerStatus>('checking');
+  const [payoneerStatus, setPayoneerStatus] = useState<ProviderStatus>('checking');
+  const [cryptoStatus, setCryptoStatus] = useState<ProviderStatus>('checking');
+  const [checkoutMethod, setCheckoutMethod] = useState<CheckoutMethod>('payoneer');
+  const [cryptoMethod, setCryptoMethod] = useState<CryptoPaymentMethod>('crypto_usdt_trc20');
   const [checkoutSubmitting, setCheckoutSubmitting] = useState(false);
   const [checkoutTracked, setCheckoutTracked] = useState(false);
 
   useEffect(() => {
-    async function checkPayoneerStatus() {
+    async function checkProviderStatus(url: string, setter: (status: ProviderStatus) => void) {
       try {
-        const res = await fetch('/api/payment/payoneer-status', { cache: 'no-store' });
+        const res = await fetch(url, { cache: 'no-store' });
         if (!res.ok) {
-          setPayoneerStatus('unavailable');
+          setter('unavailable');
           return;
         }
         const data = (await res.json()) as { available?: boolean };
-        setPayoneerStatus(data.available === true ? 'available' : 'unavailable');
+        setter(data.available === true ? 'available' : 'unavailable');
       } catch {
-        setPayoneerStatus('unavailable');
+        setter('unavailable');
       }
     }
-    void checkPayoneerStatus();
+
+    void checkProviderStatus('/api/payment/payoneer-status', setPayoneerStatus);
+    void checkProviderStatus('/api/payment/crypto-config-status', setCryptoStatus);
   }, []);
+
+  useEffect(() => {
+    if (payoneerStatus === 'unavailable' && cryptoStatus === 'available') {
+      setCheckoutMethod('crypto');
+    }
+  }, [cryptoStatus, payoneerStatus]);
 
   const loadCartItem = useCallback(async () => {
     if (!productIdParam) {
@@ -227,6 +253,7 @@ function CheckoutInner() {
     : 0;
   const finalAmount = Number(Math.max(0, basePrice - couponDiscountAmount).toFixed(2));
   const isFreeOrder = finalAmount === 0;
+  const selectedProviderStatus = checkoutMethod === 'payoneer' ? payoneerStatus : cryptoStatus;
 
   useEffect(() => {
     if (cartItem && pricing && !checkoutTracked) {
@@ -310,7 +337,7 @@ function CheckoutInner() {
       return;
     }
     if (!cartItem) return;
-    if (!isFreeOrder && payoneerStatus !== 'available') return;
+    if (!isFreeOrder && selectedProviderStatus !== 'available') return;
 
     setCheckoutSubmitting(true);
     setPageError('');
@@ -318,7 +345,10 @@ function CheckoutInner() {
     try {
       const endpoint = isFreeOrder
         ? '/api/payment/create-free-order'
-        : '/api/payment/create-payoneer-session';
+        : checkoutMethod === 'crypto'
+          ? '/api/payment/create-crypto-session'
+          : '/api/payment/create-payoneer-session';
+
       const res = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -326,13 +356,16 @@ function CheckoutInner() {
           productId: cartItem.product.id,
           planId: cartItem.plan.id,
           couponId: appliedCoupon?.id ?? null,
+          ...(checkoutMethod === 'crypto' && !isFreeOrder ? { paymentMethodType: cryptoMethod } : {}),
         }),
       });
 
       const data = (await res.json()) as {
         orderId?: string;
         redirectUrl?: string;
-        alreadyOwned?: boolean;
+        providerPaymentRef?: string;
+        paymentAddress?: string;
+        cryptoAmount?: string;
         error?: string;
       };
 
@@ -343,6 +376,15 @@ function CheckoutInner() {
 
       if (isFreeOrder) {
         router.push(`/checkout/success?order_id=${encodeURIComponent(data.orderId)}&free=1`);
+        return;
+      }
+
+      if (checkoutMethod === 'crypto') {
+        if (!data.providerPaymentRef || !data.paymentAddress || !data.cryptoAmount) {
+          setPageError('Cryptocurrency provider did not return complete payment details.');
+          return;
+        }
+        router.push(`/checkout/crypto?order_id=${encodeURIComponent(data.orderId)}`);
         return;
       }
 
@@ -368,6 +410,18 @@ function CheckoutInner() {
     ? Math.max(0, Math.round(((monthlyEffective * 12 - yearlyEffective) / (monthlyEffective * 12)) * 100))
     : 0;
 
+  const providerBadge = (status: ProviderStatus) => (
+    <span className={`text-[10px] px-2 py-0.5 rounded-full ${
+      status === 'available'
+        ? 'bg-success/10 text-success'
+        : status === 'checking'
+          ? 'bg-secondary text-muted-foreground'
+          : 'bg-warning/10 text-warning'
+    }`}>
+      {status === 'available' ? 'Available' : status === 'checking' ? 'Checking…' : 'Not configured'}
+    </span>
+  );
+
   return (
     <div className="pt-24 pb-20 max-w-screen-xl mx-auto px-6 lg:px-8">
       <div className="flex items-center gap-2 text-sm text-muted-foreground mb-8">
@@ -386,7 +440,7 @@ function CheckoutInner() {
           <div>
             <h1 className="text-2xl font-800 text-foreground">Secure Checkout</h1>
             <p className="text-sm text-muted-foreground">
-              {isFreeOrder ? 'No payment is required for this order.' : 'Payment is completed on the provider\'s hosted page.'}
+              {isFreeOrder ? 'No payment is required for this order.' : 'Choose Payoneer or cryptocurrency. Payment is verified server-side.'}
             </p>
           </div>
         </div>
@@ -483,46 +537,82 @@ function CheckoutInner() {
                     </div>
                   </div>
                 ) : (
-                  <div className={`rounded-xl border p-4 flex items-center gap-3 ${payoneerStatus === 'available' ? 'border-primary bg-primary/5' : 'border-border bg-secondary/30'}`}>
-                    <Wallet size={20} className="text-primary" />
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <span className="font-700 text-sm">Payoneer Checkout</span>
-                        <span className={`text-[10px] px-2 py-0.5 rounded-full ${
-                          payoneerStatus === 'available'
-                            ? 'bg-success/10 text-success'
-                            : payoneerStatus === 'checking'
-                              ? 'bg-secondary text-muted-foreground'
-                              : 'bg-warning/10 text-warning'
-                        }`}>
-                          {payoneerStatus === 'available' ? 'Available' : payoneerStatus === 'checking' ? 'Checking…' : 'Not configured'}
-                        </span>
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => { if (payoneerStatus === 'available') setCheckoutMethod('payoneer'); }}
+                      disabled={payoneerStatus !== 'available'}
+                      className={`w-full text-left rounded-xl border p-4 flex items-center gap-3 transition-colors disabled:cursor-not-allowed ${
+                        checkoutMethod === 'payoneer' && payoneerStatus === 'available'
+                          ? 'border-primary bg-primary/5'
+                          : 'border-border bg-secondary/20'
+                      }`}
+                    >
+                      <Wallet size={20} className="text-primary" />
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="font-700 text-sm">Payoneer Checkout</span>
+                          {providerBadge(payoneerStatus)}
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-1">Redirect to Payoneer&apos;s hosted checkout.</p>
                       </div>
-                      <p className="text-xs text-muted-foreground mt-1">You will be redirected to Payoneer&apos;s hosted checkout.</p>
-                    </div>
-                    {payoneerStatus === 'available' && <ExternalLink size={14} className="text-muted-foreground" />}
-                  </div>
+                      {checkoutMethod === 'payoneer' && payoneerStatus === 'available' && <CheckCircle2 size={16} className="text-primary" />}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => { if (cryptoStatus === 'available') setCheckoutMethod('crypto'); }}
+                      disabled={cryptoStatus !== 'available'}
+                      className={`w-full text-left rounded-xl border p-4 flex items-center gap-3 transition-colors disabled:cursor-not-allowed ${
+                        checkoutMethod === 'crypto' && cryptoStatus === 'available'
+                          ? 'border-primary bg-primary/5'
+                          : 'border-border bg-secondary/20'
+                      }`}
+                    >
+                      <Bitcoin size={20} className="text-primary" />
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="font-700 text-sm">Crypto · USDT / USDC / BTC / ETH</span>
+                          {providerBadge(cryptoStatus)}
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-1">NOWPayments generates a unique payment request. Access is granted only after signed confirmation.</p>
+                      </div>
+                      {checkoutMethod === 'crypto' && cryptoStatus === 'available' && <CheckCircle2 size={16} className="text-primary" />}
+                    </button>
+
+                    {checkoutMethod === 'crypto' && cryptoStatus === 'available' && (
+                      <div className="rounded-xl border border-border bg-secondary/20 p-4">
+                        <div className="text-xs font-700 mb-3">Choose asset and network</div>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                          {cryptoOptions.map((option) => (
+                            <button
+                              key={option.value}
+                              type="button"
+                              onClick={() => setCryptoMethod(option.value)}
+                              className={`p-3 rounded-xl border text-left transition-colors ${
+                                cryptoMethod === option.value ? 'border-primary bg-primary/5' : 'border-border bg-card'
+                              }`}
+                            >
+                              <div className="text-sm font-700">{option.label}</div>
+                              <div className="text-[10px] text-muted-foreground mt-1">{option.detail}</div>
+                            </button>
+                          ))}
+                        </div>
+                        <p className="text-[11px] text-warning mt-3">Send only on the selected network. A different network may cause permanent loss.</p>
+                      </div>
+                    )}
+                  </>
                 )}
 
                 {!isFreeOrder && (
-                  <>
-                    <div className="rounded-xl border border-border bg-secondary/20 p-4 flex items-center gap-3 opacity-70">
-                      <CreditCard size={20} />
-                      <div className="flex-1">
-                        <div className="font-700 text-sm">Direct card checkout</div>
-                        <p className="text-xs text-muted-foreground mt-1">Coming soon — card numbers are not collected by SUMMECA.</p>
-                      </div>
-                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-secondary text-muted-foreground">Coming soon</span>
+                  <div className="rounded-xl border border-border bg-secondary/20 p-4 flex items-center gap-3 opacity-70">
+                    <CreditCard size={20} />
+                    <div className="flex-1">
+                      <div className="font-700 text-sm">Direct card checkout</div>
+                      <p className="text-xs text-muted-foreground mt-1">Coming soon — card numbers are not collected by SUMMECA.</p>
                     </div>
-                    <div className="rounded-xl border border-border bg-secondary/20 p-4 flex items-center gap-3 opacity-70">
-                      <Bitcoin size={20} />
-                      <div className="flex-1">
-                        <div className="font-700 text-sm">Crypto · BTC / ETH / USDT</div>
-                        <p className="text-xs text-muted-foreground mt-1">Coming soon — crypto payment processing is not live yet.</p>
-                      </div>
-                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-secondary text-muted-foreground">Coming soon</span>
-                    </div>
-                  </>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-secondary text-muted-foreground">Coming soon</span>
+                  </div>
                 )}
               </div>
             </div>
@@ -607,7 +697,7 @@ function CheckoutInner() {
 
                 <button
                   onClick={() => void handleCheckout()}
-                  disabled={authLoading || checkoutSubmitting || (!isFreeOrder && payoneerStatus !== 'available')}
+                  disabled={authLoading || checkoutSubmitting || (!isFreeOrder && selectedProviderStatus !== 'available')}
                   className="w-full py-3.5 bg-gradient-teal text-white font-700 text-sm rounded-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
                   {checkoutSubmitting ? (
@@ -616,15 +706,17 @@ function CheckoutInner() {
                     'Sign In to Continue'
                   ) : isFreeOrder ? (
                     <><CheckCircle2 size={15} /> Get Free Access</>
-                  ) : payoneerStatus === 'available' ? (
-                    <><ExternalLink size={14} /> Pay with Payoneer</>
+                  ) : selectedProviderStatus !== 'available' ? (
+                    `${checkoutMethod === 'crypto' ? 'Crypto' : 'Payoneer'} Checkout Unavailable`
+                  ) : checkoutMethod === 'crypto' ? (
+                    <><Bitcoin size={15} /> Create Crypto Payment</>
                   ) : (
-                    'Payoneer Checkout Unavailable'
+                    <><ExternalLink size={14} /> Pay with Payoneer</>
                   )}
                 </button>
 
                 <p className="text-center text-xs text-muted-foreground mt-3 flex items-center justify-center gap-1">
-                  <Lock size={11} /> {isFreeOrder ? 'No payment information required' : 'Payment credentials stay with the provider'}
+                  <Lock size={11} /> {isFreeOrder ? 'No payment information required' : 'Payment credentials and wallet secrets are never collected by SUMMECA'}
                 </p>
 
                 <div className="mt-5 pt-4 border-t border-border text-center">
