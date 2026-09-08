@@ -14,12 +14,6 @@ export async function GET() {
       ? [
           'crypto_usdt_trc20',
           'crypto_usdt_erc20',
-          'crypto_usdc',
-          'crypto_usdc_polygon',
-          'crypto_trx',
-          'crypto_ltc',
-          'crypto_btc',
-          'crypto_eth',
         ]
       : [],
   });
