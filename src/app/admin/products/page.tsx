@@ -110,12 +110,15 @@ function ProductModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center modal-overlay p-4" onClick={onClose}>
+    <div
+      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto modal-overlay px-4 py-6 sm:items-center"
+      onClick={onClose}
+    >
       <div
-        className="bg-card rounded-2xl border border-border w-full max-w-3xl max-h-[90vh] overflow-y-auto"
+        className="flex w-full max-w-3xl max-h-[calc(100vh-3rem)] flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-2xl"
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="flex items-center justify-between p-5 border-b border-border">
+        <div className="sticky top-0 z-20 flex shrink-0 items-center justify-between border-b border-border bg-card p-5">
           <h2 className="text-base font-700 text-foreground">{isEdit ? 'Edit Product' : 'New Product'}</h2>
           <button
             onClick={onClose}
@@ -125,8 +128,23 @@ function ProductModal({
           </button>
         </div>
 
-        <div className="p-5 space-y-4">
-          {(['name', 'slug', 'short_desc'] as const).map((field) => (
+        <div className="min-h-0 flex-1 overflow-y-auto p-5 space-y-4">
+          <div>
+            <label htmlFor="product-name" className="mb-1.5 block text-xs font-700 text-foreground">
+              Product Name
+            </label>
+            <input
+              id="product-name"
+              type="text"
+              value={form.name}
+              onChange={(event) => handleChange('name', event.target.value)}
+              placeholder="Enter product name"
+              autoComplete="off"
+              className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/60 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
+            />
+          </div>
+
+          {(['slug', 'short_desc'] as const).map((field) => (
             <div key={field}>
               <label className="block text-xs font-600 text-muted-foreground mb-1.5 capitalize">
                 {field.replace('_', ' ')}
@@ -135,7 +153,7 @@ function ProductModal({
                 type="text"
                 value={form[field]}
                 onChange={(event) => handleChange(field, event.target.value)}
-                className="w-full px-3 py-2.5 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+                className="w-full px-3 py-2.5 text-sm text-foreground bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
               />
             </div>
           ))}
@@ -146,7 +164,7 @@ function ProductModal({
               value={form.description}
               onChange={(event) => handleChange('description', event.target.value)}
               rows={3}
-              className="w-full px-3 py-2.5 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary resize-none"
+              className="w-full px-3 py-2.5 text-sm text-foreground bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary resize-none"
             />
           </div>
 
@@ -156,7 +174,7 @@ function ProductModal({
               <select
                 value={form.category}
                 onChange={(event) => handleChange('category', event.target.value)}
-                className="w-full px-3 py-2.5 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/30 appearance-none"
+                className="w-full px-3 py-2.5 text-sm text-foreground bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/30 appearance-none"
               >
                 {CATEGORIES.map((category) => (
                   <option key={category} value={category}>
@@ -170,7 +188,7 @@ function ProductModal({
               <select
                 value={form.status}
                 onChange={(event) => handleChange('status', event.target.value)}
-                className="w-full px-3 py-2.5 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/30 appearance-none"
+                className="w-full px-3 py-2.5 text-sm text-foreground bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/30 appearance-none"
               >
                 {STATUSES.map((status) => (
                   <option key={status} value={status}>
@@ -187,7 +205,7 @@ function ProductModal({
               type="text"
               value={form.thumbnail_url}
               onChange={(event) => handleChange('thumbnail_url', event.target.value)}
-              className="w-full px-3 py-2.5 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+              className="w-full px-3 py-2.5 text-sm text-foreground bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
             />
           </div>
 
@@ -197,7 +215,7 @@ function ProductModal({
               type="text"
               value={form.demo_url}
               onChange={(event) => handleChange('demo_url', event.target.value)}
-              className="w-full px-3 py-2.5 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+              className="w-full px-3 py-2.5 text-sm text-foreground bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
             />
           </div>
 
@@ -208,7 +226,7 @@ function ProductModal({
               value={form.tags}
               onChange={(event) => handleChange('tags', event.target.value)}
               placeholder="ai, writing, content"
-              className="w-full px-3 py-2.5 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+              className="w-full px-3 py-2.5 text-sm text-foreground bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
             />
           </div>
 
@@ -224,7 +242,7 @@ function ProductModal({
           )}
         </div>
 
-        <div className="flex gap-3 p-5 border-t border-border">
+        <div className="flex shrink-0 gap-3 border-t border-border bg-card p-5">
           <button onClick={onClose} className="btn-secondary flex-1">Cancel</button>
           <button
             onClick={handleSave}
