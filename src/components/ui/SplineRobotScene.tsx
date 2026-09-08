@@ -37,7 +37,11 @@ function loadSplineRuntime() {
       if (win.__summecaSplineApplication) resolve(win.__summecaSplineApplication);
       else reject(new Error('Spline runtime loaded without Application'));
     };
-    const handleError = () => { cleanup(); reject(new Error('Spline runtime failed to load')); };
+    const handleError = () => {
+      cleanup();
+      reject(new Error('Spline runtime failed to load'));
+    };
+
     window.addEventListener(readyEvent, handleReady, { once: true });
     window.addEventListener(errorEvent, handleError, { once: true });
 
@@ -48,9 +52,13 @@ function loadSplineRuntime() {
     script.dataset.summecaSplineRuntime = 'true';
     script.src = blobUrl;
     script.onload = () => URL.revokeObjectURL(blobUrl);
-    script.onerror = () => { URL.revokeObjectURL(blobUrl); window.dispatchEvent(new Event(errorEvent)); };
+    script.onerror = () => {
+      URL.revokeObjectURL(blobUrl);
+      window.dispatchEvent(new Event(errorEvent));
+    };
     document.head.appendChild(script);
   });
+
   return win.__summecaSplineRuntimePromise;
 }
 
@@ -60,6 +68,7 @@ export default function SplineRobotScene() {
 
   useEffect(() => {
     if (!hostRef.current) return;
+
     const host = hostRef.current;
     let cancelled = false;
     let app: SplineApplication | undefined;
@@ -67,9 +76,14 @@ export default function SplineRobotScene() {
     const canvas = document.createElement('canvas');
     canvas.setAttribute('aria-hidden', 'true');
     Object.assign(canvas.style, {
-      display: 'block', width: '100%', height: '100%', background: 'transparent',
-      pointerEvents: 'auto', touchAction: 'pan-y',
-      filter: 'saturate(1.5) contrast(1.09) brightness(1.02)', opacity: '0',
+      display: 'block',
+      width: '100%',
+      height: '100%',
+      background: 'transparent',
+      pointerEvents: 'auto',
+      touchAction: 'pan-y',
+      filter: 'saturate(1.5) contrast(1.09) brightness(1.02)',
+      opacity: '0',
       transition: 'opacity 420ms ease',
     });
     host.replaceChildren(canvas);
@@ -78,45 +92,67 @@ export default function SplineRobotScene() {
       try {
         const Application = await loadSplineRuntime();
         if (cancelled) return;
+
         app = new Application(canvas);
+
+        // IMPORTANT: Spline's setZoom is an initial camera framing control.
+        // Apply it before load so production actually starts zoomed out enough
+        // to include the complete legs and feet. Calling only after load can be ignored.
+        const width = window.innerWidth;
+        const zoom = width < 640 ? 0.24 : width < 1024 ? 0.28 : width < 1440 ? 0.3 : 0.32;
+        app.setZoom(zoom);
+
         await app.load(SCENE_URL);
-        if (cancelled) { app.stop?.(); app.dispose?.(); return; }
+        if (cancelled) {
+          app.stop?.();
+          app.dispose?.();
+          return;
+        }
+
         app.setBackgroundColor('rgba(0, 0, 0, 0)');
         app.setGlobalEvents?.(true);
 
-        // Production framing: leave enough vertical field of view for the robot's
-        // complete lower legs AND feet. The Spline scene camera is portrait-biased,
-        // so desktop needs substantially more zoom-out than the old 0.50 value.
-        const width = window.innerWidth;
-        const zoom = width < 640 ? 0.32 : width < 1024 ? 0.36 : width < 1440 ? 0.38 : 0.4;
+        // Re-apply once loaded for runtime versions that support live zoom changes.
         app.setZoom(zoom);
 
         canvas.style.opacity = '1';
         setReady(true);
-      } catch { if (!cancelled) setReady(false); }
+      } catch {
+        if (!cancelled) setReady(false);
+      }
     };
 
-    const observer = new IntersectionObserver(([entry]) => {
-      if (!entry.isIntersecting) return;
-      observer.disconnect();
-      void mount();
-    }, { rootMargin: '260px', threshold: 0.01 });
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry.isIntersecting) return;
+        observer.disconnect();
+        void mount();
+      },
+      { rootMargin: '260px', threshold: 0.01 },
+    );
+
     observer.observe(host);
 
     return () => {
       cancelled = true;
       observer.disconnect();
-      app?.stop?.(); app?.dispose?.();
+      app?.stop?.();
+      app?.dispose?.();
       host.replaceChildren();
     };
   }, []);
 
   return (
     <div className="relative h-full w-full overflow-hidden bg-transparent">
-      <div className={`pointer-events-none absolute inset-0 transition-opacity duration-500 ${ready ? 'opacity-100' : 'opacity-70'}`} aria-hidden="true">
+      <div
+        className={`pointer-events-none absolute inset-0 transition-opacity duration-500 ${
+          ready ? 'opacity-100' : 'opacity-70'
+        }`}
+        aria-hidden="true"
+      >
         <div className="absolute left-1/2 top-[45%] h-[62%] w-[62%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#08c5d1]/12 blur-[68px]" />
         <div className="absolute left-1/2 top-[58%] h-[36%] w-[36%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#0aaebd]/10 blur-[48px]" />
-        <div className="absolute bottom-[3%] left-1/2 h-12 w-[44%] -translate-x-1/2 rounded-[50%] bg-black/20 blur-2xl" />
+        <div className="absolute bottom-[2%] left-1/2 h-12 w-[44%] -translate-x-1/2 rounded-[50%] bg-black/20 blur-2xl" />
       </div>
       <div ref={hostRef} className="absolute inset-0 z-[2] bg-transparent" />
     </div>
