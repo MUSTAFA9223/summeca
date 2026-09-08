@@ -129,14 +129,14 @@ function ProductModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto modal-overlay px-4 py-6 sm:items-center"
+      className="fixed inset-0 z-50 flex h-screen items-center justify-center overflow-hidden modal-overlay p-4"
       onClick={onClose}
     >
       <div
-        className="flex w-full max-w-3xl max-h-[calc(100vh-3rem)] flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-2xl"
+        className="flex w-full max-w-3xl max-h-[calc(100vh-2rem)] flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-2xl"
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="sticky top-0 z-20 flex shrink-0 items-center justify-between border-b border-border bg-card p-5">
+        <div className="z-20 flex shrink-0 items-center justify-between border-b border-border bg-card p-5">
           <h2 className="text-base font-700 text-foreground">{isEdit ? 'Edit Product' : 'New Product'}</h2>
           <button
             onClick={onClose}
@@ -146,22 +146,22 @@ function ProductModal({
           </button>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto p-5 space-y-4">
-          <div>
-            <label htmlFor="product-name" className="mb-1.5 block text-xs font-700 text-foreground">
-              Product Name
-            </label>
-            <input
-              id="product-name"
-              type="text"
-              value={form.name}
-              onChange={(event) => handleChange('name', event.target.value)}
-              placeholder="Enter product name"
-              autoComplete="off"
-              className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/60 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
-            />
-          </div>
+        <div className="shrink-0 border-b border-border bg-card px-5 py-4">
+          <label htmlFor="product-name" className="mb-1.5 block text-xs font-700 text-foreground">
+            Product Name
+          </label>
+          <input
+            id="product-name"
+            type="text"
+            value={form.name}
+            onChange={(event) => handleChange('name', event.target.value)}
+            placeholder="Enter product name"
+            autoComplete="off"
+            className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/60 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
+          />
+        </div>
 
+        <div className="min-h-0 flex-1 overflow-y-auto p-5 space-y-4">
           {(['slug', 'short_desc'] as const).map((field) => (
             <div key={field}>
               <label className="block text-xs font-600 text-muted-foreground mb-1.5 capitalize">
