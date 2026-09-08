@@ -76,6 +76,8 @@ type CryptoSession = {
 };
 
 const CRYPTO_METHODS = [
+  { value: 'crypto_trx', label: 'TRON (TRX) · Low minimum' },
+  { value: 'crypto_ltc', label: 'Litecoin (LTC) · Low minimum' },
   { value: 'crypto_usdt_trc20', label: 'USDT · TRON (TRC20)' },
   { value: 'crypto_usdt_erc20', label: 'USDT · Ethereum (ERC20)' },
   { value: 'crypto_usdc_polygon', label: 'USDC · Polygon' },
@@ -305,9 +307,9 @@ function CheckoutInner() {
             <Wallet size={20} className="text-primary" /><div className="flex-1"><div className="font-700 text-sm">Payoneer Checkout</div><p className="text-xs text-muted-foreground mt-1">Hosted Payoneer checkout.</p></div><span className="text-[10px]">{payoneerStatus === 'available' ? 'Available' : payoneerStatus === 'checking' ? 'Checking…' : 'Not configured'}</span>
           </button>
           <button type="button" onClick={() => { setCheckoutMethod('crypto'); setCryptoSession(null); }} className={`w-full text-left rounded-xl border p-4 flex gap-3 ${checkoutMethod === 'crypto' ? 'border-primary bg-primary/5' : 'border-border'}`}>
-            <Bitcoin size={20} className="text-primary" /><div className="flex-1"><div className="font-700 text-sm">Crypto · NOWPayments</div><p className="text-xs text-muted-foreground mt-1">USDT, USDC, BTC and ETH. Order completes only from a signed IPN.</p></div><span className="text-[10px]">{cryptoStatus === 'available' ? 'Available' : cryptoStatus === 'checking' ? 'Checking…' : 'Not configured'}</span>
+            <Bitcoin size={20} className="text-primary" /><div className="flex-1"><div className="font-700 text-sm">Crypto · NOWPayments</div><p className="text-xs text-muted-foreground mt-1">USDT, USDC, TRX, LTC, BTC and ETH. Minimums are checked server-side before order creation.</p></div><span className="text-[10px]">{cryptoStatus === 'available' ? 'Available' : cryptoStatus === 'checking' ? 'Checking…' : 'Not configured'}</span>
           </button>
-          {checkoutMethod === 'crypto' && <select value={cryptoMethod} onChange={(e) => { setCryptoMethod(e.target.value); setCryptoSession(null); }} className="w-full px-3 py-3 bg-background border border-border rounded-xl text-sm">{CRYPTO_METHODS.map((method) => <option key={method.value} value={method.value}>{method.label}</option>)}</select>}
+          {checkoutMethod === 'crypto' && <select value={cryptoMethod} onChange={(e) => { setCryptoMethod(e.target.value); setCryptoSession(null); setPageError(''); }} className="w-full px-3 py-3 bg-background border border-border rounded-xl text-sm">{CRYPTO_METHODS.map((method) => <option key={method.value} value={method.value}>{method.label}</option>)}</select>}
         </div>}
 
         {cryptoSession && <div className="bg-card border border-primary/30 rounded-2xl p-5 space-y-4">
