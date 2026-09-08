@@ -98,8 +98,10 @@ test('admin product CRUD stays behind the protected server API', () => {
   const routeSource = fs.readFileSync('src/app/api/admin/products/route.ts', 'utf8');
   assert.doesNotMatch(pageSource, /createClient|\.from\(['"]products['"]\)/);
   assert.match(pageSource, /\/api\/admin\/products/);
-  assert.match(routeSource, /select\(['"]is_admin['"]\)/);
-  assert.match(routeSource, /createServiceClient\(\)/);
+  assert.match(routeSource, /auth\.getUser\(\)/);
+  assert.match(routeSource, /rpc\(['"]is_admin['"]\)/);
+  assert.match(routeSource, /return \{ service: sessionClient \}/);
+  assert.doesNotMatch(routeSource, /createServiceClient\(\)/);
   assert.match(routeSource, /action === 'save_product'/);
   assert.match(routeSource, /action === 'update_status'/);
 });
