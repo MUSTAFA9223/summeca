@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form';
 import { Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import GoogleOAuthButton from './GoogleOAuthButton';
 
 interface LoginFormData {
@@ -23,12 +23,16 @@ function getSafeNextPath(value: string | null) {
   return value;
 }
 
+function getRequestedNextPath() {
+  if (typeof window === 'undefined') return null;
+  return getSafeNextPath(new URLSearchParams(window.location.search).get('next'));
+}
+
 export default function LoginForm({ onForgotPassword, onSwitchToSignup }: LoginFormProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const { signIn } = useAuth();
   const router = useRouter();
-  const searchParams = useSearchParams();
 
   const { register, handleSubmit, formState: { errors }, setError } = useForm<LoginFormData>({
     defaultValues: { email: '', password: '' },
@@ -41,7 +45,7 @@ export default function LoginForm({ onForgotPassword, onSwitchToSignup }: LoginF
       const signedInUser = authData?.user;
       if (!signedInUser?.id) throw new Error('Unable to verify the signed-in account.');
 
-      const requestedNextPath = getSafeNextPath(searchParams.get('next'));
+      const requestedNextPath = getRequestedNextPath();
 
       // Role lookup improves the first redirect, but it must never turn a successful
       // authentication into a failed login. Protected admin routes are enforced by
