@@ -59,6 +59,9 @@ jobs:
       - name: Auth security regression tests
         run: node --test tests/auth-middleware.test.cjs
 
+      - name: Crypto payment security regression tests
+        run: node --experimental-strip-types --test tests/crypto-payment-provider.test.mjs
+
       - name: Build Cloudflare Worker
         run: npm run build
 
