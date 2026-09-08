@@ -24,6 +24,11 @@ export const metadata: Metadata = {
   title: 'SUMMECA — AI & SaaS for Modern Work',
   description:
     'Discover and access premium AI tools, SaaS applications, and digital products designed for modern knowledge workers and businesses.',
+  twitter: {
+    card: 'summary_large_image',
+    site: '@summeca_',
+    creator: '@summeca_',
+  },
   icons: {
     icon: [{ url: '/favicon.ico', type: 'image/x-icon' }],
   },
