@@ -39,7 +39,8 @@ export default function AuthScreen() {
             </div>
             <h1 className="text-4xl font-black leading-[1.04] tracking-[-0.04em] xl:text-6xl">
               <span className="block">Your digital</span>
-              <span className="block">world, ready</span>
+              <span className="block">world,</span>
+              <span className="block">ready</span>
               <span className="block bg-gradient-to-r from-white via-teal-100 to-teal-400 bg-clip-text text-transparent">when you</span>
               <span className="block">are.</span>
             </h1>
