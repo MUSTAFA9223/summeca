@@ -1,85 +1,64 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  Calendar,
+  CheckCircle,
+  ExternalLink,
+  FileText,
+  RefreshCw,
+  Search,
+} from 'lucide-react';
 import DashboardLayout from '@/app/user-dashboard/components/DashboardLayout';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import {
-  FileText,
-  Download,
-  ExternalLink,
-  Search,
-  RefreshCw,
-  CheckCircle,
-  DollarSign,
-  Calendar,
-  ChevronUp,
-  ChevronDown,
-} from 'lucide-react';
 
-interface InvoiceRow {
+interface PurchaseRecord {
   id: string;
   created_at: string;
   amount: number;
   currency: string;
   discount_amount: number;
   receipt_url: string | null;
-  stripe_payment_id: string | null;
   products: { name: string; category: string; slug: string } | null;
   product_plans: { name: string; billing_period: string } | null;
 }
 
-type SortField = 'date' | 'amount' | 'product';
-type SortDir = 'asc' | 'desc';
-
 const billingPeriodLabel: Record<string, string> = {
   one_time: 'One-time',
-  monthly: 'Monthly',
-  yearly: 'Yearly',
+  monthly: 'Monthly access',
+  yearly: 'Yearly access',
   lifetime: 'Lifetime',
 };
 
-const categoryStyles: Record<string, string> = {
-  ai_tool: 'bg-primary/10 text-primary',
-  api: 'bg-primary/10 text-primary',
-  plugin: 'bg-primary/10 text-primary',
-  template: 'bg-warning/10 text-warning',
-  dataset: 'bg-warning/10 text-warning',
-  course: 'bg-success/10 text-success',
-  other: 'bg-secondary text-muted-foreground',
-};
-
-const categoryLabel: Record<string, string> = {
-  ai_tool: 'AI',
-  api: 'API',
-  plugin: 'Plugin',
-  template: 'Template',
-  dataset: 'Dataset',
-  course: 'Course',
-  other: 'Other',
-};
-
 function formatDate(iso: string) {
-  const d = new Date(iso);
-  return d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+  return new Date(iso).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  });
 }
 
 function formatAmount(amount: number, currency: string) {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: currency || 'USD',
-  }).format(amount);
+  try {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: currency || 'USD',
+    }).format(amount);
+  } catch {
+    return `${Number(amount).toFixed(2)} ${currency || 'USD'}`;
+  }
 }
 
-function invoiceNumber(id: string, index: number) {
-  return `INV-${String(index + 1).padStart(4, '0')}`;
+function purchaseReference(id: string) {
+  return `ORD-${id.replace(/-/g, '').slice(0, 12).toUpperCase()}`;
 }
 
-function InvoicesSkeleton() {
+function RecordsSkeleton() {
   return (
     <div className="space-y-3">
-      {Array.from({ length: 5 }).map((_, i) => (
-        <div key={i} className="h-16 bg-secondary/50 rounded-xl animate-pulse" />
+      {Array.from({ length: 5 }).map((_, index) => (
+        <div key={index} className="h-16 bg-secondary/50 rounded-xl animate-pulse" />
       ))}
     </div>
   );
@@ -87,17 +66,19 @@ function InvoicesSkeleton() {
 
 export default function InvoicesPage() {
   const { user } = useAuth();
-  const supabase = createClient();
-
-  const [invoices, setInvoices] = useState<InvoiceRow[]>([]);
+  const supabase = useMemo(() => createClient(), []);
+  const [records, setRecords] = useState<PurchaseRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
-  const [sortField, setSortField] = useState<SortField>('date');
-  const [sortDir, setSortDir] = useState<SortDir>('desc');
 
-  const fetchInvoices = useCallback(async () => {
-    if (!user) return;
+  const fetchRecords = useCallback(async () => {
+    if (!user) {
+      setRecords([]);
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     setError(null);
     try {
@@ -110,7 +91,6 @@ export default function InvoicesPage() {
           currency,
           discount_amount,
           receipt_url,
-          stripe_payment_id,
           products ( name, category, slug ),
           product_plans ( name, billing_period )
         `)
@@ -119,171 +99,102 @@ export default function InvoicesPage() {
         .order('created_at', { ascending: false });
 
       if (fetchError) throw fetchError;
-      setInvoices((data as unknown as InvoiceRow[]) || []);
+      setRecords((data as unknown as PurchaseRecord[]) || []);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed to load invoices');
+      setError(err instanceof Error ? err.message : 'Failed to load purchase records');
     } finally {
       setLoading(false);
     }
-  }, [user, supabase]);
+  }, [supabase, user]);
 
   useEffect(() => {
-    fetchInvoices();
-  }, [fetchInvoices]);
+    fetchRecords();
+  }, [fetchRecords]);
 
-  const handleSort = (field: SortField) => {
-    if (sortField === field) {
-      setSortDir(sortDir === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortField(field);
-      setSortDir('desc');
-    }
-  };
+  const term = search.trim().toLowerCase();
+  const filtered = records.filter((record) =>
+    !term ||
+    record.id.toLowerCase().includes(term) ||
+    record.products?.name?.toLowerCase().includes(term) ||
+    record.product_plans?.name?.toLowerCase().includes(term) ||
+    record.currency?.toLowerCase().includes(term)
+  );
 
-  const filtered = invoices
-    .filter((inv) => {
-      if (!search) return true;
-      return (
-        inv.products?.name?.toLowerCase().includes(search.toLowerCase()) ||
-        inv.id.toLowerCase().includes(search.toLowerCase()) ||
-        inv.product_plans?.name?.toLowerCase().includes(search.toLowerCase())
-      );
-    })
-    .sort((a, b) => {
-      let cmp = 0;
-      if (sortField === 'date') {
-        cmp = new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
-      } else if (sortField === 'amount') {
-        cmp = a.amount - b.amount;
-      } else if (sortField === 'product') {
-        cmp = (a.products?.name || '').localeCompare(b.products?.name || '');
-      }
-      return sortDir === 'asc' ? cmp : -cmp;
-    });
-
-  const totalPaid = invoices.reduce((sum, inv) => sum + inv.amount, 0);
-  const totalSaved = invoices.reduce((sum, inv) => sum + (inv.discount_amount || 0), 0);
-
-  const SortIcon = ({ field }: { field: SortField }) => {
-    if (sortField !== field) return <ChevronUp size={11} className="text-muted-foreground opacity-30" />;
-    return sortDir === 'asc'
-      ? <ChevronUp size={11} className="text-primary" />
-      : <ChevronDown size={11} className="text-primary" />;
-  };
+  const currencies = Array.from(new Set(records.map((record) => record.currency).filter(Boolean)));
+  const receiptCount = records.filter((record) => Boolean(record.receipt_url)).length;
 
   return (
     <DashboardLayout activeRoute="invoices">
       <div className="space-y-6">
-        {/* Page header */}
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-4">
           <div>
-            <h1 className="text-xl font-800 text-foreground">Invoices</h1>
+            <h1 className="text-xl font-800 text-foreground">Purchase Records</h1>
             <p className="text-sm text-muted-foreground mt-0.5">
-              All your paid invoices and receipts
+              Stable order references and provider receipts for completed purchases.
             </p>
           </div>
           <button
-            onClick={fetchInvoices}
+            onClick={fetchRecords}
             disabled={loading}
-            className="flex items-center gap-2 px-3 py-2 text-xs font-600 text-muted-foreground hover:text-foreground bg-secondary hover:bg-secondary/80 rounded-lg transition-all duration-150 disabled:opacity-50"
+            className="flex items-center gap-2 px-3 py-2 text-xs font-600 text-muted-foreground hover:text-foreground bg-secondary hover:bg-secondary/80 rounded-lg transition-all disabled:opacity-50"
           >
             <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
             Refresh
           </button>
         </div>
 
-        {/* KPI cards */}
+        <div className="rounded-xl border border-border bg-secondary/30 p-4 text-xs leading-relaxed text-muted-foreground">
+          SUMMECA does not generate a standalone tax invoice PDF on this page. A “provider receipt” link is shown only when the completed order contains a real receipt URL returned by the payment flow.
+        </div>
+
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[
-            {
-              label: 'Total Invoices',
-              value: invoices.length,
-              sub: 'paid',
-              icon: FileText,
-              color: 'text-primary',
-              bg: 'bg-primary/10',
-            },
-            {
-              label: 'Total Paid',
-              value: `$${totalPaid.toFixed(2)}`,
-              sub: 'all time',
-              icon: DollarSign,
-              color: 'text-success',
-              bg: 'bg-success/10',
-            },
-            {
-              label: 'Total Saved',
-              value: `$${totalSaved.toFixed(2)}`,
-              sub: 'via discounts',
-              icon: CheckCircle,
-              color: 'text-warning',
-              bg: 'bg-warning/10',
-            },
-            {
-              label: 'Latest Invoice',
-              value: invoices.length > 0 ? formatDate(invoices[0].created_at) : '—',
-              sub: 'most recent',
-              icon: Calendar,
-              color: 'text-muted-foreground',
-              bg: 'bg-secondary',
-            },
+            { label: 'Paid Purchases', value: records.length, sub: 'completed orders', icon: FileText },
+            { label: 'Provider Receipts', value: receiptCount, sub: 'available links', icon: ExternalLink },
+            { label: 'Currencies', value: currencies.length, sub: currencies.join(', ') || 'none yet', icon: CheckCircle },
+            { label: 'Latest Purchase', value: records.length ? formatDate(records[0].created_at) : '—', sub: 'most recent', icon: Calendar },
           ].map((kpi) => (
             <div key={kpi.label} className="bg-card border border-border rounded-xl px-4 py-3 flex items-start gap-3">
-              <div className={`w-8 h-8 rounded-lg ${kpi.bg} flex items-center justify-center flex-shrink-0 mt-0.5`}>
-                <kpi.icon size={15} className={kpi.color} />
+              <div className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center flex-shrink-0 mt-0.5">
+                <kpi.icon size={15} className="text-primary" />
               </div>
               <div className="min-w-0">
-                <div className="text-xs text-muted-foreground mb-0.5">{kpi.label}</div>
+                <div className="text-xs text-muted-foreground">{kpi.label}</div>
                 <div className="text-base font-800 text-foreground tabular-nums truncate">{kpi.value}</div>
-                <div className="text-xs text-muted-foreground">{kpi.sub}</div>
+                <div className="text-xs text-muted-foreground truncate">{kpi.sub}</div>
               </div>
             </div>
           ))}
         </div>
 
-        {/* Search */}
         <div className="relative max-w-xs">
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
           <input
-            type="text"
-            placeholder="Search invoices..."
+            type="search"
+            placeholder="Search purchase records..."
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-9 pr-3 py-2 text-sm bg-secondary border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition-all"
+            onChange={(event) => setSearch(event.target.value)}
+            className="w-full pl-9 pr-3 py-2 text-sm bg-secondary border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
           />
         </div>
 
-        {/* Table */}
         <div className="bg-card border border-border rounded-2xl overflow-hidden">
           {loading ? (
-            <div className="p-5">
-              <InvoicesSkeleton />
-            </div>
+            <div className="p-5"><RecordsSkeleton /></div>
           ) : error ? (
-            <div className="flex flex-col items-center justify-center py-16 gap-3">
-              <div className="w-10 h-10 rounded-full bg-danger/10 flex items-center justify-center">
-                <FileText size={18} className="text-danger" />
-              </div>
-              <p className="text-sm text-danger font-600">{error}</p>
-              <button
-                onClick={fetchInvoices}
-                className="px-4 py-2 text-xs font-600 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-all"
-              >
+            <div className="py-16 text-center px-6">
+              <FileText size={22} className="text-danger mx-auto mb-3" />
+              <p className="text-sm font-600 text-foreground">Failed to load purchase records</p>
+              <p className="text-xs text-muted-foreground mt-1 mb-4">{error}</p>
+              <button onClick={fetchRecords} className="px-4 py-2 text-xs font-600 bg-primary text-primary-foreground rounded-lg">
                 Try Again
               </button>
             </div>
           ) : filtered.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 gap-3">
-              <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center">
-                <FileText size={22} className="text-muted-foreground" />
-              </div>
+            <div className="py-16 text-center px-6">
+              <FileText size={22} className="text-muted-foreground mx-auto mb-3" />
               <p className="text-sm font-600 text-foreground">
-                {search ? 'No invoices match your search' : 'No paid invoices yet'}
-              </p>
-              <p className="text-xs text-muted-foreground text-center max-w-xs">
-                {search
-                  ? 'Try a different search term'
-                  : 'Your paid invoices will appear here once you complete a purchase'}
+                {records.length ? 'No records match your search' : 'No completed purchases yet'}
               </p>
             </div>
           ) : (
@@ -291,159 +202,56 @@ export default function InvoicesPage() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border bg-secondary/40">
-                    <th className="text-left px-4 py-3 text-xs font-700 text-muted-foreground uppercase tracking-wide">
-                      Invoice #
-                    </th>
-                    <th
-                      className="text-left px-4 py-3 text-xs font-700 text-muted-foreground uppercase tracking-wide cursor-pointer hover:text-foreground select-none"
-                      onClick={() => handleSort('product')}
-                    >
-                      <span className="flex items-center gap-1">
-                        Product <SortIcon field="product" />
-                      </span>
-                    </th>
-                    <th
-                      className="text-left px-4 py-3 text-xs font-700 text-muted-foreground uppercase tracking-wide cursor-pointer hover:text-foreground select-none"
-                      onClick={() => handleSort('date')}
-                    >
-                      <span className="flex items-center gap-1">
-                        Date <SortIcon field="date" />
-                      </span>
-                    </th>
-                    <th
-                      className="text-right px-4 py-3 text-xs font-700 text-muted-foreground uppercase tracking-wide cursor-pointer hover:text-foreground select-none"
-                      onClick={() => handleSort('amount')}
-                    >
-                      <span className="flex items-center justify-end gap-1">
-                        Amount <SortIcon field="amount" />
-                      </span>
-                    </th>
-                    <th className="text-center px-4 py-3 text-xs font-700 text-muted-foreground uppercase tracking-wide">
-                      Status
-                    </th>
-                    <th className="text-right px-4 py-3 text-xs font-700 text-muted-foreground uppercase tracking-wide">
-                      Actions
-                    </th>
+                    <th className="text-left px-4 py-3 text-xs font-700 text-muted-foreground uppercase tracking-wide">Reference</th>
+                    <th className="text-left px-4 py-3 text-xs font-700 text-muted-foreground uppercase tracking-wide">Product</th>
+                    <th className="text-left px-4 py-3 text-xs font-700 text-muted-foreground uppercase tracking-wide">Date</th>
+                    <th className="text-right px-4 py-3 text-xs font-700 text-muted-foreground uppercase tracking-wide">Amount</th>
+                    <th className="text-right px-4 py-3 text-xs font-700 text-muted-foreground uppercase tracking-wide">Receipt</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
-                  {filtered.map((inv, index) => {
-                    const originalIndex = invoices.findIndex((i) => i.id === inv.id);
-                    const invNum = invoiceNumber(inv.id, originalIndex);
-                    const cat = inv.products?.category || 'other';
-                    const billingLabel = billingPeriodLabel[inv.product_plans?.billing_period || ''] || '';
-
+                  {filtered.map((record) => {
+                    const billing = billingPeriodLabel[record.product_plans?.billing_period || ''] || '';
                     return (
-                      <tr key={inv.id} className="hover:bg-secondary/30 transition-colors duration-100">
-                        {/* Invoice # */}
+                      <tr key={record.id} className="hover:bg-secondary/30 transition-colors">
                         <td className="px-4 py-3.5">
-                          <div className="flex items-center gap-2">
-                            <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-                              <FileText size={13} className="text-primary" />
-                            </div>
-                            <span className="font-700 text-foreground text-xs tabular-nums">{invNum}</span>
+                          <span className="font-mono text-xs font-700 text-foreground">{purchaseReference(record.id)}</span>
+                        </td>
+                        <td className="px-4 py-3.5">
+                          <div className="font-600 text-foreground text-sm">{record.products?.name || 'Unknown Product'}</div>
+                          <div className="text-xs text-muted-foreground mt-0.5">
+                            {record.product_plans?.name || 'Plan'}{billing ? ` · ${billing}` : ''}
                           </div>
                         </td>
-
-                        {/* Product */}
-                        <td className="px-4 py-3.5">
-                          <div className="flex items-center gap-2 min-w-0">
-                            <span
-                              className={`text-xs font-600 px-1.5 py-0.5 rounded-md flex-shrink-0 ${categoryStyles[cat] || categoryStyles.other}`}
-                            >
-                              {categoryLabel[cat] || 'Other'}
-                            </span>
-                            <div className="min-w-0">
-                              <div className="text-sm font-600 text-foreground truncate max-w-[180px]">
-                                {inv.products?.name || 'Unknown Product'}
-                              </div>
-                              {inv.product_plans?.name && (
-                                <div className="text-xs text-muted-foreground truncate">
-                                  {inv.product_plans.name}
-                                  {billingLabel ? ` · ${billingLabel}` : ''}
-                                </div>
-                              )}
-                            </div>
-                          </div>
+                        <td className="px-4 py-3.5 whitespace-nowrap text-sm text-foreground">{formatDate(record.created_at)}</td>
+                        <td className="px-4 py-3.5 text-right whitespace-nowrap">
+                          <div className="font-700 text-foreground">{formatAmount(record.amount, record.currency)}</div>
+                          {record.discount_amount > 0 && (
+                            <div className="text-xs text-success">{formatAmount(record.discount_amount, record.currency)} discount</div>
+                          )}
                         </td>
-
-                        {/* Date */}
-                        <td className="px-4 py-3.5">
-                          <span className="text-sm text-foreground tabular-nums whitespace-nowrap">
-                            {formatDate(inv.created_at)}
-                          </span>
-                        </td>
-
-                        {/* Amount */}
                         <td className="px-4 py-3.5 text-right">
-                          <div>
-                            <span className="text-sm font-700 text-foreground tabular-nums">
-                              {formatAmount(inv.amount, inv.currency)}
-                            </span>
-                            {inv.discount_amount > 0 && (
-                              <div className="text-xs text-success">
-                                −{formatAmount(inv.discount_amount, inv.currency)} saved
-                              </div>
-                            )}
-                          </div>
-                        </td>
-
-                        {/* Status */}
-                        <td className="px-4 py-3.5 text-center">
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-600 bg-success/10 text-success border border-success/20">
-                            <CheckCircle size={10} />
-                            Paid
-                          </span>
-                        </td>
-
-                        {/* Actions */}
-                        <td className="px-4 py-3.5">
-                          <div className="flex items-center justify-end gap-1.5">
-                            {inv.receipt_url ? (
-                              <>
-                                <a
-                                  href={inv.receipt_url}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-600 text-primary bg-primary/10 hover:bg-primary/20 rounded-lg transition-all duration-150"
-                                  title="View receipt"
-                                >
-                                  <ExternalLink size={11} />
-                                  View
-                                </a>
-                                <a
-                                  href={inv.receipt_url}
-                                  download
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-600 text-muted-foreground bg-secondary hover:bg-secondary/80 hover:text-foreground rounded-lg transition-all duration-150"
-                                  title="Download PDF"
-                                >
-                                  <Download size={11} />
-                                  PDF
-                                </a>
-                              </>
-                            ) : (
-                              <span className="text-xs text-muted-foreground italic px-2">
-                                No receipt
-                              </span>
-                            )}
-                          </div>
+                          {record.receipt_url ? (
+                            <a
+                              href={record.receipt_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-600 text-primary bg-primary/10 hover:bg-primary/20 rounded-lg transition-colors"
+                            >
+                              <ExternalLink size={11} />
+                              Provider receipt
+                            </a>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">Not available</span>
+                          )}
                         </td>
                       </tr>
                     );
                   })}
                 </tbody>
               </table>
-
-              {/* Footer */}
-              <div className="px-4 py-3 border-t border-border bg-secondary/20 flex items-center justify-between">
-                <span className="text-xs text-muted-foreground">
-                  Showing {filtered.length} of {invoices.length} invoice{invoices.length !== 1 ? 's' : ''}
-                </span>
-                <span className="text-xs font-700 text-foreground">
-                  Total: {formatAmount(filtered.reduce((s, i) => s + i.amount, 0), invoices[0]?.currency || 'USD')}
-                </span>
+              <div className="px-4 py-3 border-t border-border bg-secondary/20 text-xs text-muted-foreground">
+                Showing {filtered.length} of {records.length} completed purchase record{records.length === 1 ? '' : 's'}. Amounts are shown in each order’s original currency and are not combined across currencies.
               </div>
             </div>
           )}
