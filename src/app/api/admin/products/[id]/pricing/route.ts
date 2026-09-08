@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient, createServiceClient } from '@/lib/supabase/server';
+import { createClient } from '@/lib/supabase/server';
 import { getEffectivePrice } from '@/lib/pricing';
 
 const BILLING_PERIODS = new Set(['one_time', 'monthly', 'yearly', 'lifetime']);
@@ -11,15 +11,14 @@ async function requireAdmin() {
   const { data: { user }, error } = await sessionClient.auth.getUser();
   if (error || !user) return { error: NextResponse.json({ error: 'Authentication required.' }, { status: 401 }) };
 
-  const service = createServiceClient();
-  const { data: profile } = await service
-    .from('user_profiles')
-    .select('is_admin')
-    .eq('id', user.id)
-    .maybeSingle();
+  const { data: isAdmin, error: adminError } = await sessionClient.rpc('is_admin');
+  if (adminError) {
+    console.error('[admin/products/pricing] Admin check failed:', adminError.message);
+    return { error: NextResponse.json({ error: 'Could not verify admin access.' }, { status: 500 }) };
+  }
+  if (!isAdmin) return { error: NextResponse.json({ error: 'Admin access required.' }, { status: 403 }) };
 
-  if (!profile?.is_admin) return { error: NextResponse.json({ error: 'Admin access required.' }, { status: 403 }) };
-  return { service, user };
+  return { service: sessionClient, user };
 }
 
 function asNumber(value: unknown, field: string): number;
