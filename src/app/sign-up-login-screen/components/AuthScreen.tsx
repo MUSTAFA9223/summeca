@@ -38,8 +38,10 @@ export default function AuthScreen() {
               <Sparkles size={13} /> Interactive workspace
             </div>
             <h1 className="text-4xl font-black leading-[1.04] tracking-[-0.04em] xl:text-6xl">
-              Your digital world,
-              <span className="block bg-gradient-to-r from-white via-teal-100 to-teal-400 bg-clip-text text-transparent">ready when you are.</span>
+              <span className="block">Your digital</span>
+              <span className="block">world, ready</span>
+              <span className="block bg-gradient-to-r from-white via-teal-100 to-teal-400 bg-clip-text text-transparent">when you</span>
+              <span className="block">are.</span>
             </h1>
             <p className="mt-5 max-w-sm text-sm leading-6 text-white/48 xl:text-base">
               Sign in to access your SUMMECA tools, products and workspace from one secure place.
