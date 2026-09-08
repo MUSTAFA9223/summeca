@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import DashboardLayout from '@/app/user-dashboard/components/DashboardLayout';
 import { useAuth } from '@/contexts/AuthContext';
 import { trackEvent } from '@/lib/analytics';
+import { toast } from 'sonner';
 import { Gift, Copy, CheckCheck, Users, TrendingUp, DollarSign, Share2, Loader2, Star, Clock, CheckCircle2 } from 'lucide-react';
 
 interface ReferralStats {
@@ -26,6 +27,16 @@ const STATUS_CONFIG: Record<string, { label: string; cls: string; icon: React.Co
   rewarded: { label: 'Rewarded', cls: 'bg-primary/10 text-primary', icon: Star },
 };
 
+async function readJsonSafely<T>(res: Response): Promise<T | null> {
+  const text = await res.text();
+  if (!text.trim()) return null;
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    return null;
+  }
+}
+
 export default function ReferralsPage() {
   const { user, loading: authLoading } = useAuth();
   const [stats, setStats] = useState<ReferralStats | null>(null);
@@ -43,13 +54,17 @@ export default function ReferralsPage() {
   const fetchStats = async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/referrals/stats');
-      if (res.ok) {
-        const data = await res.json() as ReferralStats;
-        setStats(data);
+      const res = await fetch('/api/referrals/stats', { cache: 'no-store' });
+      const data = await readJsonSafely<ReferralStats & { error?: string }>(res);
+
+      if (!res.ok || !data) {
+        toast.error(data?.error || 'Could not load referral statistics. Please try again.');
+        return;
       }
+
+      setStats(data);
     } catch {
-      // Silently fail
+      toast.error('Could not load referral statistics. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -59,11 +74,17 @@ export default function ReferralsPage() {
     setGenerating(true);
     try {
       const res = await fetch('/api/referrals/generate', { method: 'POST' });
-      if (res.ok) {
-        await fetchStats();
+      const data = await readJsonSafely<{ referral_code?: string; error?: string }>(res);
+
+      if (!res.ok || !data?.referral_code) {
+        toast.error(data?.error || 'Could not create your referral link. Please try again.');
+        return;
       }
+
+      await fetchStats();
+      toast.success('Your referral link is ready.');
     } catch {
-      // Silently fail
+      toast.error('Could not create your referral link. Please try again.');
     } finally {
       setGenerating(false);
     }
@@ -75,7 +96,10 @@ export default function ReferralsPage() {
     navigator.clipboard.writeText(link).then(() => {
       setCopied(true);
       trackEvent('referral_signup', { referral_code: stats.referral_code });
+      toast.success('Referral link copied.');
       setTimeout(() => setCopied(false), 2000);
+    }).catch(() => {
+      toast.error('Could not copy the referral link.');
     });
   };
 
@@ -120,14 +144,13 @@ export default function ReferralsPage() {
   return (
     <DashboardLayout activeRoute="referrals">
       <div className="max-w-4xl mx-auto">
-        {/* Header */}
         <div className="flex items-center gap-3 mb-8">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center">
             <Gift size={20} className="text-white" />
           </div>
           <div>
             <h1 className="text-2xl font-800 text-foreground">Referral Program</h1>
-            <p className="text-sm text-secondary-foreground">Invite friends and earn rewards for every successful referral</p>
+            <p className="text-sm text-secondary-foreground">Invite friends and earn 5% on their first completed purchase</p>
           </div>
         </div>
 
@@ -137,7 +160,6 @@ export default function ReferralsPage() {
           </div>
         ) : (
           <>
-            {/* Referral link card */}
             <div className="bg-gradient-to-br from-primary/5 to-accent/5 rounded-2xl border border-primary/20 p-6 mb-6">
               <div className="flex items-center gap-2 mb-4">
                 <Share2 size={16} className="text-primary" />
@@ -151,8 +173,7 @@ export default function ReferralsPage() {
                     <button
                       onClick={copyLink}
                       className={`flex items-center gap-1.5 text-xs font-600 px-3 py-1.5 rounded-lg transition-all duration-200 ${
-                        copied
-                          ? 'bg-success/10 text-success' :'bg-primary text-white hover:bg-primary/90'
+                        copied ? 'bg-success/10 text-success' : 'bg-primary text-white hover:bg-primary/90'
                       }`}
                     >
                       {copied ? <CheckCheck size={12} /> : <Copy size={12} />}
@@ -163,7 +184,7 @@ export default function ReferralsPage() {
                     <span className="text-xs font-700 bg-primary/10 text-primary px-3 py-1 rounded-full">
                       Code: {stats.referral_code}
                     </span>
-                    <span className="text-xs text-muted-foreground">Share this link with friends to earn rewards</span>
+                    <span className="text-xs text-muted-foreground">You earn 5% when your referral completes their first purchase</span>
                   </div>
                 </>
               ) : (
@@ -181,7 +202,6 @@ export default function ReferralsPage() {
               )}
             </div>
 
-            {/* KPI cards */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
               {kpiCards.map((card) => (
                 <div key={card.label} className="bg-white rounded-2xl border border-border p-5 hover:shadow-md transition-shadow">
@@ -196,14 +216,13 @@ export default function ReferralsPage() {
               ))}
             </div>
 
-            {/* How it works */}
             <div className="bg-white rounded-2xl border border-border p-6 mb-6">
               <h2 className="text-base font-700 text-foreground mb-4">How It Works</h2>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 {[
                   { step: '1', title: 'Share Your Link', desc: 'Copy your unique referral link and share it with friends, colleagues, or on social media.' },
                   { step: '2', title: 'Friend Signs Up', desc: 'When someone registers using your link, they become your referral.' },
-                  { step: '3', title: 'Earn Rewards', desc: 'When your referral makes a purchase, you earn rewards credited to your account.' },
+                  { step: '3', title: 'Earn 5%', desc: 'When your referral completes their first purchase, you earn 5% of that order.' },
                 ].map((item) => (
                   <div key={item.step} className="flex gap-3">
                     <div className="w-7 h-7 rounded-full bg-gradient-teal text-white text-xs font-800 flex items-center justify-center flex-shrink-0 mt-0.5">
@@ -218,7 +237,6 @@ export default function ReferralsPage() {
               </div>
             </div>
 
-            {/* Recent referrals */}
             {stats?.recent_referrals && stats.recent_referrals.length > 0 && (
               <div className="bg-white rounded-2xl border border-border overflow-hidden">
                 <div className="px-6 py-4 border-b border-border">
@@ -232,13 +250,11 @@ export default function ReferralsPage() {
                       <div key={ref.id} className="flex items-center justify-between px-6 py-3">
                         <div className="flex items-center gap-3">
                           <div className={`w-7 h-7 rounded-full ${statusCfg.cls} flex items-center justify-center`}>
-                            <StatusIcon size={13}  />
+                            <StatusIcon size={13} />
                           </div>
                           <div>
                             <div className="text-xs font-600 text-foreground">Referral #{ref.id.slice(0, 8)}</div>
-                            <div className="text-xs text-muted-foreground">
-                              {new Date(ref.created_at).toLocaleDateString()}
-                            </div>
+                            <div className="text-xs text-muted-foreground">{new Date(ref.created_at).toLocaleDateString()}</div>
                           </div>
                         </div>
                         <div className="flex items-center gap-3">
@@ -256,14 +272,13 @@ export default function ReferralsPage() {
               </div>
             )}
 
-            {/* Empty referrals state */}
             {(!stats?.recent_referrals || stats.recent_referrals.length === 0) && stats?.referral_code && (
               <div className="bg-white rounded-2xl border border-border p-8 text-center">
                 <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
                   <Users size={24} className="text-primary" />
                 </div>
                 <h3 className="text-base font-700 text-foreground mb-2">No referrals yet</h3>
-                <p className="text-sm text-secondary-foreground mb-4">Start sharing your link to earn rewards!</p>
+                <p className="text-sm text-secondary-foreground mb-4">Start sharing your link to earn 5% rewards.</p>
                 <button
                   onClick={copyLink}
                   className="inline-flex items-center gap-2 bg-primary text-white px-5 py-2 rounded-xl font-600 text-sm hover:bg-primary/90 transition-colors"
