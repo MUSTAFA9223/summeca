@@ -13,7 +13,7 @@ type AuthView = 'login' | 'signup' | 'forgot';
 
 export default function AuthScreen() {
   const [view, setView] = useState<AuthView>('login');
-  const headlineLine = 'block w-fit bg-gradient-to-r from-white via-white via-[62%] to-teal-300 bg-clip-text text-transparent';
+  const headlineLine = 'block w-fit bg-gradient-to-r from-white from-[0%] via-teal-50 via-[52%] to-teal-300 bg-clip-text text-transparent';
 
   return (
     <main className="relative min-h-screen overflow-hidden bg-[#050807] text-white">
