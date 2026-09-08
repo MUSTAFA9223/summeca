@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form';
 import { Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import GoogleOAuthButton from './GoogleOAuthButton';
 
 interface LoginFormData {
@@ -18,11 +18,17 @@ interface LoginFormProps {
   onSwitchToSignup: () => void;
 }
 
+function getSafeNextPath(value: string | null) {
+  if (!value || !value.startsWith('/') || value.startsWith('//')) return null;
+  return value;
+}
+
 export default function LoginForm({ onForgotPassword, onSwitchToSignup }: LoginFormProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const { signIn } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   const { register, handleSubmit, formState: { errors }, setError } = useForm<LoginFormData>({
     defaultValues: { email: '', password: '' },
@@ -35,21 +41,25 @@ export default function LoginForm({ onForgotPassword, onSwitchToSignup }: LoginF
       const signedInUser = authData?.user;
       if (!signedInUser?.id) throw new Error('Unable to verify the signed-in account.');
 
+      const requestedNextPath = getSafeNextPath(searchParams.get('next'));
+
       // Role lookup improves the first redirect, but it must never turn a successful
       // authentication into a failed login. Protected admin routes are enforced by
       // middleware/server-side database checks, not by this client-side convenience.
-      let destination = '/user-dashboard';
-      try {
-        const { createClient } = await import('@/lib/supabase/client');
-        const supabase = createClient();
-        const { data: profile } = await supabase
-          .from('user_profiles')
-          .select('is_admin')
-          .eq('id', signedInUser.id)
-          .maybeSingle();
-        if (profile?.is_admin === true) destination = '/admin';
-      } catch {
-        // Keep the safe regular-user destination when profile lookup is unavailable.
+      let destination = requestedNextPath ?? '/user-dashboard';
+      if (!requestedNextPath) {
+        try {
+          const { createClient } = await import('@/lib/supabase/client');
+          const supabase = createClient();
+          const { data: profile } = await supabase
+            .from('user_profiles')
+            .select('is_admin')
+            .eq('id', signedInUser.id)
+            .maybeSingle();
+          if (profile?.is_admin === true) destination = '/admin';
+        } catch {
+          // Keep the safe regular-user destination when profile lookup is unavailable.
+        }
       }
 
       toast.success('Welcome back to SUMMECA!');
