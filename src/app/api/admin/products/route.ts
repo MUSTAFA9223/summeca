@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient, createServiceClient } from '@/lib/supabase/server';
+import { createClient } from '@/lib/supabase/server';
 
 const CATEGORIES = new Set(['ai_tool', 'template', 'dataset', 'api', 'plugin', 'course', 'other']);
 const STATUSES = new Set(['active', 'draft', 'archived']);
@@ -27,21 +27,28 @@ async function requireAdmin() {
   } = await sessionClient.auth.getUser();
 
   if (error || !user) {
-    return { error: NextResponse.json({ error: 'Authentication required.' }, { status: 401 }) };
+    return { error: noStoreJson({ error: 'Authentication required.' }, { status: 401 }) };
   }
 
-  const service = createServiceClient();
-  const { data: profile, error: profileError } = await service
-    .from('user_profiles')
-    .select('is_admin')
-    .eq('id', user.id)
-    .maybeSingle();
+  const { data: isAdmin, error: adminError } = await sessionClient.rpc('is_admin');
 
-  if (profileError || !profile?.is_admin) {
-    return { error: NextResponse.json({ error: 'Admin access required.' }, { status: 403 }) };
+  if (adminError) {
+    return {
+      error: noStoreJson(
+        { error: `Could not verify admin access: ${adminError.message}` },
+        { status: 500 },
+      ),
+    };
   }
 
-  return { service };
+  if (!isAdmin) {
+    return { error: noStoreJson({ error: 'Admin access required.' }, { status: 403 }) };
+  }
+
+  // Use the authenticated session client for admin product operations.
+  // The database already has authenticated-admin RLS policies on products,
+  // so this avoids depending on a service-role secret in the Cloudflare worker.
+  return { service: sessionClient };
 }
 
 function cleanText(value: unknown, maxLength: number) {
@@ -115,49 +122,79 @@ function noStoreJson(body: unknown, init?: ResponseInit) {
 }
 
 export async function GET(request: NextRequest) {
-  const auth = await requireAdmin();
-  if ('error' in auth) return auth.error;
+  try {
+    const auth = await requireAdmin();
+    if ('error' in auth) return auth.error;
 
-  const status = request.nextUrl.searchParams.get('status')?.trim() ?? '';
-  if (status && !STATUSES.has(status)) {
-    return noStoreJson({ error: 'Invalid product status filter.' }, { status: 400 });
+    const status = request.nextUrl.searchParams.get('status')?.trim() ?? '';
+    if (status && !STATUSES.has(status)) {
+      return noStoreJson({ error: 'Invalid product status filter.' }, { status: 400 });
+    }
+
+    let query = auth.service
+      .from('products')
+      .select(PRODUCT_COLUMNS)
+      .order('created_at', { ascending: false });
+
+    if (status) query = query.eq('status', status);
+
+    const { data, error } = await query;
+    if (error) return noStoreJson({ error: error.message }, { status: 500 });
+
+    return noStoreJson({ products: data ?? [] });
+  } catch (error: any) {
+    return noStoreJson({ error: error?.message || 'Failed to load products.' }, { status: 500 });
   }
-
-  let query = auth.service
-    .from('products')
-    .select(PRODUCT_COLUMNS)
-    .order('created_at', { ascending: false });
-
-  if (status) query = query.eq('status', status);
-
-  const { data, error } = await query;
-  if (error) return noStoreJson({ error: error.message }, { status: 500 });
-
-  return noStoreJson({ products: data ?? [] });
 }
 
 export async function POST(request: NextRequest) {
-  const auth = await requireAdmin();
-  if ('error' in auth) return auth.error;
-
-  let body: Record<string, unknown>;
   try {
-    body = await request.json();
-  } catch {
-    return noStoreJson({ error: 'Invalid request body.' }, { status: 400 });
-  }
+    const auth = await requireAdmin();
+    if ('error' in auth) return auth.error;
 
-  try {
-    const action = String(body.action ?? '');
+    let body: Record<string, unknown>;
+    try {
+      body = await request.json();
+    } catch {
+      return noStoreJson({ error: 'Invalid request body.' }, { status: 400 });
+    }
 
-    if (action === 'save_product') {
-      const payload = validateProduct(body);
-      const id = cleanText(body.id, 100);
+    try {
+      const action = String(body.action ?? '');
 
-      if (id) {
+      if (action === 'save_product') {
+        const payload = validateProduct(body);
+        const id = cleanText(body.id, 100);
+
+        if (id) {
+          const { data, error } = await auth.service
+            .from('products')
+            .update(payload)
+            .eq('id', id)
+            .select(PRODUCT_COLUMNS)
+            .single();
+          if (error) throw error;
+          return noStoreJson({ product: data });
+        }
+
         const { data, error } = await auth.service
           .from('products')
-          .update(payload)
+          .insert(payload)
+          .select(PRODUCT_COLUMNS)
+          .single();
+        if (error) throw error;
+        return noStoreJson({ product: data }, { status: 201 });
+      }
+
+      if (action === 'update_status') {
+        const id = cleanText(body.id, 100);
+        const status = cleanText(body.status, 20);
+        if (!id) throw new Error('Product id is required.');
+        if (!STATUSES.has(status)) throw new Error('Invalid product status.');
+
+        const { data, error } = await auth.service
+          .from('products')
+          .update({ status, updated_at: new Date().toISOString() })
           .eq('id', id)
           .select(PRODUCT_COLUMNS)
           .single();
@@ -165,36 +202,14 @@ export async function POST(request: NextRequest) {
         return noStoreJson({ product: data });
       }
 
-      const { data, error } = await auth.service
-        .from('products')
-        .insert(payload)
-        .select(PRODUCT_COLUMNS)
-        .single();
-      if (error) throw error;
-      return noStoreJson({ product: data }, { status: 201 });
+      return noStoreJson({ error: 'Unknown product action.' }, { status: 400 });
+    } catch (error: any) {
+      const message = error?.code === '23505'
+        ? 'A product with this slug already exists.'
+        : error?.message || 'Product update failed.';
+      return noStoreJson({ error: message }, { status: 400 });
     }
-
-    if (action === 'update_status') {
-      const id = cleanText(body.id, 100);
-      const status = cleanText(body.status, 20);
-      if (!id) throw new Error('Product id is required.');
-      if (!STATUSES.has(status)) throw new Error('Invalid product status.');
-
-      const { data, error } = await auth.service
-        .from('products')
-        .update({ status, updated_at: new Date().toISOString() })
-        .eq('id', id)
-        .select(PRODUCT_COLUMNS)
-        .single();
-      if (error) throw error;
-      return noStoreJson({ product: data });
-    }
-
-    return noStoreJson({ error: 'Unknown product action.' }, { status: 400 });
   } catch (error: any) {
-    const message = error?.code === '23505'
-      ? 'A product with this slug already exists.'
-      : error?.message || 'Product update failed.';
-    return noStoreJson({ error: message }, { status: 400 });
+    return noStoreJson({ error: error?.message || 'Product request failed.' }, { status: 500 });
   }
 }
