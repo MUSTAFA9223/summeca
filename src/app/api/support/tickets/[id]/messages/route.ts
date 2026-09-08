@@ -1,6 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 
+async function hasAdminAccess(supabase: Awaited<ReturnType<typeof createClient>>, userId: string) {
+  const { data } = await supabase
+    .from('user_profiles')
+    .select('is_admin')
+    .eq('id', userId)
+    .maybeSingle();
+  return data?.is_admin === true;
+}
+
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -13,14 +22,17 @@ export async function POST(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const body = await request.json();
-    const { message } = body;
+    const body = await request.json().catch(() => null);
+    const message = body && typeof body === 'object' ? body.message : null;
 
-    if (!message?.trim()) {
+    if (typeof message !== 'string' || !message.trim()) {
       return NextResponse.json({ error: 'Message is required' }, { status: 400 });
     }
+    if (message.trim().length > 5000) {
+      return NextResponse.json({ error: 'Message is too long' }, { status: 400 });
+    }
 
-    const isAdmin = user.user_metadata?.role === 'admin' || user.app_metadata?.role === 'admin';
+    const isAdmin = await hasAdminAccess(supabase, user.id);
 
     // Verify ticket access
     const { data: ticket } = await supabase
