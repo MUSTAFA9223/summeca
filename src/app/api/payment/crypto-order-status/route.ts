@@ -37,6 +37,24 @@ export async function GET(request: NextRequest) {
     return noStoreJson({ error: 'This is not a cryptocurrency order.' }, { status: 409 });
   }
 
+  const { data: latestEvent } = await supabase
+    .from('payment_events')
+    .select('event_type, metadata, created_at')
+    .eq('order_id', orderId)
+    .eq('provider', 'crypto')
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const eventMetadata = record(latestEvent?.metadata);
+  const providerStatus = typeof eventMetadata.provider_status === 'string'
+    ? eventMetadata.provider_status
+    : order.status === 'completed'
+      ? 'finished'
+      : typeof metadata.provider_status === 'string'
+        ? metadata.provider_status
+        : null;
+
   return noStoreJson({
     orderId: order.id,
     status: order.status,
@@ -46,7 +64,8 @@ export async function GET(request: NextRequest) {
     cryptoAmount: typeof metadata.crypto_amount === 'string' ? metadata.crypto_amount : null,
     cryptoCurrency: typeof metadata.crypto_currency === 'string' ? metadata.crypto_currency : null,
     cryptoNetwork: typeof metadata.crypto_network === 'string' ? metadata.crypto_network : null,
-    providerStatus: typeof metadata.provider_status === 'string' ? metadata.provider_status : null,
+    providerStatus,
+    providerEvent: latestEvent?.event_type ?? null,
     createdAt: order.created_at,
     updatedAt: order.updated_at,
   });
