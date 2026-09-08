@@ -4,8 +4,6 @@ import { createContext, useContext, useEffect, useState, useMemo } from 'react';
 import { createClient } from '@/lib/supabase/client';
 
 const AuthContext = createContext<any>({});
-const SIGNUP_PENDING_KEY = 'summeca:signup-pending-at';
-const AUTH_FLOW_MAX_AGE_MS = 60 * 60 * 1000;
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
@@ -38,53 +36,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
     };
 
-    const hasRecentSignupMarker = () => {
-      if (typeof window === 'undefined') return false;
-      const value = Number(window.localStorage.getItem(SIGNUP_PENDING_KEY) || '0');
-      return value > 0 && Date.now() - value < AUTH_FLOW_MAX_AGE_MS;
-    };
-
-    const clearSignupMarker = () => {
-      if (typeof window !== 'undefined') window.localStorage.removeItem(SIGNUP_PENDING_KEY);
-    };
-
     const hasRecoveryMarkerInUrl = () => {
       if (typeof window === 'undefined') return false;
       const hash = new URLSearchParams(window.location.hash.replace(/^#/, ''));
       const search = new URLSearchParams(window.location.search);
       return hash.get('type') === 'recovery' || search.get('type') === 'recovery' || Boolean(search.get('token_hash'));
-    };
-
-    const handleStrayAuthCode = async () => {
-      if (typeof window === 'undefined' || window.location.pathname === '/auth/callback' || window.location.pathname === '/reset-password') return false;
-
-      const url = new URL(window.location.href);
-      const code = url.searchParams.get('code');
-      const flowId = url.searchParams.get('sb_flow_id');
-      if (!code) return false;
-
-      const wasSignup = hasRecentSignupMarker();
-      const { data, error } = await supabase.auth.exchangeCodeForSession(
-        code,
-        flowId ? { flowId } : undefined,
-      );
-
-      if (!active || error || !data.session) return false;
-
-      url.searchParams.delete('code');
-      url.searchParams.delete('sb_flow_id');
-      window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
-
-      if (hasRecoveryMarkerInUrl()) {
-        redirectRecoveryToResetPage();
-        return true;
-      }
-      if (wasSignup) {
-        clearSignupMarker();
-        window.location.replace('/user-dashboard');
-        return true;
-      }
-      return false;
     };
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, nextSession) => {
@@ -95,15 +51,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       if (event === 'PASSWORD_RECOVERY') redirectRecoveryToResetPage();
     });
 
-    handleStrayAuthCode().then((handled) => {
-      if (handled || !active) return;
-      supabase.auth.getSession().then(({ data: { session: initialSession } }) => {
-        if (!active) return;
-        setSession(initialSession);
-        setUser(initialSession?.user ?? null);
-        setLoading(false);
-        if (initialSession && hasRecoveryMarkerInUrl()) redirectRecoveryToResetPage();
-      });
+    supabase.auth.getSession().then(({ data: { session: initialSession } }) => {
+      if (!active) return;
+      setSession(initialSession);
+      setUser(initialSession?.user ?? null);
+      setLoading(false);
+      if (initialSession && hasRecoveryMarkerInUrl()) redirectRecoveryToResetPage();
     });
 
     return () => {
@@ -113,7 +66,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, [supabase]);
 
   const signUp = async (email: string, password: string, metadata: any = {}) => {
-    if (typeof window !== 'undefined') window.localStorage.setItem(SIGNUP_PENDING_KEY, String(Date.now()));
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -126,10 +78,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         emailRedirectTo: `${getSiteUrl()}/auth/callback`,
       },
     });
-    if (error) {
-      if (typeof window !== 'undefined') window.localStorage.removeItem(SIGNUP_PENDING_KEY);
-      throw error;
-    }
+    if (error) throw error;
     return data;
   };
 

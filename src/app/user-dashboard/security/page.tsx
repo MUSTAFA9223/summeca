@@ -130,9 +130,11 @@ export default function SecurityPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ currentPassword: pwForm.current, newPassword: pwForm.next }),
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (!res.ok) { setPwError(data.error || 'Failed to change password.'); return; }
-      setPwSuccess('Password changed successfully. A confirmation email has been sent.');
+      setPwSuccess(data.emailNotificationSent
+        ? 'Password changed successfully. A confirmation email was sent.'
+        : 'Password changed successfully.');
       setPwForm({ current: '', next: '', confirm: '' });
     } catch {
       setPwError('An unexpected error occurred.');
@@ -142,16 +144,22 @@ export default function SecurityPage() {
   };
 
   const handleSettingsToggle = async (key: keyof SecuritySettings) => {
+    const previous = settings;
     const updated = { ...settings, [key]: !settings[key] };
     setSettings(updated);
     setSettingsSaving(true);
     try {
-      await fetch('/api/security/settings', {
+      const res = await fetch('/api/security/settings', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updated),
       });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Failed to save security preferences.');
       showToast('Security preferences saved.');
+    } catch (settingsError) {
+      setSettings(previous);
+      showToast(settingsError instanceof Error ? settingsError.message : 'Failed to save security preferences.');
     } finally {
       setSettingsSaving(false);
     }
@@ -161,10 +169,15 @@ export default function SecurityPage() {
     setLogoutAllLoading(true);
     try {
       const res = await fetch('/api/security/logout-all', { method: 'POST' });
+      const data = await res.json().catch(() => ({}));
       if (res.ok) {
         showToast('All sessions have been terminated. Please log in again.');
         setTimeout(() => { window.location.href = '/sign-up-login-screen'; }, 2000);
+      } else {
+        showToast(data.error || 'Failed to terminate sessions.');
       }
+    } catch {
+      showToast('Failed to terminate sessions.');
     } finally {
       setLogoutAllLoading(false);
     }
@@ -330,7 +343,7 @@ export default function SecurityPage() {
 
             <div className="flex items-center gap-2 bg-gray-50 rounded-xl px-4 py-2.5">
               <Info size={13} className="text-gray-400 flex-shrink-0" />
-              <p className="text-xs text-gray-500">A confirmation email will be sent after the password is changed.</p>
+              <p className="text-xs text-gray-500">You will need to sign in again on sessions that are no longer valid.</p>
             </div>
 
             <button

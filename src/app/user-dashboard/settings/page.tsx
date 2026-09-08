@@ -248,8 +248,10 @@ function SecurityTab() {
   const [newEmail, setNewEmail] = useState('');
   const [savingEmail, setSavingEmail] = useState(false);
 
+  const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showCurrent, setShowCurrent] = useState(false);
   const [showNew, setShowNew] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [savingPw, setSavingPw] = useState(false);
@@ -262,7 +264,7 @@ function SecurityTab() {
     try {
       const { error } = await supabase.auth.updateUser(
         { email: newEmail },
-        { emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback?next=/user-dashboard/settings` }
+        { emailRedirectTo: `${window.location.origin}/auth/callback?next=/user-dashboard/settings` }
       );
       if (error) throw error;
       toast.success('Confirmation sent to new email address');
@@ -277,13 +279,22 @@ function SecurityTab() {
   const handlePasswordUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     setPwError('');
+    if (!currentPassword) { setPwError('Current password is required'); return; }
     if (newPassword !== confirmPassword) { setPwError('Passwords do not match'); return; }
     if (newPassword.length < 8) { setPwError('Password must be at least 8 characters'); return; }
     setSavingPw(true);
     try {
-      const { error } = await supabase.auth.updateUser({ password: newPassword });
-      if (error) throw error;
-      toast.success('Password updated successfully');
+      const response = await fetch('/api/security/change-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ currentPassword, newPassword }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.error || 'Failed to update password');
+      toast.success(result.emailNotificationSent
+        ? 'Password updated and confirmation email sent'
+        : 'Password updated successfully');
+      setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
     } catch (err: any) {
@@ -326,6 +337,25 @@ function SecurityTab() {
         )}
         <form onSubmit={handlePasswordUpdate} className="space-y-4">
           <div>
+            <label className="block text-sm font-600 text-foreground mb-1.5" htmlFor="current-pw">
+              Current Password
+            </label>
+            <div className="relative">
+              <input
+                id="current-pw"
+                type={showCurrent ? 'text' : 'password'}
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                autoComplete="current-password"
+                placeholder="Enter current password"
+                className="w-full px-3.5 py-2.5 pr-10 rounded-xl border border-input text-sm text-foreground placeholder-muted-foreground bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all duration-150"
+              />
+              <button type="button" onClick={() => setShowCurrent(!showCurrent)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">
+                {showCurrent ? <EyeOff size={15} /> : <Eye size={15} />}
+              </button>
+            </div>
+          </div>
+          <div>
             <label className="block text-sm font-600 text-foreground mb-1.5" htmlFor="new-pw">
               New Password
             </label>
@@ -335,6 +365,7 @@ function SecurityTab() {
                 type={showNew ? 'text' : 'password'}
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
+                autoComplete="new-password"
                 placeholder="Enter new password"
                 className="w-full px-3.5 py-2.5 pr-10 rounded-xl border border-input text-sm text-foreground placeholder-muted-foreground bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all duration-150"
               />
@@ -353,6 +384,7 @@ function SecurityTab() {
                 type={showConfirm ? 'text' : 'password'}
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
+                autoComplete="new-password"
                 placeholder="Confirm new password"
                 className="w-full px-3.5 py-2.5 pr-10 rounded-xl border border-input text-sm text-foreground placeholder-muted-foreground bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all duration-150"
               />
