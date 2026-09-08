@@ -13,6 +13,8 @@ const NOWPAYMENTS_API_URL = 'https://api.nowpayments.io/v1';
 const PAY_CURRENCY: Record<string, string> = {
   crypto_btc: 'btc',
   crypto_eth: 'eth',
+  crypto_ltc: 'ltc',
+  crypto_trx: 'trx',
   crypto_usdt: 'usdttrc20',
   crypto_usdt_trc20: 'usdttrc20',
   crypto_usdt_erc20: 'usdterc20',
@@ -34,6 +36,15 @@ type NowPaymentsCreateResponse = {
   message?: string;
 };
 
+type NowPaymentsMinimumResponse = {
+  currency_from?: string;
+  currency_to?: string;
+  min_amount?: number | string;
+  fiat_equivalent?: number | string;
+  error?: string;
+  message?: string;
+};
+
 type NowPaymentsWebhook = {
   payment_id?: number | string;
   payment_status?: string;
@@ -47,6 +58,14 @@ type NowPaymentsWebhook = {
   purchase_id?: string;
   outcome_amount?: number;
   outcome_currency?: string;
+};
+
+export type CryptoMinimumCheck = {
+  checked: boolean;
+  payCurrency?: string;
+  minimumCrypto?: number;
+  minimumFiat?: number;
+  error?: string;
 };
 
 function sortObject(value: unknown): unknown {
@@ -75,6 +94,8 @@ function paymentMethodFromPayCurrency(payCurrency?: string): PaymentMethodType {
   const normalized = String(payCurrency ?? '').toLowerCase();
   if (normalized === 'btc') return 'crypto_btc';
   if (normalized === 'eth') return 'crypto_eth';
+  if (normalized === 'ltc') return 'crypto_ltc';
+  if (normalized === 'trx') return 'crypto_trx';
   if (normalized === 'usdttrc20') return 'crypto_usdt_trc20';
   if (normalized === 'usdterc20') return 'crypto_usdt_erc20';
   if (normalized === 'usdcmatic') return 'crypto_usdc_polygon';
@@ -100,6 +121,55 @@ function mapPaymentStatus(status?: string): WebhookVerificationResult['paymentSt
       return 'pending';
     default:
       return 'pending';
+  }
+}
+
+export async function getCryptoMinimumCheck(params: {
+  paymentMethodType: string;
+  priceCurrency: string;
+}): Promise<CryptoMinimumCheck> {
+  const apiKey = process.env.NOWPAYMENTS_API_KEY?.trim();
+  const payCurrency = PAY_CURRENCY[params.paymentMethodType];
+  if (!apiKey || !payCurrency) {
+    return { checked: false, payCurrency, error: 'Crypto minimum check is unavailable.' };
+  }
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 8_000);
+  try {
+    const query = new URLSearchParams({
+      currency_from: payCurrency,
+      fiat_equivalent: params.priceCurrency.toLowerCase(),
+    });
+    const response = await fetch(`${NOWPAYMENTS_API_URL}/min-amount?${query.toString()}`, {
+      headers: { 'x-api-key': apiKey },
+      signal: controller.signal,
+      cache: 'no-store',
+    });
+    const payload = (await response.json().catch(() => ({}))) as NowPaymentsMinimumResponse;
+    if (!response.ok) {
+      return {
+        checked: false,
+        payCurrency,
+        error: payload.message ?? payload.error ?? 'NOWPayments minimum check failed.',
+      };
+    }
+
+    const minimumCrypto = Number(payload.min_amount);
+    const minimumFiat = Number(payload.fiat_equivalent);
+    return {
+      checked: Number.isFinite(minimumFiat) && minimumFiat > 0,
+      payCurrency,
+      minimumCrypto: Number.isFinite(minimumCrypto) && minimumCrypto > 0 ? minimumCrypto : undefined,
+      minimumFiat: Number.isFinite(minimumFiat) && minimumFiat > 0 ? minimumFiat : undefined,
+    };
+  } catch (error) {
+    const message = error instanceof Error && error.name === 'AbortError'
+      ? 'NOWPayments minimum check timed out.'
+      : 'Failed to check NOWPayments minimum.';
+    return { checked: false, payCurrency, error: message };
+  } finally {
+    clearTimeout(timeout);
   }
 }
 
@@ -145,9 +215,13 @@ export class CryptoProvider implements IPaymentProvider {
 
       const payload = (await response.json().catch(() => ({}))) as NowPaymentsCreateResponse;
       if (!response.ok) {
+        const providerError = payload.message ?? payload.error ?? 'NOWPayments rejected the payment request.';
+        const minimumError = /less than minimal|minimum|minimal/i.test(providerError);
         return {
           success: false,
-          error: payload.message ?? payload.error ?? 'NOWPayments rejected the payment request.',
+          error: minimumError
+            ? 'This cryptocurrency is currently above the minimum for this order total. Try TRON (TRX) or Litecoin (LTC).'
+            : providerError,
         };
       }
 
