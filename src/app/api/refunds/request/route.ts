@@ -19,7 +19,11 @@ type RefundReason = typeof VALID_REASONS[number];
 
 export async function POST(request: NextRequest) {
   const sessionClient = await createClient();
-  const { data: { user }, error: authError } = await sessionClient.auth.getUser();
+  const {
+    data: { user },
+    error: authError,
+  } = await sessionClient.auth.getUser();
+
   if (authError || !user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
@@ -31,7 +35,12 @@ export async function POST(request: NextRequest) {
   if (!rate.allowed) {
     return NextResponse.json(
       { error: 'Too many refund requests. Please try again later.' },
-      { status: 429, headers: { 'Retry-After': String(Math.max(1, Math.ceil((rate.resetAt - Date.now()) / 1000))) } }
+      {
+        status: 429,
+        headers: {
+          'Retry-After': String(Math.max(1, Math.ceil((rate.resetAt - Date.now()) / 1000))),
+        },
+      }
     );
   }
 
@@ -46,7 +55,9 @@ export async function POST(request: NextRequest) {
   const reason = body.reason;
   const sanitizedNote = (body.customerNote ?? '').slice(0, 1000).trim();
 
-  if (!orderId) return NextResponse.json({ error: 'orderId is required' }, { status: 400 });
+  if (!orderId) {
+    return NextResponse.json({ error: 'orderId is required' }, { status: 400 });
+  }
   if (!reason || !VALID_REASONS.includes(reason as RefundReason)) {
     return NextResponse.json(
       { error: `reason must be one of: ${VALID_REASONS.join(', ')}` },
@@ -113,7 +124,10 @@ export async function POST(request: NextRequest) {
 
   if (insertError || !refund) {
     if (insertError?.code === '23505') {
-      return NextResponse.json({ error: 'An active refund request already exists for this order.' }, { status: 409 });
+      return NextResponse.json(
+        { error: 'An active refund request already exists for this order.' },
+        { status: 409 }
+      );
     }
     console.error('[refunds/request] Insert error:', insertError?.message);
     return NextResponse.json({ error: 'Failed to create refund request' }, { status: 500 });
@@ -147,9 +161,13 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  return NextResponse.json({
-    success: true,
-    refundId: refund.id,
-    message: 'Refund request submitted successfully. Our team will review it within 1–3 business days.',
-  }, { headers: { 'Cache-Control': 'no-store' } });
+  return NextResponse.json(
+    {
+      success: true,
+      refundId: refund.id,
+      message:
+        'Refund request submitted successfully. Its status will be updated after review; no review or payout timeframe is guaranteed by this request.',
+    },
+    { headers: { 'Cache-Control': 'no-store' } }
+  );
 }
