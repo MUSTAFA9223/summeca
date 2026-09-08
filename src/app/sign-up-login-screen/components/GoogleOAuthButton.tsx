@@ -8,6 +8,14 @@ interface GoogleOAuthButtonProps {
   label: string;
 }
 
+const GOOGLE_OAUTH_STATE_KEY = 'summeca:google-oauth-browser-state';
+
+function makeBrowserState() {
+  const bytes = new Uint8Array(24);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes, byte => byte.toString(16).padStart(2, '0')).join('');
+}
+
 export default function GoogleOAuthButton({ label }: GoogleOAuthButtonProps) {
   const [loading, setLoading] = useState(false);
 
@@ -20,7 +28,10 @@ export default function GoogleOAuthButton({ label }: GoogleOAuthButtonProps) {
       const currentUrl = new URL(window.location.href);
       const referralCode = (currentUrl.searchParams.get('ref') || '').trim().toUpperCase();
       const callbackUrl = new URL('/auth/callback', window.location.origin);
+      const browserState = makeBrowserState();
+      window.sessionStorage.setItem(GOOGLE_OAUTH_STATE_KEY, browserState);
       callbackUrl.searchParams.set('next', '/user-dashboard');
+      callbackUrl.searchParams.set('browser_state', browserState);
       if (referralCode) callbackUrl.searchParams.set('ref', referralCode);
 
       const { error } = await supabase.auth.signInWithOAuth({
@@ -30,6 +41,7 @@ export default function GoogleOAuthButton({ label }: GoogleOAuthButtonProps) {
 
       if (error) throw error;
     } catch (error: any) {
+      window.sessionStorage.removeItem(GOOGLE_OAUTH_STATE_KEY);
       setLoading(false);
       toast.error(error?.message || 'Google sign-in is not available right now.');
     }
