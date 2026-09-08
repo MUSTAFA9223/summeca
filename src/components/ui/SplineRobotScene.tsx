@@ -62,6 +62,20 @@ function loadSplineRuntime() {
   return win.__summecaSplineRuntimePromise;
 }
 
+function safelyDisposeSpline(app: SplineApplication | undefined) {
+  if (!app) return;
+  try {
+    app.stop?.();
+  } catch {
+    // Never let a third-party WebGL runtime break route transitions.
+  }
+  try {
+    app.dispose?.();
+  } catch {
+    // Cleanup is best-effort; the page must remain usable if Spline fails.
+  }
+}
+
 export default function SplineRobotScene() {
   const hostRef = useRef<HTMLDivElement>(null);
   const [ready, setReady] = useState(false);
@@ -95,50 +109,55 @@ export default function SplineRobotScene() {
 
         app = new Application(canvas);
 
-        // IMPORTANT: Spline's setZoom is an initial camera framing control.
-        // Apply it before load so production actually starts zoomed out enough
-        // to include the complete legs and feet. Calling only after load can be ignored.
+        // Spline's setZoom is an initial camera framing control.
         const width = window.innerWidth;
         const zoom = width < 640 ? 0.24 : width < 1024 ? 0.28 : width < 1440 ? 0.3 : 0.32;
         app.setZoom(zoom);
 
         await app.load(SCENE_URL);
         if (cancelled) {
-          app.stop?.();
-          app.dispose?.();
+          safelyDisposeSpline(app);
           return;
         }
 
         app.setBackgroundColor('rgba(0, 0, 0, 0)');
         app.setGlobalEvents?.(true);
-
-        // Re-apply once loaded for runtime versions that support live zoom changes.
         app.setZoom(zoom);
 
         canvas.style.opacity = '1';
         setReady(true);
       } catch {
+        // Spline is decorative. Any runtime/WebGL/network failure must degrade silently.
+        safelyDisposeSpline(app);
+        app = undefined;
         if (!cancelled) setReady(false);
       }
     };
 
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (!entry.isIntersecting) return;
-        observer.disconnect();
-        void mount();
-      },
-      { rootMargin: '260px', threshold: 0.01 },
-    );
-
-    observer.observe(host);
+    let observer: IntersectionObserver | null = null;
+    if (typeof IntersectionObserver === 'undefined') {
+      void mount();
+    } else {
+      observer = new IntersectionObserver(
+        ([entry]) => {
+          if (!entry.isIntersecting) return;
+          observer?.disconnect();
+          void mount();
+        },
+        { rootMargin: '260px', threshold: 0.01 },
+      );
+      observer.observe(host);
+    }
 
     return () => {
       cancelled = true;
-      observer.disconnect();
-      app?.stop?.();
-      app?.dispose?.();
-      host.replaceChildren();
+      observer?.disconnect();
+      safelyDisposeSpline(app);
+      try {
+        host.replaceChildren();
+      } catch {
+        // The host may already have been detached by React during navigation.
+      }
     };
   }, []);
 
