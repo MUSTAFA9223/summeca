@@ -5,42 +5,57 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST() {
-  const supabase = await createClient();
+  try {
+    const supabase = await createClient();
+    const { data: authData, error: authError } = await supabase.auth.getUser();
+    const user = authData.user;
 
-  const { data: { user } } = await supabase?.auth?.getUser();
-  if (!user) {
-    return NextResponse?.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
 
-  // Check if user already has a referral code
-  const { data: existing } = await supabase?.from('referrals')?.select('referral_code')?.eq('referrer_user_id', user?.id)?.is('referred_user_id', null)?.single();
+    const { data: existing, error: existingError } = await supabase
+      .from('referrals')
+      .select('referral_code')
+      .eq('referrer_user_id', user.id)
+      .is('referred_user_id', null)
+      .maybeSingle();
 
-  if (existing) {
-    return NextResponse?.json({ referral_code: existing?.referral_code });
-  }
+    if (existingError) {
+      console.error('[referrals/generate] Failed to read referral code:', existingError.message);
+      return NextResponse.json({ error: 'Could not load your referral code.' }, { status: 500 });
+    }
 
-  // Generate new code using DB function
-  const { data: codeData, error: codeError } = await supabase?.rpc('generate_referral_code', { user_id: user?.id });
+    if (existing?.referral_code) {
+      return NextResponse.json({ referral_code: existing.referral_code });
+    }
 
-  if (codeError || !codeData) {
-    // Fallback: generate code client-side
-    const fallbackCode = 'SUMM' + Math.random()?.toString(36)?.substring(2, 10)?.toUpperCase();
-    const { error: insertError } = await supabase?.from('referrals')?.insert({
-        referrer_user_id: user?.id,
-        referral_code: fallbackCode,
-        status: 'pending',
-      });
-    if (insertError) return NextResponse?.json({ error: insertError?.message }, { status: 500 });
-    return NextResponse?.json({ referral_code: fallbackCode });
-  }
+    const { data: codeData, error: codeError } = await supabase.rpc('generate_referral_code', {
+      user_id: user.id,
+    });
 
-  const { error: insertError } = await supabase?.from('referrals')?.insert({
-      referrer_user_id: user?.id,
-      referral_code: codeData,
+    const referralCode =
+      !codeError && typeof codeData === 'string' && codeData.trim()
+        ? codeData.trim()
+        : `SUMM${crypto.randomUUID().replace(/-/g, '').slice(0, 8).toUpperCase()}`;
+
+    const { error: insertError } = await supabase.from('referrals').insert({
+      referrer_user_id: user.id,
+      referral_code: referralCode,
       status: 'pending',
     });
 
-  if (insertError) return NextResponse?.json({ error: insertError?.message }, { status: 500 });
-  return NextResponse?.json({ referral_code: codeData });
+    if (insertError) {
+      console.error('[referrals/generate] Failed to create referral code:', insertError.message);
+      return NextResponse.json({ error: 'Could not create your referral link.' }, { status: 500 });
+    }
+
+    return NextResponse.json({ referral_code: referralCode }, { status: 200 });
+  } catch (error) {
+    console.error('[referrals/generate] Unexpected error:', error);
+    return NextResponse.json({ error: 'Referral service is temporarily unavailable.' }, { status: 500 });
+  }
 }
