@@ -2,8 +2,6 @@ import React from 'react';
 import Link from 'next/link';
 import AppLogo from '@/components/ui/AppLogo';
 import { Mail, ArrowRight, Zap, Shield, Globe } from 'lucide-react';
-import Icon from '@/components/ui/AppIcon';
-
 
 const footerLinks = {
   Platform: [
@@ -15,8 +13,6 @@ const footerLinks = {
   Company: [
     { label: 'About SUMMECA', href: '/about' },
     { label: 'Contact', href: '/contact' },
-    { label: 'Blog', href: '/blog' },
-    { label: 'Careers', href: '/careers' },
   ],
   Support: [
     { label: 'Help Center', href: '/support' },
@@ -52,17 +48,14 @@ export default function PublicFooter() {
 
   return (
     <footer className="bg-[#0A0F1E] text-white relative overflow-hidden">
-      {/* Subtle grid pattern */}
       <div className="absolute inset-0 opacity-30"
         style={{
           backgroundImage: 'linear-gradient(rgba(13,148,136,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(13,148,136,0.06) 1px, transparent 1px)',
           backgroundSize: '40px 40px'
         }}
       />
-      {/* Teal glow top */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[200px] rounded-full bg-primary/5 blur-3xl pointer-events-none" />
 
-      {/* Trust badges strip */}
       <div className="relative border-b border-white/6">
         <div className="max-w-screen-xl mx-auto px-6 lg:px-8 py-4">
           <div className="flex flex-wrap items-center justify-center gap-6">
@@ -80,7 +73,6 @@ export default function PublicFooter() {
         </div>
       </div>
 
-      {/* Newsletter band */}
       <div className="relative border-b border-white/8">
         <div className="max-w-screen-xl mx-auto px-6 lg:px-8 py-12">
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
@@ -104,7 +96,6 @@ export default function PublicFooter() {
 
       <div className="relative max-w-screen-xl mx-auto px-6 lg:px-8 py-14">
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-8 lg:gap-10">
-          {/* Brand — spans 2 cols */}
           <div className="col-span-2">
             <div className="flex items-center gap-2.5 mb-4">
               <div className="w-8 h-8 rounded-lg bg-gradient-teal flex items-center justify-center shadow-md">
@@ -115,7 +106,6 @@ export default function PublicFooter() {
             <p className="text-sm text-slate-400 leading-relaxed mb-5 max-w-[220px]">
               AI-powered business technology for the modern enterprise. Built for scale.
             </p>
-            {/* Teal accent line */}
             <div className="w-12 h-0.5 bg-gradient-to-r from-primary to-accent rounded-full mb-5" />
             <div className="flex items-center gap-2">
               {socialLinks.map(({ Icon, href, label }) => (
@@ -138,7 +128,6 @@ export default function PublicFooter() {
             </div>
           </div>
 
-          {/* Links */}
           {Object.entries(footerLinks)?.map(([section, links]) => (
             <div key={`footer-section-${section}`}>
               <h4 className="text-xs font-700 uppercase tracking-widest text-slate-500 mb-4">
@@ -167,14 +156,10 @@ export default function PublicFooter() {
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-1.5">
               <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></div>
-              <p className="text-xs text-slate-600">
-                Powered by AI
-              </p>
+              <p className="text-xs text-slate-600">Powered by AI</p>
             </div>
             <div className="w-1 h-1 rounded-full bg-slate-700" />
-            <p className="text-xs text-slate-600">
-              SUMMECA v37
-            </p>
+            <p className="text-xs text-slate-600">SUMMECA v37</p>
           </div>
         </div>
       </div>
