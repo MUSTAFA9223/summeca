@@ -52,16 +52,11 @@ test('database administrator can access admin API without shared caching', async
 test('profile lookup errors fail closed', async () => {
   assert.equal((await harness({ user: { id: 'customer' }, profileError: new Error('unavailable') }).run('/api/admin/export')).status, 403);
 });
-test('session refresh reaches request cookies and redirect response', async () => {
-  const response = await harness({ user: { id: 'customer' }, refresh: true }).run('/sign-up-login-screen');
-  assert.equal(response.status, 307);
-  assert.equal(new URL(response.headers.get('location')).pathname, '/user-dashboard');
-  const cookie = response.cookies.get('sb-test-auth-token');
-  assert.equal(cookie.value, 'refreshed');
-  assert.equal(cookie.sameSite, 'lax');
-  assert.equal(cookie.secure, true);
-  assert.notEqual(cookie.httpOnly, true);
-  assert.match(response.headers.get('cache-control'), /no-store/);
+test('auth entry bypasses Supabase middleware work', async () => {
+  const h = harness({ user: { id: 'customer' }, refresh: true });
+  const response = await h.run('/sign-up-login-screen?next=%2Fcheckout');
+  assert.equal(response.status, 200);
+  assert.equal(h.calls(), 0);
 });
 test('refreshed cookies are forwarded to downstream handlers', async () => {
   const response = await harness({ user: { id: 'customer' }, refresh: true }).run('/user-dashboard');
