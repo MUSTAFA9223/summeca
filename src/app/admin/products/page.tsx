@@ -130,7 +130,6 @@ function ProductModal({
   return (
     <div
       className="fixed inset-0 z-50 flex h-screen items-center justify-center overflow-hidden modal-overlay p-4"
-      onClick={onClose}
     >
       <div
         className="flex w-full max-w-3xl max-h-[calc(100vh-2rem)] flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-2xl"
