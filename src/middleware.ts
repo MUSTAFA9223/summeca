@@ -15,12 +15,12 @@ export async function middleware(request: NextRequest) {
   const isUserDashboard = path.startsWith('/user-dashboard');
   const isAdminPage = path.startsWith('/admin');
   const isAdminApi = path.startsWith('/api/admin');
-  const isAuthEntry = path === '/sign-up-login-screen' || path === '/login' || path === '/signup';
 
-  // Public pages and ordinary APIs do not need a Supabase network request in
-  // middleware. This prevents every asset/page navigation from spending Worker
-  // CPU and making an auth request at the edge.
-  if (!isUserDashboard && !isAdminPage && !isAdminApi && !isAuthEntry) {
+  // Public storefront/auth pages and ordinary APIs do not need a Supabase
+  // network request in middleware. Keeping the sign-in page outside auth
+  // middleware is important on Cloudflare's tight Worker CPU budget: the page
+  // can be served as a static asset and login/session work remains client-side.
+  if (!isUserDashboard && !isAdminPage && !isAdminApi) {
     return NextResponse.next();
   }
 
@@ -61,6 +61,7 @@ export async function middleware(request: NextRequest) {
   if (!user && isUserDashboard) {
     const url = request.nextUrl.clone();
     url.pathname = '/sign-up-login-screen';
+    url.searchParams.set('next', `${path}${request.nextUrl.search}`);
     return finish(NextResponse.redirect(url));
   }
 
@@ -69,7 +70,7 @@ export async function middleware(request: NextRequest) {
       if (isAdminApi) return finish(NextResponse.json({ error: 'Unauthorized' }, { status: 401 }));
       const url = request.nextUrl.clone();
       url.pathname = '/sign-up-login-screen';
-      url.searchParams.set('next', path);
+      url.searchParams.set('next', `${path}${request.nextUrl.search}`);
       return finish(NextResponse.redirect(url));
     }
 
@@ -88,32 +89,16 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  if (user && isAuthEntry) {
-    const url = request.nextUrl.clone();
-    // Resolve the role once here so a signed-in admin is not sent through the
-    // customer dashboard first.
-    const { data: profile } = await supabase
-      .from('user_profiles')
-      .select('is_admin')
-      .eq('id', user.id)
-      .single();
-    url.pathname = profile?.is_admin ? '/admin' : '/user-dashboard';
-    return finish(NextResponse.redirect(url));
-  }
-
   return finish(supabaseResponse);
 }
 
 export const config = {
-  // Run auth middleware only where authentication/authorization is actually
-  // required. Public storefront pages bypass it completely.
+  // Keep public/auth pages out of middleware so Cloudflare can serve their
+  // pre-rendered assets without paying the Worker SSR/auth CPU cost.
   matcher: [
     '/user-dashboard/:path*',
     '/admin/:path*',
     '/api/admin/:path*',
-    '/sign-up-login-screen',
-    '/login',
-    '/signup',
     '/api/:path*',
   ],
 };
