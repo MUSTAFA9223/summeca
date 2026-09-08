@@ -17,10 +17,15 @@ export default function GoogleOAuthButton({ label }: GoogleOAuthButtonProps) {
 
     try {
       const supabase = createClient();
-      const redirectTo = `${window.location.origin}/auth/callback?next=/user-dashboard`;
+      const currentUrl = new URL(window.location.href);
+      const referralCode = (currentUrl.searchParams.get('ref') || '').trim().toUpperCase();
+      const callbackUrl = new URL('/auth/callback', window.location.origin);
+      callbackUrl.searchParams.set('next', '/user-dashboard');
+      if (referralCode) callbackUrl.searchParams.set('ref', referralCode);
+
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
-        options: { redirectTo },
+        options: { redirectTo: callbackUrl.toString() },
       });
 
       if (error) throw error;
