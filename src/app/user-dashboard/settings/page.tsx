@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import DashboardLayout from '@/app/user-dashboard/components/DashboardLayout';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { User, Mail, Lock, MapPin, CreditCard, Settings2, Save, Eye, EyeOff, CheckCircle, AlertCircle, RefreshCw, Trash2, Plus, Bell, Globe, Shield,  } from 'lucide-react';
+import { User, Mail, Lock, MapPin, CreditCard, Settings2, Save, Eye, EyeOff, CheckCircle, AlertCircle, RefreshCw, Bell, Globe, Shield } from 'lucide-react';
 import { toast } from 'sonner';
 import Icon from '@/components/ui/AppIcon';
 
@@ -20,7 +20,6 @@ interface UserProfile {
   website: string;
   company: string;
   plan_tier: string;
-  stripe_customer_id: string;
 }
 
 interface BillingAddress {
@@ -484,224 +483,17 @@ function BillingTab({ profile }: { profile: UserProfile | null }) {
 }
 
 // ─── Payment Methods Tab ─────────────────────────────────────────────────────
-function PaymentTab({ profile }: { profile: UserProfile | null }) {
-  const { user } = useAuth();
-  const supabase = createClient();
-  const [methods, setMethods] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [showAdd, setShowAdd] = useState(false);
-  const [cardNumber, setCardNumber] = useState('');
-  const [cardName, setCardName] = useState('');
-  const [expiry, setExpiry] = useState('');
-  const [saving, setSaving] = useState(false);
-
-  const loadMethods = useCallback(async () => {
-    if (!user) return;
-    setLoading(true);
-    try {
-      // Payment methods stored in auth user metadata
-      const { data: { user: freshUser } } = await supabase.auth.getUser();
-      const stored = freshUser?.user_metadata?.payment_methods || [];
-      setMethods(stored);
-    } catch {
-      setMethods([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [user, supabase]);
-
-  useEffect(() => { loadMethods(); }, [loadMethods]);
-
-  const handleAddCard = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!cardNumber || !cardName || !expiry) return;
-    setSaving(true);
-    try {
-      const last4 = cardNumber.replace(/\s/g, '').slice(-4);
-      const newMethod = {
-        id: `card_${Date.now()}`,
-        type: 'card',
-        brand: 'Visa',
-        last4,
-        name: cardName,
-        expiry,
-        is_default: methods.length === 0,
-      };
-      const updated = [...methods, newMethod];
-      const { error } = await supabase.auth.updateUser({ data: { payment_methods: updated } });
-      if (error) throw error;
-      setMethods(updated);
-      setShowAdd(false);
-      setCardNumber('');
-      setCardName('');
-      setExpiry('');
-      toast.success('Payment method added');
-    } catch (err: any) {
-      toast.error(err?.message || 'Failed to add payment method');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleRemove = async (id: string) => {
-    if (!user) return;
-    try {
-      const updated = methods.filter((m) => m.id !== id);
-      const { error } = await supabase.auth.updateUser({ data: { payment_methods: updated } });
-      if (error) throw error;
-      setMethods(updated);
-      toast.success('Payment method removed');
-    } catch (err: any) {
-      toast.error(err?.message || 'Failed to remove payment method');
-    }
-  };
-
-  const handleSetDefault = async (id: string) => {
-    if (!user) return;
-    try {
-      const updated = methods.map((m) => ({ ...m, is_default: m.id === id }));
-      const { error } = await supabase.auth.updateUser({ data: { payment_methods: updated } });
-      if (error) throw error;
-      setMethods(updated);
-      toast.success('Default payment method updated');
-    } catch (err: any) {
-      toast.error(err?.message || 'Failed to update default');
-    }
-  };
-
-  const formatCardNumber = (val: string) => {
-    const digits = val.replace(/\D/g, '').slice(0, 16);
-    return digits.replace(/(.{4})/g, '$1 ').trim();
-  };
-
-  const formatExpiry = (val: string) => {
-    const digits = val.replace(/\D/g, '').slice(0, 4);
-    if (digits.length >= 3) return `${digits.slice(0, 2)}/${digits.slice(2)}`;
-    return digits;
-  };
-
+function PaymentTab() {
   return (
     <div className="space-y-6 max-w-2xl">
-      <SectionCard title="Saved Payment Methods" icon={CreditCard}>
-        {loading ? (
-          <div className="space-y-3">
-            {[1, 2].map((i) => (
-              <div key={i} className="h-16 bg-secondary/50 rounded-xl animate-pulse" />
-            ))}
-          </div>
-        ) : methods.length === 0 && !showAdd ? (
-          <div className="text-center py-8">
-            <CreditCard size={32} className="text-muted-foreground mx-auto mb-3 opacity-40" />
-            <p className="text-sm text-muted-foreground">No payment methods saved yet.</p>
-          </div>
-        ) : (
-          <div className="space-y-3 mb-4">
-            {methods.map((m) => (
-              <div key={m.id} className="flex items-center justify-between p-4 rounded-xl border border-border bg-secondary/30">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-7 rounded-md bg-primary/10 flex items-center justify-center">
-                    <CreditCard size={14} className="text-primary" />
-                  </div>
-                  <div>
-                    <div className="text-sm font-600 text-foreground">
-                      {m.brand} •••• {m.last4}
-                      {m.is_default && (
-                        <span className="ml-2 text-xs font-500 bg-success/10 text-success px-1.5 py-0.5 rounded-full">Default</span>
-                      )}
-                    </div>
-                    <div className="text-xs text-muted-foreground">{m.name} · Expires {m.expiry}</div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  {!m.is_default && (
-                    <button
-                      onClick={() => handleSetDefault(m.id)}
-                      className="text-xs text-primary hover:underline font-500"
-                    >
-                      Set default
-                    </button>
-                  )}
-                  <button
-                    onClick={() => handleRemove(m.id)}
-                    className="w-7 h-7 rounded-lg flex items-center justify-center text-muted-foreground hover:text-danger hover:bg-danger/5 transition-all duration-150"
-                  >
-                    <Trash2 size={13} />
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {showAdd ? (
-          <form onSubmit={handleAddCard} className="space-y-4 pt-2 border-t border-border mt-4">
-            <h4 className="text-sm font-600 text-foreground">Add New Card</h4>
-            <div>
-              <label className="block text-sm font-600 text-foreground mb-1.5" htmlFor="card-number">Card Number</label>
-              <input
-                id="card-number"
-                type="text"
-                value={cardNumber}
-                onChange={(e) => setCardNumber(formatCardNumber(e.target.value))}
-                placeholder="1234 5678 9012 3456"
-                maxLength={19}
-                className="w-full px-3.5 py-2.5 rounded-xl border border-input text-sm text-foreground placeholder-muted-foreground bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all duration-150"
-              />
-            </div>
-            <InputField label="Cardholder Name" id="card-name" value={cardName} onChange={setCardName} placeholder="Name on card" />
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-600 text-foreground mb-1.5" htmlFor="expiry">Expiry Date</label>
-                <input
-                  id="expiry"
-                  type="text"
-                  value={expiry}
-                  onChange={(e) => setExpiry(formatExpiry(e.target.value))}
-                  placeholder="MM/YY"
-                  maxLength={5}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-input text-sm text-foreground placeholder-muted-foreground bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all duration-150"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-600 text-foreground mb-1.5" htmlFor="cvv">CVV</label>
-                <input
-                  id="cvv"
-                  type="password"
-                  placeholder="•••"
-                  maxLength={4}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-input text-sm text-foreground placeholder-muted-foreground bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all duration-150"
-                />
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <SaveButton loading={saving} label="Add Card" />
-              <button
-                type="button"
-                onClick={() => setShowAdd(false)}
-                className="px-4 py-2.5 rounded-xl border border-border text-sm text-muted-foreground hover:text-foreground hover:bg-secondary transition-all duration-150"
-              >
-                Cancel
-              </button>
-            </div>
-          </form>
-        ) : (
-          <button
-            onClick={() => setShowAdd(true)}
-            className="flex items-center gap-2 text-sm font-600 text-primary hover:text-primary/80 transition-colors mt-2"
-          >
-            <Plus size={15} />
-            Add Payment Method
-          </button>
-        )}
-      </SectionCard>
-
-      {profile?.stripe_customer_id && (
-        <div className="px-4 py-3 rounded-xl bg-secondary border border-border">
-          <p className="text-xs text-muted-foreground">
-            Stripe Customer ID: <span className="font-mono text-foreground">{profile.stripe_customer_id}</span>
+      <SectionCard title="Payment Methods" icon={CreditCard}>
+        <div className="rounded-xl border border-primary/20 bg-primary/5 p-5">
+          <h3 className="text-sm font-700 text-foreground">Payment details are not stored by SUMMECA</h3>
+          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+            Enter payment details only on the secure checkout page of the selected provider. SUMMECA currently supports Payoneer and available cryptocurrency checkout options and does not collect or save card numbers or security codes in your profile.
           </p>
         </div>
-      )}
+      </SectionCard>
     </div>
   );
 }
@@ -909,7 +701,7 @@ export default function SettingsPage() {
             {activeTab === 'profile' && <ProfileTab profile={profile} onRefresh={fetchProfile} />}
             {activeTab === 'security' && <SecurityTab />}
             {activeTab === 'billing' && <BillingTab profile={profile} />}
-            {activeTab === 'payment' && <PaymentTab profile={profile} />}
+            {activeTab === 'payment' && <PaymentTab />}
             {activeTab === 'preferences' && <PreferencesTab />}
           </>
         )}
