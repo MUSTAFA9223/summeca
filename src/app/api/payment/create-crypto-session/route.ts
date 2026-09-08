@@ -14,12 +14,6 @@ interface CreateCryptoSessionRequest {
 const SUPPORTED_METHODS = new Set([
   'crypto_usdt_trc20',
   'crypto_usdt_erc20',
-  'crypto_usdc',
-  'crypto_usdc_polygon',
-  'crypto_trx',
-  'crypto_ltc',
-  'crypto_btc',
-  'crypto_eth',
 ]);
 
 function noStoreJson(body: unknown, init?: ResponseInit) {
@@ -66,7 +60,7 @@ export async function POST(request: NextRequest) {
     return noStoreJson({ error: 'productId and planId are required.' }, { status: 400 });
   }
   if (!SUPPORTED_METHODS.has(paymentMethodType)) {
-    return noStoreJson({ error: 'Unsupported cryptocurrency or network.' }, { status: 400 });
+    return noStoreJson({ error: 'Only USDT payments are supported.' }, { status: 400 });
   }
 
   const supabase = createServiceClient();
@@ -122,7 +116,7 @@ export async function POST(request: NextRequest) {
     && finalAmount + 0.005 < minimumCheck.minimumFiat
   ) {
     return noStoreJson({
-      error: `This payment method currently requires at least ${minimumCheck.minimumFiat.toFixed(2)} ${orderCurrencyPreview}. Try TRON (TRX) or Litecoin (LTC).`,
+      error: `This USDT network currently requires at least ${minimumCheck.minimumFiat.toFixed(2)} ${orderCurrencyPreview}. Try the other USDT network or Payoneer.`,
       minimumAmount: minimumCheck.minimumFiat,
       minimumCurrency: orderCurrencyPreview,
       payCurrency: minimumCheck.payCurrency,
@@ -168,7 +162,7 @@ export async function POST(request: NextRequest) {
       .eq('id', orderId)
       .eq('status', 'pending_payment');
 
-    return noStoreJson({ error: sessionResult.error ?? 'Failed to create crypto payment.' }, { status: 502 });
+    return noStoreJson({ error: sessionResult.error ?? 'Failed to create USDT payment.' }, { status: 502 });
   }
 
   const priorMetadata = order.metadata && typeof order.metadata === 'object'
@@ -192,7 +186,7 @@ export async function POST(request: NextRequest) {
 
   if (updateError) {
     console.error('[create-crypto-session] Failed to save crypto provider ref:', updateError.message);
-    return noStoreJson({ error: 'Failed to finalize crypto payment session.' }, { status: 500 });
+    return noStoreJson({ error: 'Failed to finalize USDT payment session.' }, { status: 500 });
   }
 
   try {
