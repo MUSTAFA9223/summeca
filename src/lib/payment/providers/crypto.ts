@@ -1,73 +1,224 @@
-/**
- * Cryptocurrency Payment Provider — Future Integration Stub
- *
- * This file is a placeholder for cryptocurrency payment processing.
- * When ready, integrate with a crypto payment processor such as:
- *   - NOWPayments (https://nowpayments.io/docs)
- *   - CoinGate (https://developer.coingate.com)
- *   - BTCPay Server (self-hosted, https://docs.btcpayserver.org)
- *
- * Required ENV variables (add when integrating):
- *   CRYPTO_PAYMENT_PROVIDER=nowpayments|coingate|btcpay
- *   CRYPTO_API_KEY=your_api_key
- *   CRYPTO_WEBHOOK_SECRET=your_ipn_secret
- *   CRYPTO_RECEIVING_ADDRESS_BTC=your_btc_address   (if self-managed)
- *   CRYPTO_RECEIVING_ADDRESS_ETH=your_eth_address   (if self-managed)
- *
- * SECURITY:
- * - NEVER store private keys, seed phrases, or wallet secrets in Supabase.
- * - Only store: transaction hash prefix (first 8 chars), network, coin symbol, amount.
- * - Webhook verification MUST use HMAC or provider-specific signature validation.
- */
-
+import { createHmac, timingSafeEqual } from 'node:crypto';
 import type {
   IPaymentProvider,
   CreatePaymentSessionInput,
   CreatePaymentSessionResult,
   WebhookVerificationInput,
   WebhookVerificationResult,
+  PaymentMethodType,
 } from '../types';
+
+const NOWPAYMENTS_API_URL = 'https://api.nowpayments.io/v1';
+
+const PAY_CURRENCY: Record<string, string> = {
+  crypto_btc: 'btc',
+  crypto_eth: 'eth',
+  crypto_usdt: 'usdttrc20',
+  crypto_usdt_trc20: 'usdttrc20',
+  crypto_usdt_erc20: 'usdterc20',
+  crypto_usdc: 'usdc',
+  crypto_usdc_polygon: 'usdcmatic',
+};
+
+type NowPaymentsCreateResponse = {
+  payment_id?: number | string;
+  payment_status?: string;
+  pay_address?: string;
+  price_amount?: number;
+  price_currency?: string;
+  pay_amount?: number;
+  pay_currency?: string;
+  order_id?: string;
+  purchase_id?: string;
+  error?: string;
+  message?: string;
+};
+
+type NowPaymentsWebhook = {
+  payment_id?: number | string;
+  payment_status?: string;
+  pay_address?: string;
+  price_amount?: number;
+  price_currency?: string;
+  pay_amount?: number;
+  actually_paid?: number;
+  pay_currency?: string;
+  order_id?: string;
+  purchase_id?: string;
+  outcome_amount?: number;
+  outcome_currency?: string;
+};
+
+function sortObject(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(sortObject);
+  if (!value || typeof value !== 'object') return value;
+
+  return Object.keys(value as Record<string, unknown>)
+    .sort()
+    .reduce<Record<string, unknown>>((result, key) => {
+      result[key] = sortObject((value as Record<string, unknown>)[key]);
+      return result;
+    }, {});
+}
+
+function safeSignatureEqual(expected: string, received: string): boolean {
+  try {
+    const expectedBuffer = Buffer.from(expected, 'hex');
+    const receivedBuffer = Buffer.from(received.trim().toLowerCase(), 'hex');
+    return expectedBuffer.length === receivedBuffer.length && timingSafeEqual(expectedBuffer, receivedBuffer);
+  } catch {
+    return false;
+  }
+}
+
+function paymentMethodFromPayCurrency(payCurrency?: string): PaymentMethodType {
+  const normalized = String(payCurrency ?? '').toLowerCase();
+  if (normalized === 'btc') return 'crypto_btc';
+  if (normalized === 'eth') return 'crypto_eth';
+  if (normalized === 'usdttrc20') return 'crypto_usdt_trc20';
+  if (normalized === 'usdterc20') return 'crypto_usdt_erc20';
+  if (normalized === 'usdcmatic') return 'crypto_usdc_polygon';
+  if (normalized.startsWith('usdc')) return 'crypto_usdc';
+  return normalized ? `crypto_${normalized}` : 'crypto';
+}
+
+function mapPaymentStatus(status?: string): WebhookVerificationResult['paymentStatus'] {
+  switch (String(status ?? '').toLowerCase()) {
+    case 'finished':
+      return 'completed';
+    case 'refunded':
+      return 'refunded';
+    case 'failed':
+      return 'failed';
+    case 'expired':
+      return 'cancelled';
+    case 'waiting':
+    case 'confirming':
+    case 'confirmed':
+    case 'sending':
+    case 'partially_paid':
+      return 'pending';
+    default:
+      return 'pending';
+  }
+}
 
 export class CryptoProvider implements IPaymentProvider {
   readonly name = 'crypto' as const;
 
-  async createSession(
-    input: CreatePaymentSessionInput
-  ): Promise<CreatePaymentSessionResult> {
-    // TODO: Implement crypto payment session creation
-    // 1. Call your chosen crypto processor API to create an invoice
-    // 2. Return the payment address and crypto amount
-    // 3. Store the invoice ID as providerPaymentRef in the order
+  async createSession(input: CreatePaymentSessionInput): Promise<CreatePaymentSessionResult> {
+    const apiKey = process.env.NOWPAYMENTS_API_KEY?.trim();
+    if (!apiKey) {
+      return {
+        success: false,
+        error: 'Crypto checkout is not configured. NOWPAYMENTS_API_KEY is missing.',
+      };
+    }
 
-    const coinMap: Record<string, string> = {
-      crypto_btc: 'BTC',
-      crypto_eth: 'ETH',
-      crypto_usdt: 'USDT',
-      crypto_usdc: 'USDC',
-    };
+    const payCurrency = PAY_CURRENCY[input.paymentMethodType];
+    if (!payCurrency) {
+      return { success: false, error: 'Unsupported cryptocurrency or network.' };
+    }
 
-    const coin = coinMap[input.paymentMethodType] ?? 'BTC';
+    const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL ?? 'https://summeca.com').replace(/\/$/, '');
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15_000);
 
-    return {
-      success: false,
-      error:
-        `Cryptocurrency (${coin}) payment integration is not yet configured. ` +
-        'Please add CRYPTO_API_KEY and CRYPTO_WEBHOOK_SECRET to your environment.',
-    };
+    try {
+      const response = await fetch(`${NOWPAYMENTS_API_URL}/payment`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey,
+        },
+        body: JSON.stringify({
+          price_amount: Number(input.amount.toFixed(2)),
+          price_currency: input.currency.toLowerCase(),
+          pay_currency: payCurrency,
+          ipn_callback_url: `${siteUrl}/api/payment/webhook?provider=crypto`,
+          order_id: input.orderId,
+          order_description: `${input.productName} — ${input.planName}`.slice(0, 250),
+        }),
+        signal: controller.signal,
+        cache: 'no-store',
+      });
+
+      const payload = (await response.json().catch(() => ({}))) as NowPaymentsCreateResponse;
+      if (!response.ok) {
+        return {
+          success: false,
+          error: payload.message ?? payload.error ?? 'NOWPayments rejected the payment request.',
+        };
+      }
+
+      const providerPaymentRef = payload.payment_id ? String(payload.payment_id) : '';
+      const paymentAddress = payload.pay_address?.trim() ?? '';
+      const cryptoAmount = payload.pay_amount !== undefined ? String(payload.pay_amount) : '';
+      if (!providerPaymentRef || !paymentAddress || !cryptoAmount) {
+        return { success: false, error: 'NOWPayments returned an incomplete payment session.' };
+      }
+
+      return {
+        success: true,
+        providerPaymentRef,
+        paymentAddress,
+        cryptoAmount,
+        instructions: `Send exactly ${cryptoAmount} ${String(payload.pay_currency ?? payCurrency).toUpperCase()} to the generated address. Access is granted only after a verified webhook confirms the payment as finished.`,
+      };
+    } catch (error) {
+      const message = error instanceof Error && error.name === 'AbortError'
+        ? 'NOWPayments request timed out.'
+        : 'Failed to connect to NOWPayments.';
+      return { success: false, error: message };
+    } finally {
+      clearTimeout(timeout);
+    }
   }
 
-  async verifyWebhook(
-    input: WebhookVerificationInput
-  ): Promise<WebhookVerificationResult> {
-    // TODO: Implement crypto IPN/webhook verification
-    // 1. Validate HMAC signature using CRYPTO_WEBHOOK_SECRET
-    // 2. Parse payload to extract order_id, tx_hash, and payment_status
-    // 3. Optionally verify on-chain confirmation count
-    // 4. Return verified=true only when payment_status === 'confirmed'
+  async verifyWebhook(input: WebhookVerificationInput): Promise<WebhookVerificationResult> {
+    const secret = process.env.NOWPAYMENTS_IPN_SECRET?.trim();
+    const signature = input.signature?.trim() ?? input.headers['x-nowpayments-sig']?.trim() ?? '';
+    if (!secret || !signature) {
+      return { verified: false, error: 'Missing NOWPayments IPN secret or signature.' };
+    }
+
+    let payload: NowPaymentsWebhook;
+    try {
+      payload = JSON.parse(input.rawBody) as NowPaymentsWebhook;
+    } catch {
+      return { verified: false, error: 'Invalid NOWPayments webhook JSON.' };
+    }
+
+    const canonical = JSON.stringify(sortObject(payload));
+    const expected = createHmac('sha512', secret).update(canonical).digest('hex');
+    if (!safeSignatureEqual(expected, signature)) {
+      return { verified: false, error: 'NOWPayments IPN signature mismatch.' };
+    }
+
+    const orderId = String(payload.order_id ?? '').trim();
+    const providerPaymentRef = payload.payment_id ? String(payload.payment_id) : '';
+    if (!orderId || !providerPaymentRef) {
+      return { verified: false, error: 'NOWPayments webhook is missing order or payment reference.' };
+    }
+
+    const amount = Number(payload.price_amount);
+    const currency = String(payload.price_currency ?? '').trim().toUpperCase();
+    if (!Number.isFinite(amount) || amount < 0 || !currency) {
+      return { verified: false, error: 'NOWPayments webhook is missing the original price amount/currency.' };
+    }
 
     return {
-      verified: false,
-      error: 'Crypto webhook verification not yet implemented.',
+      verified: true,
+      orderId,
+      providerPaymentRef,
+      amount,
+      currency,
+      paymentStatus: mapPaymentStatus(payload.payment_status),
+      metadata: {
+        provider: 'crypto',
+        payment_method_type: paymentMethodFromPayCurrency(payload.pay_currency),
+        provider_payment_ref: providerPaymentRef,
+      },
     };
   }
 }
