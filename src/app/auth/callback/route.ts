@@ -21,6 +21,7 @@ export async function GET(request: NextRequest) {
   const code = searchParams.get('code');
   const flowId = searchParams.get('sb_flow_id');
   const requestedNext = getSafeNext(searchParams.get('next'));
+  const referralCode = (searchParams.get('ref') || '').trim().toUpperCase();
 
   if (!code) {
     const loginUrl = new URL('/sign-up-login-screen', origin);
@@ -71,6 +72,15 @@ export async function GET(request: NextRequest) {
     const response = NextResponse.redirect(loginUrl);
     response.headers.set('Cache-Control', 'private, no-store');
     return response;
+  }
+
+  if (referralCode) {
+    const { error: referralError } = await supabase.rpc('claim_referral_code', {
+      code: referralCode,
+    });
+    if (referralError) {
+      console.warn('Referral claim after Google OAuth failed:', referralError.message);
+    }
   }
 
   const { data: profile } = await supabase
