@@ -28,13 +28,31 @@ const statusColors: Record<string, string> = {
   archived: 'bg-muted text-muted-foreground',
 };
 
+async function parseJsonResponse(response: Response) {
+  const text = await response.text();
+  if (!text.trim()) {
+    if (!response.ok) throw new Error(`Request failed (${response.status}). Please try again.`);
+    return {} as Record<string, any>;
+  }
+
+  try {
+    return JSON.parse(text) as Record<string, any>;
+  } catch {
+    throw new Error(
+      response.ok
+        ? 'The server returned an invalid response. Please try again.'
+        : `Request failed (${response.status}). Please try again.`,
+    );
+  }
+}
+
 async function adminProductsRequest(body: Record<string, unknown>) {
   const response = await fetch('/api/admin/products', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   });
-  const data = await response.json();
+  const data = await parseJsonResponse(response);
   if (!response.ok) throw new Error(data.error || 'Product update failed.');
   return data;
 }
@@ -277,9 +295,9 @@ export default function AdminProductsPage() {
       if (statusFilter) params.set('status', statusFilter);
       const url = `/api/admin/products${params.size ? `?${params.toString()}` : ''}`;
       const response = await fetch(url, { cache: 'no-store' });
-      const data = await response.json();
+      const data = await parseJsonResponse(response);
       if (!response.ok) throw new Error(data.error || 'Failed to load products.');
-      setProducts(data.products ?? []);
+      setProducts(Array.isArray(data.products) ? data.products : []);
     } catch (error: any) {
       toast.error(error?.message || 'Failed to load products.');
       setProducts([]);
