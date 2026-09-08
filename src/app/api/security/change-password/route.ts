@@ -77,6 +77,7 @@ export async function POST(req: NextRequest) {
     const customerName = user.user_metadata?.full_name || user.email.split('@')[0] || 'User';
     const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://summeca.com').replace(/\/$/, '');
 
+    let emailNotificationSent = false;
     try {
       await sendEmail({
         type: 'security_password_changed',
@@ -87,11 +88,15 @@ export async function POST(req: NextRequest) {
           securityUrl: `${siteUrl}/user-dashboard/security`,
         },
       } as Parameters<typeof sendEmail>[0]);
+      emailNotificationSent = true;
     } catch (emailErr) {
       console.warn('[change-password] Confirmation email failed:', emailErr);
     }
 
-    return NextResponse.json({ success: true }, { headers: { 'Cache-Control': 'no-store' } });
+    return NextResponse.json(
+      { success: true, emailNotificationSent },
+      { headers: { 'Cache-Control': 'no-store' } }
+    );
   } catch (err) {
     console.error('[change-password] Unexpected error:', err);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

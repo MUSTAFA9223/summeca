@@ -4,11 +4,9 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { User, Mail, Lock, Save, Eye, EyeOff, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
-import { createClient } from '@/lib/supabase/client';
 
 export default function UserProfilePanel() {
   const { user, updateProfile } = useAuth();
-  const supabase = createClient();
 
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
@@ -46,6 +44,10 @@ export default function UserProfilePanel() {
     e.preventDefault();
     setPasswordError('');
 
+    if (!currentPassword) {
+      setPasswordError('Current password is required');
+      return;
+    }
     if (newPassword !== confirmPassword) {
       setPasswordError('New passwords do not match');
       return;
@@ -57,9 +59,16 @@ export default function UserProfilePanel() {
 
     setIsSavingPassword(true);
     try {
-      const { error } = await supabase.auth.updateUser({ password: newPassword });
-      if (error) throw error;
-      toast.success('Password updated successfully');
+      const response = await fetch('/api/security/change-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ currentPassword, newPassword }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.error || 'Failed to update password');
+      toast.success(result.emailNotificationSent
+        ? 'Password updated and confirmation email sent'
+        : 'Password updated successfully');
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
@@ -173,6 +182,25 @@ export default function UserProfilePanel() {
 
         <form onSubmit={handleChangePassword} className="space-y-4">
           <div>
+            <label className="block text-sm font-600 text-foreground mb-1.5" htmlFor="current-password">
+              Current password
+            </label>
+            <div className="relative">
+              <input
+                id="current-password"
+                type={showCurrentPw ? 'text' : 'password'}
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                autoComplete="current-password"
+                placeholder="Enter current password"
+                className="w-full px-3.5 py-2.5 pr-10 rounded-xl border border-input text-sm text-foreground placeholder-muted-foreground bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all duration-150"
+              />
+              <button type="button" onClick={() => setShowCurrentPw(!showCurrentPw)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">
+                {showCurrentPw ? <EyeOff size={15} /> : <Eye size={15} />}
+              </button>
+            </div>
+          </div>
+          <div>
             <label className="block text-sm font-600 text-foreground mb-1.5" htmlFor="new-password">
               New password
             </label>
@@ -182,6 +210,7 @@ export default function UserProfilePanel() {
                 type={showNewPw ? 'text' : 'password'}
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
+                autoComplete="new-password"
                 placeholder="Enter new password"
                 className="w-full px-3.5 py-2.5 pr-10 rounded-xl border border-input text-sm text-foreground placeholder-muted-foreground bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all duration-150"
               />
@@ -202,7 +231,7 @@ export default function UserProfilePanel() {
             <div className="relative">
               <input
                 id="confirm-password"
-                type={showCurrentPw ? 'text' : 'password'}
+                type={showNewPw ? 'text' : 'password'}
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 placeholder="Confirm new password"
@@ -210,17 +239,17 @@ export default function UserProfilePanel() {
               />
               <button
                 type="button"
-                onClick={() => setShowCurrentPw(!showCurrentPw)}
+                onClick={() => setShowNewPw(!showNewPw)}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
               >
-                {showCurrentPw ? <EyeOff size={15} /> : <Eye size={15} />}
+                {showNewPw ? <EyeOff size={15} /> : <Eye size={15} />}
               </button>
             </div>
           </div>
 
           <button
             type="submit"
-            disabled={isSavingPassword || !newPassword || !confirmPassword}
+            disabled={isSavingPassword || !currentPassword || !newPassword || !confirmPassword}
             className="btn-primary px-5 py-2.5 flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
           >
             {isSavingPassword ? (

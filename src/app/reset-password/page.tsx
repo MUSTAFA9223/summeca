@@ -122,7 +122,7 @@ export default function ResetPasswordPage() {
     try {
       const { error: updateError } = await supabase.auth.updateUser({ password });
       if (updateError) throw updateError;
-      await supabase.auth.signOut();
+      await supabase.auth.signOut({ scope: 'global' });
       setSuccess(true);
       setPassword('');
       setConfirmPassword('');
