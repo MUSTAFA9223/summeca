@@ -123,7 +123,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       email,
       password,
       options: {
-        data: { full_name: metadata?.fullName || '', avatar_url: metadata?.avatarUrl || '' },
+        data: {
+          full_name: metadata?.fullName || '',
+          avatar_url: metadata?.avatarUrl || '',
+          referral_code: metadata?.referralCode || '',
+        },
         emailRedirectTo: `${getSiteUrl()}/auth/callback`,
       },
     });
