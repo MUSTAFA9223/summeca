@@ -37,7 +37,7 @@ function TwitterIcon({ size = 16 }: { size?: number }) {
 
 export default function PublicFooter() {
   const socialLinks = [
-    { Icon: TwitterIcon, href: 'https://x.com/summeca_', label: 'Twitter' },
+    { Icon: TwitterIcon, href: 'https://x.com/summeca_', label: 'SUMMECA on X (@summeca_)' },
   ];
 
   const trustBadges = [
@@ -112,7 +112,10 @@ export default function PublicFooter() {
                 <a
                   key={`footer-social-${label}`}
                   href={href}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   aria-label={label}
+                  title={label}
                   className="w-8 h-8 rounded-lg bg-white/8 flex items-center justify-center text-slate-400 hover:text-white hover:bg-primary/30 hover:scale-110 transition-all duration-200"
                 >
                   <Icon size={15} />
