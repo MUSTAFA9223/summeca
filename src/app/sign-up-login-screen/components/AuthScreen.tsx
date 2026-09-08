@@ -13,6 +13,7 @@ type AuthView = 'login' | 'signup' | 'forgot';
 
 export default function AuthScreen() {
   const [view, setView] = useState<AuthView>('login');
+  const headlineLine = 'block w-fit bg-gradient-to-r from-white via-white via-[62%] to-teal-300 bg-clip-text text-transparent';
 
   return (
     <main className="relative min-h-screen overflow-hidden bg-[#050807] text-white">
@@ -37,12 +38,12 @@ export default function AuthScreen() {
             <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-teal-300/20 bg-teal-300/[0.08] px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-teal-200">
               <Sparkles size={13} /> Interactive workspace
             </div>
-            <h1 className="bg-gradient-to-br from-white via-teal-50 to-teal-400 bg-clip-text text-4xl font-black leading-[1.04] tracking-[-0.04em] text-transparent xl:text-6xl">
-              <span className="block">Your digital</span>
-              <span className="block">world,</span>
-              <span className="block">ready</span>
-              <span className="block">when you</span>
-              <span className="block">are.</span>
+            <h1 className="text-4xl font-black leading-[1.04] tracking-[-0.04em] xl:text-6xl">
+              <span className={headlineLine}>Your digital</span>
+              <span className={headlineLine}>world,</span>
+              <span className={headlineLine}>ready</span>
+              <span className={headlineLine}>when you</span>
+              <span className={headlineLine}>are.</span>
             </h1>
             <p className="mt-5 max-w-sm text-sm leading-6 text-white/48 xl:text-base">
               Sign in to access your SUMMECA tools, products and workspace from one secure place.
