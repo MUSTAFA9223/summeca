@@ -4,7 +4,6 @@ import { createContext, useContext, useEffect, useState, useMemo } from 'react';
 import { createClient } from '@/lib/supabase/client';
 
 const AuthContext = createContext<any>({});
-const RECOVERY_PENDING_KEY = 'summeca:recovery-pending-at';
 const SIGNUP_PENDING_KEY = 'summeca:signup-pending-at';
 const AUTH_FLOW_MAX_AGE_MS = 60 * 60 * 1000;
 
@@ -31,25 +30,29 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     const redirectRecoveryToResetPage = () => {
       if (typeof window !== 'undefined' && window.location.pathname !== '/reset-password') {
-        window.location.replace('/reset-password');
+        const url = new URL('/reset-password', window.location.origin);
+        const current = new URL(window.location.href);
+        current.searchParams.forEach((value, key) => url.searchParams.set(key, value));
+        url.hash = current.hash;
+        window.location.replace(url.toString());
       }
     };
 
-    const hasRecentMarker = (key: string) => {
+    const hasRecentSignupMarker = () => {
       if (typeof window === 'undefined') return false;
-      const value = Number(window.localStorage.getItem(key) || '0');
+      const value = Number(window.localStorage.getItem(SIGNUP_PENDING_KEY) || '0');
       return value > 0 && Date.now() - value < AUTH_FLOW_MAX_AGE_MS;
     };
 
-    const clearMarker = (key: string) => {
-      if (typeof window !== 'undefined') window.localStorage.removeItem(key);
+    const clearSignupMarker = () => {
+      if (typeof window !== 'undefined') window.localStorage.removeItem(SIGNUP_PENDING_KEY);
     };
 
     const hasRecoveryMarkerInUrl = () => {
       if (typeof window === 'undefined') return false;
       const hash = new URLSearchParams(window.location.hash.replace(/^#/, ''));
       const search = new URLSearchParams(window.location.search);
-      return hash.get('type') === 'recovery' || search.get('type') === 'recovery';
+      return hash.get('type') === 'recovery' || search.get('type') === 'recovery' || Boolean(search.get('token_hash'));
     };
 
     const handleStrayAuthCode = async () => {
@@ -60,8 +63,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       const flowId = url.searchParams.get('sb_flow_id');
       if (!code) return false;
 
-      const wasRecovery = hasRecentMarker(RECOVERY_PENDING_KEY);
-      const wasSignup = hasRecentMarker(SIGNUP_PENDING_KEY);
+      const wasSignup = hasRecentSignupMarker();
       const { data, error } = await supabase.auth.exchangeCodeForSession(
         code,
         flowId ? { flowId } : undefined,
@@ -73,13 +75,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       url.searchParams.delete('sb_flow_id');
       window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
 
-      if (wasRecovery) {
-        clearMarker(RECOVERY_PENDING_KEY);
+      if (hasRecoveryMarkerInUrl()) {
         redirectRecoveryToResetPage();
         return true;
       }
       if (wasSignup) {
-        clearMarker(SIGNUP_PENDING_KEY);
+        clearSignupMarker();
         window.location.replace('/user-dashboard');
         return true;
       }
@@ -91,10 +92,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setSession(nextSession);
       setUser(nextSession?.user ?? null);
       setLoading(false);
-      if (event === 'PASSWORD_RECOVERY') {
-        clearMarker(RECOVERY_PENDING_KEY);
-        redirectRecoveryToResetPage();
-      }
+      if (event === 'PASSWORD_RECOVERY') redirectRecoveryToResetPage();
     });
 
     handleStrayAuthCode().then((handled) => {
@@ -104,10 +102,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setSession(initialSession);
         setUser(initialSession?.user ?? null);
         setLoading(false);
-        if (initialSession && (hasRecoveryMarkerInUrl() || hasRecentMarker(RECOVERY_PENDING_KEY))) {
-          clearMarker(RECOVERY_PENDING_KEY);
-          redirectRecoveryToResetPage();
-        }
+        if (initialSession && hasRecoveryMarkerInUrl()) redirectRecoveryToResetPage();
       });
     });
 
@@ -150,14 +145,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const resetPassword = async (email: string) => {
-    if (typeof window !== 'undefined') window.localStorage.setItem(RECOVERY_PENDING_KEY, String(Date.now()));
+    // Recovery must not rely on localStorage or the browser that requested it.
+    // The recovery email should carry a TokenHash to /reset-password, where the
+    // token is verified directly with Supabase and creates a fresh session.
     const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${getSiteUrl()}/reset-password`,
     });
-    if (error) {
-      if (typeof window !== 'undefined') window.localStorage.removeItem(RECOVERY_PENDING_KEY);
-      throw error;
-    }
+    if (error) throw error;
     return data;
   };
 
