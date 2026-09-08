@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 
+const ALLOWED_CATEGORIES = new Set(['general', 'billing', 'technical', 'orders', 'subscriptions', 'refunds', 'other']);
+const ALLOWED_PRIORITIES = new Set(['low', 'normal', 'high', 'urgent']);
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 export async function GET(request: NextRequest) {
   try {
     const supabase = await createClient();
@@ -39,11 +43,36 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const body = await request.json();
+    const body = await request.json().catch(() => null);
+    if (!body || typeof body !== 'object') {
+      return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
+    }
     const { subject, category, priority, message, order_id } = body;
 
-    if (!subject?.trim() || !message?.trim()) {
+    if (typeof subject !== 'string' || typeof message !== 'string' || !subject.trim() || !message.trim()) {
       return NextResponse.json({ error: 'Subject and message are required' }, { status: 400 });
+    }
+    if (subject.trim().length > 200 || message.trim().length > 5000) {
+      return NextResponse.json({ error: 'Subject or message is too long' }, { status: 400 });
+    }
+    const safeCategory = typeof category === 'string' && ALLOWED_CATEGORIES.has(category) ? category : 'general';
+    const safePriority = typeof priority === 'string' && ALLOWED_PRIORITIES.has(priority) ? priority : 'normal';
+
+    let safeOrderId: string | null = null;
+    if (order_id != null && order_id !== '') {
+      if (typeof order_id !== 'string' || !UUID_PATTERN.test(order_id)) {
+        return NextResponse.json({ error: 'Invalid order reference' }, { status: 400 });
+      }
+      const { data: ownedOrder } = await supabase
+        .from('orders')
+        .select('id')
+        .eq('id', order_id)
+        .eq('user_id', user.id)
+        .maybeSingle();
+      if (!ownedOrder) {
+        return NextResponse.json({ error: 'Order not found' }, { status: 404 });
+      }
+      safeOrderId = ownedOrder.id;
     }
 
     // Create ticket
@@ -52,10 +81,10 @@ export async function POST(request: NextRequest) {
       .insert({
         user_id: user.id,
         subject: subject.trim(),
-        category: category || 'general',
-        priority: priority || 'normal',
+        category: safeCategory,
+        priority: safePriority,
         status: 'open',
-        order_id: order_id || null,
+        order_id: safeOrderId,
       })
       .select()
       .single();

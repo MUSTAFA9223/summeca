@@ -1,6 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 
+const ALLOWED_STATUSES = new Set(['open', 'pending', 'resolved', 'closed']);
+const ALLOWED_PRIORITIES = new Set(['low', 'normal', 'high', 'urgent']);
+
+async function hasAdminAccess(supabase: Awaited<ReturnType<typeof createClient>>, userId: string) {
+  const { data } = await supabase
+    .from('user_profiles')
+    .select('is_admin')
+    .eq('id', userId)
+    .maybeSingle();
+  return data?.is_admin === true;
+}
+
 export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -23,7 +35,7 @@ export async function GET(
       return NextResponse.json({ error: 'Ticket not found' }, { status: 404 });
     }
 
-    const isAdmin = user.user_metadata?.role === 'admin' || user.app_metadata?.role === 'admin';
+    const isAdmin = await hasAdminAccess(supabase, user.id);
     if (ticket.user_id !== user.id && !isAdmin) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
@@ -56,10 +68,12 @@ export async function PATCH(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const body = await request.json();
+    const body = await request.json().catch(() => null);
+    if (!body || typeof body !== 'object') {
+      return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
+    }
     const { status, priority } = body;
-
-    const isAdmin = user.user_metadata?.role === 'admin' || user.app_metadata?.role === 'admin';
+    const isAdmin = await hasAdminAccess(supabase, user.id);
 
     // Fetch ticket to verify ownership
     const { data: ticket } = await supabase
@@ -76,19 +90,32 @@ export async function PATCH(
     // Users can only close their own tickets; admins can set any status/priority
     const updates: Record<string, string> = {};
     if (status) {
+      if (typeof status !== 'string' || !ALLOWED_STATUSES.has(status)) {
+        return NextResponse.json({ error: 'Unsupported ticket status' }, { status: 400 });
+      }
       if (!isAdmin && status !== 'closed') {
         return NextResponse.json({ error: 'Users can only close tickets' }, { status: 403 });
       }
       updates.status = status;
     }
     if (priority && isAdmin) {
+      if (typeof priority !== 'string' || !ALLOWED_PRIORITIES.has(priority)) {
+        return NextResponse.json({ error: 'Unsupported ticket priority' }, { status: 400 });
+      }
       updates.priority = priority;
+    }
+    if (priority && !isAdmin) {
+      return NextResponse.json({ error: 'Only administrators can change priority' }, { status: 403 });
+    }
+    if (Object.keys(updates).length === 0) {
+      return NextResponse.json({ error: 'No supported changes supplied' }, { status: 400 });
     }
 
     const { data: updated, error: updateError } = await supabase
       .from('support_tickets')
       .update(updates)
       .eq('id', id)
+      .eq('user_id', isAdmin ? ticket.user_id : user.id)
       .select()
       .single();
 

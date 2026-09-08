@@ -100,3 +100,26 @@ test('admin product CRUD stays behind the protected server API', () => {
   assert.match(routeSource, /action === 'save_product'/);
   assert.match(routeSource, /action === 'update_status'/);
 });
+
+test('support authorization never trusts editable auth metadata', () => {
+  const ticketSource = fs.readFileSync('src/app/api/support/tickets/[id]/route.ts', 'utf8');
+  const messageSource = fs.readFileSync('src/app/api/support/tickets/[id]/messages/route.ts', 'utf8');
+  for (const source of [ticketSource, messageSource]) {
+    assert.doesNotMatch(source, /user_metadata\?\.role|app_metadata\?\.role/);
+    assert.match(source, /from\('user_profiles'\)/);
+    assert.match(source, /select\('is_admin'\)/);
+  }
+});
+
+test('all signed-in password forms require server-side current-password verification', () => {
+  for (const file of [
+    'src/app/user-dashboard/security/page.tsx',
+    'src/app/user-dashboard/settings/page.tsx',
+    'src/app/user-dashboard/components/UserProfilePanel.tsx',
+  ]) {
+    const source = fs.readFileSync(file, 'utf8');
+    assert.match(source, /\/api\/security\/change-password/);
+    assert.match(source, /currentPassword/);
+    assert.doesNotMatch(source, /auth\.updateUser\(\{ password:/);
+  }
+});
