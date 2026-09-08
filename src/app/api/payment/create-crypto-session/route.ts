@@ -34,8 +34,12 @@ function checkoutError(message?: string) {
 }
 
 export async function POST(request: NextRequest) {
-  if (!process.env.NOWPAYMENTS_API_KEY?.trim() || !process.env.NOWPAYMENTS_IPN_SECRET?.trim()) {
-    return noStoreJson({ error: 'Crypto checkout is not configured.' }, { status: 503 });
+  if (
+    !process.env.NOWPAYMENTS_API_KEY?.trim()
+    || !process.env.NOWPAYMENTS_IPN_SECRET?.trim()
+    || !process.env.SUPABASE_SERVICE_ROLE_KEY?.trim()
+  ) {
+    return noStoreJson({ error: 'Crypto checkout server configuration is incomplete.' }, { status: 503 });
   }
 
   const sessionClient = await createClient();
