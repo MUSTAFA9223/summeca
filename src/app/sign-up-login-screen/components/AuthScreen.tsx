@@ -10,10 +10,29 @@ import AppLogo from '@/components/ui/AppLogo';
 import SplineRobotScene from '@/components/ui/SplineRobotScene';
 
 type AuthView = 'login' | 'signup' | 'forgot';
+type TransitionDirection = 'left' | 'right' | null;
 
 export default function AuthScreen() {
   const [view, setView] = useState<AuthView>('login');
+  const [transitionDirection, setTransitionDirection] = useState<TransitionDirection>(null);
   const headlineLine = 'block w-fit bg-gradient-to-r from-white from-[0%] via-teal-50 via-[52%] to-teal-300 bg-clip-text text-transparent';
+
+  const showLogin = () => {
+    if (view === 'login') return;
+    setTransitionDirection(view === 'signup' ? 'right' : null);
+    setView('login');
+  };
+
+  const showSignup = () => {
+    if (view === 'signup') return;
+    setTransitionDirection('left');
+    setView('signup');
+  };
+
+  const showForgotPassword = () => {
+    setTransitionDirection(null);
+    setView('forgot');
+  };
 
   return (
     <main className="relative min-h-screen overflow-hidden bg-[#050807] text-white">
@@ -68,31 +87,192 @@ export default function AuthScreen() {
 
             {view === 'forgot' ? (
               <div>
-                <button onClick={() => setView('login')} className="mb-6 flex items-center gap-1.5 text-sm text-white/50 transition-colors hover:text-white">
+                <button onClick={showLogin} className="mb-6 flex items-center gap-1.5 text-sm text-white/50 transition-colors hover:text-white">
                   <ArrowLeft size={14} /> Back to login
                 </button>
                 <ForgotPasswordForm />
               </div>
             ) : (
-              <>
-                <div className="mb-8 flex rounded-2xl border border-white/[0.06] bg-black/30 p-1.5">
-                  <button onClick={() => setView('login')} className={`flex-1 rounded-xl py-2.5 text-sm font-semibold transition-all ${view === 'login' ? 'bg-white text-black shadow-lg' : 'text-white/45 hover:text-white'}`}>
-                    Log in
-                  </button>
-                  <button onClick={() => setView('signup')} className={`flex-1 rounded-xl py-2.5 text-sm font-semibold transition-all ${view === 'signup' ? 'bg-white text-black shadow-lg' : 'text-white/45 hover:text-white'}`}>
-                    Sign up
-                  </button>
+              <div className="auth-switch-stage">
+                <div
+                  key={view}
+                  className={`auth-switch-content ${transitionDirection === 'left' ? 'auth-content-left' : transitionDirection === 'right' ? 'auth-content-right' : ''}`}
+                >
+                  <div className="mb-8 flex rounded-2xl border border-white/[0.06] bg-black/30 p-1.5">
+                    <button onClick={showLogin} className={`flex-1 rounded-xl py-2.5 text-sm font-semibold transition-all ${view === 'login' ? 'bg-white text-black shadow-lg' : 'text-white/45 hover:text-white'}`}>
+                      Log in
+                    </button>
+                    <button onClick={showSignup} className={`flex-1 rounded-xl py-2.5 text-sm font-semibold transition-all ${view === 'signup' ? 'bg-white text-black shadow-lg' : 'text-white/45 hover:text-white'}`}>
+                      Sign up
+                    </button>
+                  </div>
+                  {view === 'login' ? (
+                    <LoginForm onForgotPassword={showForgotPassword} onSwitchToSignup={showSignup} />
+                  ) : (
+                    <SignupForm onSwitchToLogin={showLogin} />
+                  )}
                 </div>
-                {view === 'login' ? (
-                  <LoginForm onForgotPassword={() => setView('forgot')} onSwitchToSignup={() => setView('signup')} />
-                ) : (
-                  <SignupForm onSwitchToLogin={() => setView('login')} />
+
+                {transitionDirection && (
+                  <div
+                    key={`auth-sweep-${view}`}
+                    aria-hidden="true"
+                    className={`auth-transition-sweep ${transitionDirection === 'left' ? 'auth-sweep-left' : 'auth-sweep-right'}`}
+                  />
                 )}
-              </>
+              </div>
             )}
           </div>
         </section>
       </div>
+
+      <style jsx>{`
+        .auth-switch-stage {
+          position: relative;
+          perspective: 1500px;
+          transform-style: preserve-3d;
+          isolation: isolate;
+        }
+
+        .auth-switch-content {
+          position: relative;
+          z-index: 1;
+          transform-style: preserve-3d;
+          backface-visibility: hidden;
+          will-change: transform, opacity, filter;
+        }
+
+        .auth-content-left {
+          animation: auth-content-left 760ms cubic-bezier(0.2, 0.74, 0.2, 1) both;
+          transform-origin: right center;
+        }
+
+        .auth-content-right {
+          animation: auth-content-right 760ms cubic-bezier(0.2, 0.74, 0.2, 1) both;
+          transform-origin: left center;
+        }
+
+        .auth-transition-sweep {
+          position: absolute;
+          inset: -6px;
+          z-index: 2;
+          pointer-events: none;
+          border-radius: 1.6rem;
+          background: linear-gradient(
+            120deg,
+            rgba(5, 8, 7, 0.12) 0%,
+            rgba(13, 148, 136, 0.72) 38%,
+            rgba(45, 212, 191, 0.46) 58%,
+            rgba(5, 8, 7, 0.08) 100%
+          );
+          box-shadow:
+            0 0 70px rgba(45, 212, 191, 0.14),
+            inset 0 1px 0 rgba(255, 255, 255, 0.18);
+          opacity: 0;
+          transform-style: preserve-3d;
+          backface-visibility: hidden;
+          will-change: transform, opacity;
+        }
+
+        .auth-sweep-left {
+          animation: auth-sweep-left 760ms cubic-bezier(0.2, 0.74, 0.2, 1) both;
+          transform-origin: right center;
+        }
+
+        .auth-sweep-right {
+          animation: auth-sweep-right 760ms cubic-bezier(0.2, 0.74, 0.2, 1) both;
+          transform-origin: left center;
+        }
+
+        @keyframes auth-content-left {
+          0% {
+            opacity: 0.48;
+            transform: translate3d(24px, 0, -70px) rotateY(5deg) scale(0.985);
+            filter: blur(2px);
+          }
+          45% {
+            opacity: 0.82;
+            transform: translate3d(8px, 0, -24px) rotateY(2deg) scale(0.994);
+            filter: blur(0.7px);
+          }
+          100% {
+            opacity: 1;
+            transform: translate3d(0, 0, 0) rotateY(0deg) scale(1);
+            filter: blur(0);
+          }
+        }
+
+        @keyframes auth-content-right {
+          0% {
+            opacity: 0.48;
+            transform: translate3d(-24px, 0, -70px) rotateY(-5deg) scale(0.985);
+            filter: blur(2px);
+          }
+          45% {
+            opacity: 0.82;
+            transform: translate3d(-8px, 0, -24px) rotateY(-2deg) scale(0.994);
+            filter: blur(0.7px);
+          }
+          100% {
+            opacity: 1;
+            transform: translate3d(0, 0, 0) rotateY(0deg) scale(1);
+            filter: blur(0);
+          }
+        }
+
+        @keyframes auth-sweep-left {
+          0% {
+            opacity: 0;
+            transform: translate3d(108%, 0, 12px) rotateY(0deg);
+          }
+          16% {
+            opacity: 0.88;
+          }
+          50% {
+            opacity: 0.72;
+            transform: translate3d(0, 0, 28px) rotateY(-7deg);
+          }
+          84% {
+            opacity: 0.42;
+          }
+          100% {
+            opacity: 0;
+            transform: translate3d(-108%, 0, 12px) rotateY(-2deg);
+          }
+        }
+
+        @keyframes auth-sweep-right {
+          0% {
+            opacity: 0;
+            transform: translate3d(-108%, 0, 12px) rotateY(0deg);
+          }
+          16% {
+            opacity: 0.88;
+          }
+          50% {
+            opacity: 0.72;
+            transform: translate3d(0, 0, 28px) rotateY(7deg);
+          }
+          84% {
+            opacity: 0.42;
+          }
+          100% {
+            opacity: 0;
+            transform: translate3d(108%, 0, 12px) rotateY(2deg);
+          }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .auth-content-left,
+          .auth-content-right {
+            animation: none;
+          }
+
+          .auth-transition-sweep {
+            display: none;
+          }
+        }
+      `}</style>
     </main>
   );
 }
