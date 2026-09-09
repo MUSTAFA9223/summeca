@@ -18,8 +18,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const supabase = useMemo(() => createClient(), []);
 
   const getSiteUrl = () => {
+    // Prefer the configured canonical production origin. Using window.origin
+    // first can generate redirect URLs such as www.summeca.com on mobile even
+    // when only summeca.com is allow-listed in Supabase Auth.
+    if (process.env.NEXT_PUBLIC_SITE_URL) return process.env.NEXT_PUBLIC_SITE_URL.replace(/\/$/, '');
     if (typeof window !== 'undefined') return window.location.origin;
-    if (process.env.NEXT_PUBLIC_SITE_URL) return process.env.NEXT_PUBLIC_SITE_URL;
     return 'https://summeca.com';
   };
 
@@ -28,7 +31,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     const redirectRecoveryToResetPage = () => {
       if (typeof window !== 'undefined' && window.location.pathname !== '/reset-password') {
-        const url = new URL('/reset-password', window.location.origin);
+        const url = new URL('/reset-password', getSiteUrl());
         const current = new URL(window.location.href);
         current.searchParams.forEach((value, key) => url.searchParams.set(key, value));
         url.hash = current.hash;
