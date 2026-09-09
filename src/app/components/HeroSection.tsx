@@ -2,7 +2,7 @@
 
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
-import { ArrowRight, Boxes, Headphones, ShieldCheck, Zap } from 'lucide-react';
+import { ArrowRight, Boxes, Headphones, ShieldCheck, UserCheck } from 'lucide-react';
 
 const SplineRobotScene = dynamic(() => import('@/components/ui/SplineRobotScene'), {
   ssr: false,
@@ -10,9 +10,9 @@ const SplineRobotScene = dynamic(() => import('@/components/ui/SplineRobotScene'
 });
 
 const servicePoints = [
-  { icon: Zap, title: 'Instant Access', text: 'Get started in minutes' },
-  { icon: ShieldCheck, title: 'Secure Payments', text: 'Payoneer or Crypto' },
-  { icon: Headphones, title: 'Customer Support', text: 'Help when you need it' },
+  { icon: ShieldCheck, title: 'Verified Checkout', text: 'Paid access follows provider confirmation' },
+  { icon: UserCheck, title: 'Account Delivery', text: 'Orders and eligible access stay tied to your account' },
+  { icon: Headphones, title: 'Customer Support', text: 'Help for products, orders, and accounts' },
 ];
 
 const dark3D =
@@ -43,7 +43,7 @@ export default function HeroSection() {
           </h1>
 
           <p className="mt-7 max-w-xl text-base leading-7 text-[#667783] sm:text-lg sm:leading-8">
-            Discover AI tools, SaaS products and digital solutions built to help you work smarter and grow faster.
+            Discover published AI tools, SaaS products, and digital resources with pricing and availability tied directly to production offers.
           </p>
 
           <div className="mt-9 flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -55,7 +55,7 @@ export default function HeroSection() {
             </Link>
           </div>
 
-          <div className="mt-11 grid max-w-[650px] grid-cols-1 gap-4 border-t border-[#dfe7e9] pt-7 sm:grid-cols-3">
+          <div className="mt-11 grid max-w-[680px] grid-cols-1 gap-4 border-t border-[#dfe7e9] pt-7 sm:grid-cols-3">
             {servicePoints.map(({ icon: Icon, title, text }) => (
               <div key={title} className="flex items-start gap-3">
                 <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#e8fbfc] text-[#08aebb]"><Icon size={17} /></span>
