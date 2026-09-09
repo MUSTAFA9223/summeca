@@ -106,8 +106,12 @@ function formatCurrency(amount: number, currency = 'USD') {
 function checkoutAttemptKey(fingerprint: string) {
   const storageKey = 'summeca:checkout:' + fingerprint;
   const existing = window.sessionStorage.getItem(storageKey);
-  const valid = existing && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(existing);
-  if (valid) return { idempotencyKey: existing, storageKey };
+  if (
+    typeof existing === 'string'
+    && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(existing)
+  ) {
+    return { idempotencyKey: existing, storageKey };
+  }
   const idempotencyKey = window.crypto.randomUUID();
   window.sessionStorage.setItem(storageKey, idempotencyKey);
   return { idempotencyKey, storageKey };
@@ -209,11 +213,12 @@ function CheckoutInner() {
 
   useEffect(() => {
     if (authLoading || !user || !checkoutOrderIdParam) return;
+    const orderId = checkoutOrderIdParam;
     let cancelled = false;
     async function restoreCheckoutSession() {
       try {
         const response = await fetch(
-          '/api/payment/checkout-session?order_id=' + encodeURIComponent(checkoutOrderIdParam),
+          '/api/payment/checkout-session?order_id=' + encodeURIComponent(orderId),
           { cache: 'no-store' }
         );
         const data = await response.json().catch(() => ({})) as {
@@ -227,7 +232,7 @@ function CheckoutInner() {
         if (!paymentAddress || !cryptoAmount || !paymentMethodType) return;
         setCheckoutMethod('crypto');
         setCryptoSession({
-          orderId: checkoutOrderIdParam,
+          orderId,
           paymentAddress,
           cryptoAmount,
           paymentMethodType,
