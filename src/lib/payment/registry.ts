@@ -12,10 +12,12 @@
 
 import type { IPaymentProvider, PaymentProvider } from './types';
 import { PayoneerProvider } from './providers/payoneer';
+import { FastSpringProvider } from './providers/fastspring';
 import { CryptoProvider } from './providers/crypto';
 
 const providers: Record<PaymentProvider, IPaymentProvider> = {
   payoneer: new PayoneerProvider(),
+  fastspring: new FastSpringProvider(),
   crypto: new CryptoProvider(),
   manual: {
     name: 'manual',
