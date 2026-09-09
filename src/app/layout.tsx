@@ -15,19 +15,34 @@ const plusJakartaSans = Plus_Jakarta_Sans({
   display: 'swap',
 });
 
+const siteDescription =
+  'Discover and access premium AI tools, SaaS applications, and digital products designed for modern knowledge workers and businesses.';
+
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
 };
 
 export const metadata: Metadata = {
-  title: 'SUMMECA — AI & SaaS for Modern Work',
-  description:
-    'Discover and access premium AI tools, SaaS applications, and digital products designed for modern knowledge workers and businesses.',
+  metadataBase: new URL('https://summeca.com'),
+  title: {
+    default: 'SUMMECA — AI & SaaS for Modern Work',
+    template: '%s | SUMMECA',
+  },
+  description: siteDescription,
+  openGraph: {
+    type: 'website',
+    url: 'https://summeca.com',
+    siteName: 'SUMMECA',
+    title: 'SUMMECA — AI & SaaS for Modern Work',
+    description: siteDescription,
+  },
   twitter: {
     card: 'summary_large_image',
     site: '@summeca_',
     creator: '@summeca_',
+    title: 'SUMMECA — AI & SaaS for Modern Work',
+    description: siteDescription,
   },
   icons: {
     icon: [{ url: '/favicon.ico', type: 'image/x-icon' }],
@@ -43,14 +58,10 @@ export default function RootLayout({
         <Suspense fallback={null}>
           <GoogleAnalytics />
         </Suspense>
-        <AuthProvider>
-          {children}
-        </AuthProvider>
+        <AuthProvider>{children}</AuthProvider>
         <StoreAssistant />
         <Toaster position="bottom-right" richColors closeButton />
-
-        <script type="module" async src="https://static.rocket.new/rocket-web.js?_cfg=https%3A%2F%2Fsummeca1430back.builtwithrocket.new&_be=https%3A%2F%2Fappanalytics.rocket.new&_v=0.1.20" />
-        <script type="module" defer src="https://static.rocket.new/rocket-shot.js?v=0.0.3" /></body>
+      </body>
     </html>
   );
 }

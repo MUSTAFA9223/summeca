@@ -234,7 +234,7 @@ export class CryptoProvider implements IPaymentProvider {
         return {
           success: false,
           error: minimumError
-            ? 'This cryptocurrency is currently above the minimum for this order total. Try TRON (TRX) or Litecoin (LTC).'
+            ? 'This crypto option is below the provider minimum for the current order total. Try TRX or another available crypto option.'
             : providerError,
         };
       }
