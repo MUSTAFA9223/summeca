@@ -1,32 +1,43 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { requireAdmin } from '@/lib/auth/requireAdmin';
+import { sanitizeInternalActionUrl } from '@/lib/notifications/actionUrl';
 
-function sanitizeActionUrl(value: unknown): string | null {
-  if (typeof value !== 'string' || value.length === 0) return null;
-  if (!value.startsWith('/') || value.startsWith('//')) return null;
-  return value.slice(0, 2048);
-}
+const NOTIFICATION_TYPES = new Set([
+  'order',
+  'payment',
+  'subscription',
+  'refund',
+  'wishlist',
+  'recommendation',
+  'announcement',
+]);
 
-// POST /api/admin/notifications/send — admin sends system notification
 export async function POST(req: NextRequest) {
   try {
     const supabase = await createClient();
     const user = await requireAdmin(supabase);
     if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-    const body = await req.json();
-    const { title, message, type, action_url, target } = body;
+    const body = await req.json().catch(() => null);
+    if (!body || typeof body !== 'object') {
+      return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
+    }
 
+    const { title, message, type, action_url, target } = body as Record<string, unknown>;
     if (typeof title !== 'string' || typeof message !== 'string' || !title.trim() || !message.trim()) {
       return NextResponse.json({ error: 'title and message are required' }, { status: 400 });
     }
-    if (title.length > 200 || message.length > 5000) {
+    if (title.trim().length > 200 || message.trim().length > 5000) {
       return NextResponse.json({ error: 'Notification content is too long' }, { status: 400 });
     }
 
-    let userIds: string[] = [];
+    const safeType = typeof type === 'string' && NOTIFICATION_TYPES.has(type) ? type : 'announcement';
+    if (typeof action_url === 'string' && action_url.trim() && !sanitizeInternalActionUrl(action_url)) {
+      return NextResponse.json({ error: 'Action URL must be an internal SUMMECA path.' }, { status: 400 });
+    }
 
+    let userIds: string[] = [];
     if (target === 'all') {
       const { data: profiles, error: profileError } = await supabase
         .from('user_profiles')
@@ -45,10 +56,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'No target users found' }, { status: 400 });
     }
 
-    const safeActionUrl = sanitizeActionUrl(action_url);
+    const safeActionUrl = sanitizeInternalActionUrl(action_url);
     const rows = userIds.map((uid) => ({
       user_id: uid,
-      type: typeof type === 'string' ? type.slice(0, 50) : 'announcement',
+      type: safeType,
       title: title.trim(),
       message: message.trim(),
       action_url: safeActionUrl,
@@ -65,32 +76,35 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// GET /api/admin/notifications/send — get delivery stats
 export async function GET() {
   try {
     const supabase = await createClient();
     const user = await requireAdmin(supabase);
     if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-    const { count: total } = await supabase
+    const { count: total, error: totalError } = await supabase
       .from('notifications')
       .select('*', { count: 'exact', head: true });
+    if (totalError) throw totalError;
 
-    const { count: unread } = await supabase
+    const { count: unread, error: unreadError } = await supabase
       .from('notifications')
       .select('*', { count: 'exact', head: true })
       .eq('read', false);
+    if (unreadError) throw unreadError;
 
-    const { count: announcements } = await supabase
+    const { count: announcements, error: announcementsError } = await supabase
       .from('notifications')
       .select('*', { count: 'exact', head: true })
       .eq('type', 'announcement');
+    if (announcementsError) throw announcementsError;
 
-    const { data: recent } = await supabase
+    const { data: recent, error: recentError } = await supabase
       .from('notifications')
       .select('id, type, title, created_at, read')
       .order('created_at', { ascending: false })
       .limit(20);
+    if (recentError) throw recentError;
 
     return NextResponse.json({
       stats: {
