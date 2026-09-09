@@ -24,6 +24,49 @@ function getAuthCookiePrefix(): string | null {
   }
 }
 
+function getCanonicalCookieDomain(): string | null {
+  try {
+    const hostname = new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://summeca.com').hostname
+      .toLowerCase()
+      .replace(/^www\./, '');
+    return hostname === 'summeca.com' ? hostname : null;
+  } catch {
+    return null;
+  }
+}
+
+function decodeCookieValue(value: string) {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
+}
+
+function getCookiesForSupabase(request: NextRequest) {
+  const cookies = request.cookies.getAll();
+  const prefix = getAuthCookiePrefix();
+  const rawCookieHeader = request.headers.get('cookie');
+  if (!prefix || !rawCookieHeader) return cookies;
+
+  const authByName = new Map<string, { name: string; value: string }>();
+  for (const part of rawCookieHeader.split(';')) {
+    const trimmed = part.trim();
+    const separator = trimmed.indexOf('=');
+    if (separator <= 0) continue;
+    const name = trimmed.slice(0, separator).trim();
+    if (!name.startsWith(prefix)) continue;
+    authByName.set(name, {
+      name,
+      value: decodeCookieValue(trimmed.slice(separator + 1)),
+    });
+  }
+
+  if (authByName.size === 0) return cookies;
+  const nonAuthCookies = cookies.filter((cookie) => !cookie.name.startsWith(prefix));
+  return [...nonAuthCookies, ...authByName.values()];
+}
+
 function clearStaleAuthCookies(request: NextRequest, response: NextResponse) {
   const prefix = getAuthCookiePrefix();
   if (!prefix) return;
@@ -38,6 +81,26 @@ function clearStaleAuthCookies(request: NextRequest, response: NextResponse) {
       secure: process.env.NODE_ENV === 'production',
       httpOnly: false,
     });
+  }
+}
+
+function appendDomainAuthCookieCleanup(request: NextRequest, response: NextResponse) {
+  const prefix = getAuthCookiePrefix();
+  const domain = getCanonicalCookieDomain();
+  if (!prefix || !domain) return;
+
+  const names = new Set(
+    request.cookies.getAll()
+      .filter((cookie) => cookie.name.startsWith(prefix))
+      .map((cookie) => cookie.name),
+  );
+  const secure = process.env.NODE_ENV === 'production' ? '; Secure' : '';
+
+  for (const name of names) {
+    response.headers.append(
+      'Set-Cookie',
+      `${name}=; Path=/; Domain=${domain}; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax${secure}`,
+    );
   }
 }
 
@@ -72,8 +135,10 @@ export async function GET(request: NextRequest) {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
+        // Prefer the newest duplicate of each auth/PKCE cookie name when Chrome
+        // still carries a legacy Domain-scoped generation alongside host-only data.
         getAll() {
-          return request.cookies.getAll();
+          return getCookiesForSupabase(request);
         },
         setAll(cookiesToSet, headers) {
           cookiesToSet.forEach(({ name, value, options }) => {
@@ -123,8 +188,6 @@ export async function GET(request: NextRequest) {
   const destination = profile?.is_admin ? '/admin' : requestedNext;
   const response = NextResponse.redirect(new URL(destination, origin));
 
-  // Remove stale cookie generations first, then let the freshly-exchanged session
-  // overwrite the active chunk names. Obsolete higher-numbered chunks stay deleted.
   clearStaleAuthCookies(request, response);
   pendingCookies.forEach(({ name, value, options }) => {
     response.cookies.set(name, value, {
@@ -135,6 +198,7 @@ export async function GET(request: NextRequest) {
       httpOnly: false,
     });
   });
+  appendDomainAuthCookieCleanup(request, response);
   responseHeaders.forEach((value, key) => response.headers.set(key, value));
   disableCaching(response);
 
