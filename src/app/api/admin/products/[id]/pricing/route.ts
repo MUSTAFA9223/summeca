@@ -66,7 +66,7 @@ function validateMoney(value: number, currency: string, field: string) {
   const decimals = currency === 'JPY' ? 0 : 2;
   const factor = 10 ** decimals;
   if (Math.abs(value * factor - Math.round(value * factor)) > 1e-7) {
-    throw new Error(`${field} must use at most ${decimals} decimal place${decimals === 1 ? '' : 's'} for ${currency}.`);
+    throw new Error(`${field} must use at most ${decimals} decimal places for ${currency}.`);
   }
 }
 
