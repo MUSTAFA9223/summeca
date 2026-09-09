@@ -1,4 +1,5 @@
 import type { MetadataRoute } from 'next';
+import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 
 const siteUrl = 'https://summeca.com';
 
@@ -20,13 +21,49 @@ const publicRoutes = [
   { path: '/cookies', priority: 0.2, changeFrequency: 'yearly' as const },
 ];
 
-export default function sitemap(): MetadataRoute.Sitemap {
-  const lastModified = new Date();
+export const revalidate = 3600;
 
-  return publicRoutes.map((route) => ({
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  const now = new Date();
+  const entries: MetadataRoute.Sitemap = publicRoutes.map((route) => ({
     url: `${siteUrl}${route.path}`,
-    lastModified,
+    lastModified: now,
     changeFrequency: route.changeFrequency,
     priority: route.priority,
   }));
+
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const isCiPlaceholder = !supabaseUrl || !anonKey || supabaseUrl.includes('example.supabase.co') || anonKey === 'test-anon-key';
+  if (isCiPlaceholder) return entries;
+
+  try {
+    const supabase = createSupabaseClient(supabaseUrl, anonKey, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
+    const { data, error } = await supabase
+      .from('products')
+      .select('slug, updated_at')
+      .eq('status', 'active')
+      .order('updated_at', { ascending: false });
+
+    if (error) {
+      console.warn('[sitemap] Published products could not be loaded:', error.message);
+      return entries;
+    }
+
+    for (const product of data ?? []) {
+      if (!product.slug) continue;
+      entries.push({
+        url: `${siteUrl}/products/${encodeURIComponent(product.slug)}`,
+        lastModified: product.updated_at ? new Date(product.updated_at) : now,
+        changeFrequency: 'weekly',
+        priority: 0.8,
+      });
+    }
+  } catch (error) {
+    console.warn('[sitemap] Product sitemap generation failed:', error);
+  }
+
+  return entries;
 }
