@@ -17,6 +17,8 @@ test('password recovery uses an isolated non-persistent auth client and clears s
   assert.match(source, /auth\.verifyOtp\(\{[\s\S]*type:\s*'recovery'/);
   assert.match(source, /auth\.updateUser\(\{ password:\s*newPassword \}\)/);
   assert.match(source, /clearBrowserAuthCookies\(request, response\)/);
+  assert.match(source, /appendDomainAuthCookieCleanup\(request, response\)/);
+  assert.match(source, /Domain=\$\{domain\}/);
   assert.match(source, /name\.includes\('-auth-token'\)/);
   assert.match(source, /name\.includes\('-code-verifier'\)/);
   assert.doesNotMatch(source, /@\/lib\/supabase\/server/);
@@ -39,12 +41,17 @@ test('Google OAuth starts server-side with canonical callback and fresh PKCE coo
   assert.match(starter, /skipBrowserRedirect:\s*true/);
   assert.match(starter, /getAll\(\)\s*\{\s*return \[\];/);
   assert.match(starter, /clearStaleAuthCookies\(request, response\)/);
+  assert.match(starter, /appendDomainAuthCookieCleanup\(request, response\)/);
+  assert.match(starter, /Domain=\$\{domain\}/);
   assert.match(starter, /pendingCookies/);
   assert.match(starter, /response\.cookies\.set/);
 
   assert.match(callback, /searchParams\.get\('sb_flow_id'\)/);
   assert.match(callback, /exchangeCodeForSession\([\s\S]*flowId \? \{ flowId \}/);
+  assert.match(callback, /getCookiesForSupabase\(request\)/);
+  assert.match(callback, /authByName\.set\(name,/);
   assert.match(callback, /clearStaleAuthCookies\(request, response\)/);
+  assert.match(callback, /appendDomainAuthCookieCleanup\(request, response\)/);
 });
 
 test('password sign-in uses a native browser POST and redirects with the fresh session', () => {
@@ -66,6 +73,8 @@ test('password sign-in uses a native browser POST and redirects with the fresh s
   assert.match(route, /auth\.signInWithPassword\(\{ email, password \}\)/);
   assert.match(route, /NextResponse\.redirect\(new URL\(destination, request\.url\), 303\)/);
   assert.match(route, /clearStaleAuthCookies\(request, response\)/);
+  assert.match(route, /appendDomainAuthCookieCleanup\(request, response\)/);
+  assert.match(route, /Domain=\$\{domain\}/);
   assert.match(route, /cookie\.name\.startsWith\(prefix\)/);
   assert.match(route, /maxAge:\s*0/);
   assert.match(route, /pendingCookies/);
@@ -78,6 +87,14 @@ test('password sign-in uses a native browser POST and redirects with the fresh s
 
   assert.match(page, /dynamic\s*=\s*'force-dynamic'/);
   assert.match(page, /revalidate\s*=\s*0/);
+});
+
+test('middleware prefers the newest duplicate Supabase auth cookie from Chrome', () => {
+  const source = fs.readFileSync('src/middleware.ts', 'utf8');
+  assert.match(source, /rawCookieHeader\.split\(';'\)/);
+  assert.match(source, /authByName\.set\(name,/);
+  assert.match(source, /return \[\.\.\.nonAuthCookies, \.\.\.authByName\.values\(\)\]/);
+  assert.match(source, /getAll\(\)\s*\{\s*return getCookiesForSupabase\(request\);/);
 });
 
 test('auth email and recovery redirects prefer the configured canonical site URL', () => {
