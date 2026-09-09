@@ -85,14 +85,18 @@ export default function ResetPasswordPage() {
     setError('');
 
     try {
-      const { error: verifyError } = await supabase.auth.verifyOtp({
+      const { data: recoveryData, error: verifyError } = await supabase.auth.verifyOtp({
         type: 'recovery',
         token_hash: pendingTokenHash,
       });
       if (verifyError) throw verifyError;
-
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      if (userError || !user) throw userError || new Error('Recovery session was not created.');
+      // verifyOtp already validates the one-time token and returns the newly
+      // established recovery session. Calling getUser immediately afterwards
+      // can race a stale browser refresh cookie, report "Refresh Token Not
+      // Found", and incorrectly reject a token that was successfully consumed.
+      if (!recoveryData.user || !recoveryData.session) {
+        throw new Error('Recovery session was not created.');
+      }
 
       const url = new URL(window.location.href);
       url.searchParams.delete('token_hash');
