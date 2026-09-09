@@ -44,11 +44,24 @@ test('Google OAuth starts server-side with canonical callback and first-party PK
   assert.match(callback, /exchangeCodeForSession\([\s\S]*flowId \? \{ flowId \}/);
 });
 
-test('password sign-in performs a full navigation so fresh auth cookies reach protected routes', () => {
-  const source = fs.readFileSync('src/app/sign-up-login-screen/components/LoginForm.tsx', 'utf8');
-  assert.match(source, /window\.location\.replace\(destination\)/);
-  assert.doesNotMatch(source, /router\.replace\(destination\)/);
-  assert.match(source, /value\.startsWith\('\/sign-up-login-screen'\)/);
+test('password sign-in is issued by the server and performs a full navigation', () => {
+  const form = fs.readFileSync('src/app/sign-up-login-screen/components/LoginForm.tsx', 'utf8');
+  const route = fs.readFileSync('src/app/api/auth/password-sign-in/route.ts', 'utf8');
+
+  assert.match(form, /fetch\('\/api\/auth\/password-sign-in'/);
+  assert.match(form, /credentials:\s*'include'/);
+  assert.match(form, /window\.location\.replace\(destination\)/);
+  assert.doesNotMatch(form, /useAuth\(|signIn\(data\.email/);
+  assert.match(form, /value\.startsWith\('\/sign-up-login-screen'\)/);
+
+  assert.match(route, /createServerClient/);
+  assert.match(route, /auth\.signInWithPassword\(\{ email, password \}\)/);
+  assert.match(route, /pendingCookies/);
+  assert.match(route, /response\.cookies\.set/);
+  assert.match(route, /sameSite:\s*'lax'/);
+  assert.match(route, /secure:\s*process\.env\.NODE_ENV === 'production'/);
+  assert.match(route, /Cache-Control': 'private, no-store'/);
+  assert.match(route, /sec-fetch-site/);
 });
 
 test('auth email and recovery redirects prefer the configured canonical site URL', () => {
