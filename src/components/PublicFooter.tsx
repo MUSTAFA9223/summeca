@@ -69,12 +69,15 @@ export default function PublicFooter() {
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
             <div>
               <h3 className="text-xl font-700 text-white mb-1">Need help choosing a SUMMECA product?</h3>
-              <p className="text-sm text-slate-400">Browse the catalog or contact support before you buy.</p>
+              <p className="text-sm text-slate-400">Talk to sales before you buy, or contact support if you already need help.</p>
             </div>
             <div className="flex flex-wrap items-center justify-center gap-2">
               <Link href="/products" className="btn-primary text-sm px-4 py-2.5 flex items-center gap-1.5 whitespace-nowrap rounded-xl">
                 Browse products <ArrowRight size={13} />
               </Link>
+              <a href="mailto:sales@summeca.com?subject=SUMMECA%20Sales%20Inquiry" className="text-sm px-4 py-2.5 rounded-xl border border-primary/30 text-primary hover:text-white hover:bg-primary/20 transition-colors">
+                Talk to sales
+              </a>
               <Link href="/support" className="text-sm px-4 py-2.5 rounded-xl border border-white/12 text-slate-300 hover:text-white hover:bg-white/8 transition-colors">
                 Support center
               </Link>
@@ -96,7 +99,7 @@ export default function PublicFooter() {
               {socialLinks.map(({ Icon, href, label }) => (
                 <a key={`footer-social-${label}`} href={href} target="_blank" rel="noopener noreferrer" aria-label={label} title={label} className="w-8 h-8 rounded-lg bg-white/8 flex items-center justify-center text-slate-400 hover:text-white hover:bg-primary/30 hover:scale-110 transition-all duration-200"><Icon size={15} /></a>
               ))}
-              <a href="mailto:hello@summeca.com" aria-label="Email SUMMECA" className="w-8 h-8 rounded-lg bg-white/8 flex items-center justify-center text-slate-400 hover:text-white hover:bg-primary/30 hover:scale-110 transition-all duration-200"><Mail size={15} /></a>
+              <a href="mailto:hello@summeca.com?subject=SUMMECA%20General%20Inquiry" aria-label="Email SUMMECA general inquiries" title="hello@summeca.com" className="w-8 h-8 rounded-lg bg-white/8 flex items-center justify-center text-slate-400 hover:text-white hover:bg-primary/30 hover:scale-110 transition-all duration-200"><Mail size={15} /></a>
             </div>
           </div>
 
