@@ -130,10 +130,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ message: 'Payment is still pending.' }, { status: 200 });
   }
 
-  if (order.status === 'refunded') {
-    return NextResponse.json({ message: 'Order is already refunded.' }, { status: 200 });
-  }
-
   if (paymentStatus === 'refunded') {
     return handleRefund(supabase, {
       order,
@@ -141,6 +137,10 @@ export async function POST(request: NextRequest) {
       providerPaymentRef,
       metadata,
     });
+  }
+
+  if (order.status === 'refunded') {
+    return NextResponse.json({ message: 'Order is already refunded.' }, { status: 200 });
   }
 
   if (paymentStatus === 'failed' || paymentStatus === 'cancelled') {
@@ -320,57 +320,41 @@ async function handleRefund(
   }
 ) {
   const { order, providerName, providerPaymentRef, metadata } = params;
-  if (order.status !== 'completed') {
+  if (order.status !== 'completed' && order.status !== 'refunded') {
     return NextResponse.json(
       { error: `Cannot refund an order with status: ${order.status}` },
       { status: 409 }
     );
   }
 
-  const now = new Date().toISOString();
-  const { data: updated, error: updateError } = await supabase
-    .from('orders')
-    .update({ status: 'refunded', updated_at: now })
-    .eq('id', order.id)
-    .eq('status', 'completed')
-    .select('id')
-    .maybeSingle();
-
-  if (updateError || !updated) {
-    return NextResponse.json({ error: 'Failed to mark order refunded.' }, { status: 409 });
-  }
-
-  const eventResult = await insertPaymentEvent(supabase, {
-    orderId: order.id,
-    provider: providerName,
-    eventType: 'refunded',
-    providerPaymentRef,
-    metadata: metadataToRecord(metadata, providerName),
+  const { data, error } = await supabase.rpc('finalize_verified_refund', {
+    p_order_id: order.id,
+    p_provider: providerName,
+    p_provider_ref: providerPaymentRef,
+    p_metadata: metadataToRecord(metadata, providerName),
   });
-  if (eventResult === 'error') {
-    return NextResponse.json({ error: 'Refund recorded but audit event failed.' }, { status: 500 });
+
+  if (error || !data) {
+    console.error('[payment/webhook] Atomic refund reconciliation failed order=' + order.id + ':', error?.message);
+    return NextResponse.json(
+      { error: 'Verified refund could not be reconciled. Provider retry is required.' },
+      { status: 500 }
+    );
   }
 
-  const { data: matchingRefund } = await supabase
-    .from('refunds')
-    .select('id, status')
-    .eq('order_id', order.id)
-    .not('status', 'in', '("completed","rejected","failed")')
-    .maybeSingle();
-
-  if (matchingRefund) {
-    await supabase
-      .from('refunds')
-      .update({
-        status: 'completed',
-        provider_refund_id: providerPaymentRef,
-        completed_at: now,
-        updated_at: now,
-      })
-      .eq('id', matchingRefund.id);
+  const result = data as Record<string, unknown>;
+  if (result.ok !== true) {
+    return NextResponse.json(
+      { error: String(result.error ?? 'Verified refund could not be reconciled.') },
+      { status: 409 }
+    );
   }
 
-  return NextResponse.json({ message: 'Order marked as refunded.' });
+  return NextResponse.json({
+    message: result.already_refunded === true
+      ? 'Refund records reconciled.'
+      : 'Order marked as refunded.',
+  });
 }
 
 async function handleCompletion(
