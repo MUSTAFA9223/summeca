@@ -65,8 +65,27 @@ jobs:
       - name: Deploy to Cloudflare production
         run: npx wrangler deploy --keep-vars
 
+      - name: Production public-route smoke test
+        shell: bash
+        run: |
+          node <<'NODE'
+          const checks = [
+            ['https://summeca.com/', 'text/html'],
+            ['https://summeca.com/products', 'text/html'],
+            ['https://summeca.com/robots.txt', 'text/plain'],
+            ['https://summeca.com/sitemap.xml', 'application/xml'],
+          ];
+
+          for (const [url, expectedType] of checks) {
+            const response = await fetch(url, { redirect: 'follow' });
+            const type = response.headers.get('content-type') || '';
+            console.log(`${url} -> ${response.status} ${type}`);
+            if (!response.ok) process.exit(31);
+            if (!type.includes(expectedType)) process.exit(32);
+          }
+          NODE
+
       - name: Production sales AI smoke test
-        if: contains(github.event.head_commit.message, '[ai-smoke]')
         shell: bash
         run: |
           node <<'NODE'
