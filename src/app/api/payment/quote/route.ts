@@ -31,11 +31,18 @@ export async function POST(request: NextRequest) {
 
   const supabase = createServiceClient();
   let couponId: string | null = null;
+  let couponDetails: {
+    id: string;
+    code: string;
+    coupon_type: 'percentage' | 'fixed_amount';
+    discount_value: number;
+    applies_to: string | null;
+  } | null = null;
 
   if (couponCode) {
     const { data: coupon, error: couponLookupError } = await supabase
       .from('coupons')
-      .select('id')
+      .select('id, code, coupon_type, discount_value, applies_to')
       .eq('code', couponCode)
       .eq('is_active', true)
       .maybeSingle();
@@ -45,6 +52,13 @@ export async function POST(request: NextRequest) {
     }
 
     couponId = coupon.id;
+    couponDetails = {
+      id: coupon.id,
+      code: coupon.code,
+      coupon_type: coupon.coupon_type,
+      discount_value: Number(coupon.discount_value),
+      applies_to: coupon.applies_to,
+    };
   }
 
   const { data: quote, error: quoteError } = await supabase.rpc('quote_product_price', {
@@ -69,6 +83,7 @@ export async function POST(request: NextRequest) {
   const q = quote as Record<string, unknown>;
   return noStoreJson({
     couponId,
+    coupon: couponDetails,
     quote: {
       regularPrice: Number(q.regular_price ?? 0),
       price: Number(q.price ?? 0),

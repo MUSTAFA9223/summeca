@@ -37,23 +37,12 @@ export async function POST() {
       user_id: user.id,
     });
 
-    const referralCode =
-      !codeError && typeof codeData === 'string' && codeData.trim()
-        ? codeData.trim()
-        : `SUMM${crypto.randomUUID().replace(/-/g, '').slice(0, 8).toUpperCase()}`;
-
-    const { error: insertError } = await supabase.from('referrals').insert({
-      referrer_user_id: user.id,
-      referral_code: referralCode,
-      status: 'pending',
-    });
-
-    if (insertError) {
-      console.error('[referrals/generate] Failed to create referral code:', insertError.message);
+    if (codeError || typeof codeData !== 'string' || !codeData.trim()) {
+      console.error('[referrals/generate] RPC failed:', codeError?.message);
       return NextResponse.json({ error: 'Could not create your referral link.' }, { status: 500 });
     }
 
-    return NextResponse.json({ referral_code: referralCode }, { status: 200 });
+    return NextResponse.json({ referral_code: codeData.trim() }, { status: 200 });
   } catch (error) {
     console.error('[referrals/generate] Unexpected error:', error);
     return NextResponse.json({ error: 'Referral service is temporarily unavailable.' }, { status: 500 });

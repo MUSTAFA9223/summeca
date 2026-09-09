@@ -167,3 +167,20 @@ test('private product uploads are admin-authorized and downloads stay server-con
   assert.match(downloadsPage, /\/api\/downloads\//);
   assert.doesNotMatch(downloadsPage, /window\.open\(download\.file_url/);
 });
+
+
+test('RLS hardening keeps trust fields server-controlled', () => {
+  const migration = fs.readFileSync('supabase/migrations/20260909164000_harden_user_managed_rls.sql', 'utf8');
+  const checkout = fs.readFileSync('src/app/checkout/page.tsx', 'utf8');
+  const referralRoute = fs.readFileSync('src/app/api/referrals/generate/route.ts', 'utf8');
+
+  assert.match(migration, /drop policy if exists users_manage_own_reviews/);
+  assert.match(migration, /new\.moderation_status := 'pending'/);
+  assert.match(migration, /new\.sender_type := 'user'/);
+  assert.match(migration, /drop policy if exists users_insert_own_security_logs/);
+  assert.match(migration, /drop policy if exists users_manage_own_usage/);
+  assert.match(migration, /drop policy if exists auth_read_coupons/);
+  assert.match(migration, /user_id is distinct from caller_id/);
+  assert.doesNotMatch(checkout, /\.from\('coupons'\)/);
+  assert.doesNotMatch(referralRoute, /\.from\('referrals'\)\.insert/);
+});
