@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient, createServiceClient } from '@/lib/supabase/server';
-import { getEffectivePrice } from '@/lib/pricing';
 import { sendDownloadLink, sendSubscriptionActivated } from '@/lib/email/sendEmail';
 
 type ServiceClient = ReturnType<typeof createServiceClient>;
@@ -8,20 +7,22 @@ type ServiceClient = ReturnType<typeof createServiceClient>;
 type PlanRecord = {
   id: string;
   name: string;
-  price: number | string;
   currency: string;
   billing_period: 'one_time' | 'monthly' | 'yearly' | 'lifetime';
-  sale_price: number | string | null;
-  sale_discount_type: string | null;
-  sale_discount_value: number | string | null;
-  sale_starts_at: string | null;
-  sale_ends_at: string | null;
 };
 
 function response(body: unknown, init?: ResponseInit) {
   const result = NextResponse.json(body, init);
   result.headers.set('Cache-Control', 'private, no-store');
   return result;
+}
+
+function checkoutError(message?: string) {
+  if (message?.includes('Coupon unavailable')) return 'This coupon is no longer available.';
+  if (message?.includes('Price changed')) return 'The price changed. Review the updated total and try again.';
+  if (message?.includes('Plan unavailable')) return 'This plan is no longer available.';
+  if (message?.includes('Order limit reached')) return 'Too many checkout attempts. Please try again later.';
+  return 'Failed to create free order. Please try again.';
 }
 
 function getPeriodEnd(period: PlanRecord['billing_period']) {
@@ -39,7 +40,7 @@ function getPeriodEnd(period: PlanRecord['billing_period']) {
   return null;
 }
 
-async function ensureFreeEntitlements(
+async function reconcileFreeEntitlements(
   supabase: ServiceClient,
   params: {
     orderId: string;
@@ -51,6 +52,7 @@ async function ensureFreeEntitlements(
   const { orderId, userId, productId, plan } = params;
   const now = new Date().toISOString();
   const periodEnd = getPeriodEnd(plan.billing_period);
+  let subscriptionId: string | null = null;
 
   if (plan.billing_period === 'monthly' || plan.billing_period === 'yearly' || plan.billing_period === 'lifetime') {
     const { data: existingSubscription, error: lookupError } = await supabase
@@ -60,19 +62,26 @@ async function ensureFreeEntitlements(
       .maybeSingle();
     if (lookupError) throw lookupError;
 
-    if (!existingSubscription) {
-      const { error } = await supabase.from('subscriptions').insert({
-        user_id: userId,
-        product_id: productId,
-        plan_id: plan.id,
-        order_id: orderId,
-        status: 'active',
-        current_period_start: now,
-        current_period_end: periodEnd,
-        payment_provider: 'manual',
-        metadata: { provider: 'manual', payment_method_type: 'free' },
-      });
+    if (existingSubscription) {
+      subscriptionId = existingSubscription.id;
+    } else {
+      const { data: insertedSubscription, error } = await supabase
+        .from('subscriptions')
+        .insert({
+          user_id: userId,
+          product_id: productId,
+          plan_id: plan.id,
+          order_id: orderId,
+          status: 'active',
+          current_period_start: now,
+          current_period_end: periodEnd,
+          payment_provider: 'free',
+          metadata: { provider: 'free', payment_method_type: 'free' },
+        })
+        .select('id')
+        .maybeSingle();
       if (error && error.code !== '23505') throw error;
+      subscriptionId = insertedSubscription?.id ?? null;
     }
   }
 
@@ -85,6 +94,10 @@ async function ensureFreeEntitlements(
     if (lookupError) throw lookupError;
 
     if (!existingDownload) {
+      // The private-download trigger only inserts an entitlement when the
+      // product has a configured metadata.download path. SaaS/lifetime plans
+      // without a downloadable artifact therefore remain subscription/order
+      // entitlements rather than receiving a fake file.
       const { error } = await supabase.from('downloads').insert({
         user_id: userId,
         product_id: productId,
@@ -98,16 +111,12 @@ async function ensureFreeEntitlements(
     }
   }
 
-  return periodEnd;
+  return { periodEnd, subscriptionId };
 }
 
 export async function POST(request: NextRequest) {
   const sessionClient = await createClient();
-  const {
-    data: { user },
-    error: authError,
-  } = await sessionClient.auth.getUser();
-
+  const { data: { user }, error: authError } = await sessionClient.auth.getUser();
   if (authError || !user) {
     return response({ error: 'Authentication required.' }, { status: 401 });
   }
@@ -127,79 +136,58 @@ export async function POST(request: NextRequest) {
   }
 
   const supabase = createServiceClient();
-  const { data: product, error: productError } = await supabase
-    .from('products')
-    .select('id, name, status')
-    .eq('id', productId)
-    .eq('status', 'active')
-    .single();
+  const [{ data: product, error: productError }, { data: planData, error: planError }] = await Promise.all([
+    supabase
+      .from('products')
+      .select('id, name, status')
+      .eq('id', productId)
+      .eq('status', 'active')
+      .single(),
+    supabase
+      .from('product_plans')
+      .select('id, product_id, name, currency, billing_period, is_active')
+      .eq('id', planId)
+      .eq('product_id', productId)
+      .eq('is_active', true)
+      .single(),
+  ]);
 
-  if (productError || !product) {
+  if (productError || !product || product.status !== 'active') {
     return response({ error: 'Product not found or unavailable.' }, { status: 404 });
   }
-
-  const { data: planData, error: planError } = await supabase
-    .from('product_plans')
-    .select('id, name, price, currency, billing_period, is_active, sale_price, sale_discount_type, sale_discount_value, sale_starts_at, sale_ends_at')
-    .eq('id', planId)
-    .eq('product_id', productId)
-    .eq('is_active', true)
-    .single();
-
   if (planError || !planData) {
     return response({ error: 'Plan not found or unavailable.' }, { status: 404 });
   }
+  const plan = planData as PlanRecord & { product_id: string };
 
-  const plan = planData as PlanRecord;
-  let pricing;
-  try {
-    pricing = getEffectivePrice(plan);
-  } catch {
-    return response({ error: 'Invalid product price.' }, { status: 500 });
+  // The same database quote used by paid providers is authoritative here too.
+  // It validates sale windows, coupon dates/limits/product scope and currency.
+  const { data: quote, error: quoteError } = await supabase.rpc('quote_product_price', {
+    p_plan: planId,
+    p_coupon: couponId,
+  });
+  if (quoteError || !quote) {
+    return response({ error: checkoutError(quoteError?.message) }, { status: 409 });
   }
 
-  const basePrice = pricing.finalPrice;
-  let couponDiscountAmount = 0;
-  let appliedCouponId: string | null = null;
-
-  if (couponId) {
-    const { data: coupon } = await supabase
-      .from('coupons')
-      .select('id, coupon_type, discount_value, applies_to, max_uses, used_count, valid_from, valid_until, is_active')
-      .eq('id', couponId)
-      .eq('is_active', true)
-      .maybeSingle();
-
-    if (!coupon) {
-      return response({ error: 'Coupon is invalid or inactive.' }, { status: 409 });
-    }
-
-    const now = new Date();
-    const startsInFuture = coupon.valid_from && new Date(coupon.valid_from) > now;
-    const expired = coupon.valid_until && new Date(coupon.valid_until) < now;
-    const exhausted = coupon.max_uses !== null && coupon.used_count >= coupon.max_uses;
-    const applies = !coupon.applies_to || coupon.applies_to === productId;
-
-    if (startsInFuture || expired || exhausted || !applies) {
-      return response({ error: 'Coupon is not valid for this order.' }, { status: 409 });
-    }
-
-    const discountValue = Number(coupon.discount_value);
-    couponDiscountAmount = coupon.coupon_type === 'percentage'
-      ? Math.min(basePrice, Math.max(0, (basePrice * discountValue) / 100))
-      : Math.min(basePrice, Math.max(0, discountValue));
-    appliedCouponId = coupon.id;
+  const q = quote as Record<string, unknown>;
+  if (String(q.product_id ?? '') !== productId) {
+    return response({ error: 'Selected plan does not belong to this product.' }, { status: 409 });
   }
 
-  const finalAmount = Number(Math.max(0, basePrice - couponDiscountAmount).toFixed(2));
-  if (finalAmount !== 0) {
+  const finalAmount = Number(q.final_amount ?? NaN);
+  if (!Number.isFinite(finalAmount)) {
+    return response({ error: 'Invalid checkout total.' }, { status: 500 });
+  }
+  if (Math.abs(finalAmount) > 0.000001) {
     return response({ error: 'This order still requires payment.' }, { status: 409 });
   }
 
-  const totalDiscountAmount = Number((pricing.discountAmount + couponDiscountAmount).toFixed(2));
+  // This lookup is only for response/email behavior. Correctness and duplicate
+  // prevention are enforced inside create_priced_order under an advisory lock.
   const { data: existingOrder } = await supabase
     .from('orders')
-    .select('id, status')
+    .select('id')
     .eq('user_id', user.id)
     .eq('product_id', productId)
     .eq('plan_id', planId)
@@ -209,120 +197,80 @@ export async function POST(request: NextRequest) {
     .limit(1)
     .maybeSingle();
 
-  if (existingOrder) {
-    try {
-      await ensureFreeEntitlements(supabase, {
-        orderId: existingOrder.id,
-        userId: user.id,
-        productId,
-        plan,
-      });
-      return response({ orderId: existingOrder.id, alreadyOwned: true });
-    } catch (error: any) {
-      console.error('[create-free-order] Existing entitlement reconciliation failed:', error?.message);
-      return response({ error: 'Free access exists but fulfillment needs support.' }, { status: 500 });
-    }
+  const { data: orderData, error: orderError } = await supabase.rpc('create_priced_order', {
+    p_user: user.id,
+    p_plan: planId,
+    p_coupon: couponId,
+    p_expected: 0,
+  });
+
+  if (orderError || !orderData) {
+    console.error('[create-free-order] Atomic order creation failed:', orderError?.message);
+    return response({ error: checkoutError(orderError?.message) }, { status: 409 });
   }
 
-  const now = new Date().toISOString();
-  const { data: order, error: orderError } = await supabase
-    .from('orders')
-    .insert({
-      user_id: user.id,
-      product_id: productId,
-      plan_id: planId,
-      coupon_id: appliedCouponId,
-      status: 'pending',
-      amount: 0,
-      currency: String(plan.currency || 'USD').toUpperCase(),
-      discount_amount: totalDiscountAmount,
-      provider_payment_ref: '',
-      receipt_url: '',
-      metadata: {
-        provider: 'manual',
-        payment_method_type: 'free',
-        product_name: product.name,
-        plan_name: plan.name,
-        billing_period: plan.billing_period,
-        regular_price: pricing.regularPrice,
-        sale_price: pricing.salePrice,
-        sale_discount_amount: pricing.discountAmount,
-        coupon_discount_amount: Number(couponDiscountAmount.toFixed(2)),
-      },
-      created_at: now,
-      updated_at: now,
-    })
-    .select('id')
-    .single();
-
-  if (orderError || !order) {
-    console.error('[create-free-order] Order creation failed:', orderError?.message);
-    return response({ error: 'Failed to create free order.' }, { status: 500 });
+  const order = orderData as Record<string, unknown>;
+  const orderId = String(order.id ?? '');
+  if (
+    !orderId
+    || String(order.user_id ?? '') !== user.id
+    || String(order.product_id ?? '') !== productId
+    || String(order.plan_id ?? '') !== planId
+    || String(order.status ?? '') !== 'completed'
+    || Number(order.amount ?? NaN) !== 0
+  ) {
+    console.error('[create-free-order] Atomic order result failed validation.');
+    return response({ error: 'Free order could not be validated.' }, { status: 500 });
   }
 
-  let periodEnd: string | null = null;
+  let entitlement: { periodEnd: string | null; subscriptionId: string | null };
   try {
-    periodEnd = await ensureFreeEntitlements(supabase, {
-      orderId: order.id,
+    entitlement = await reconcileFreeEntitlements(supabase, {
+      orderId,
       userId: user.id,
       productId,
       plan,
     });
   } catch (error: any) {
-    console.error('[create-free-order] Fulfillment failed:', error?.message);
-    await supabase
-      .from('orders')
-      .update({ status: 'failed', updated_at: new Date().toISOString() })
-      .eq('id', order.id)
-      .eq('status', 'pending');
-    return response({ error: 'Failed to grant free access.' }, { status: 500 });
+    console.error('[create-free-order] Entitlement reconciliation failed:', error?.message);
+    return response({ error: 'Free access was created but fulfillment needs support.' }, { status: 500 });
   }
 
-  const { data: completedOrder, error: completionError } = await supabase
-    .from('orders')
-    .update({ status: 'completed', updated_at: new Date().toISOString() })
-    .eq('id', order.id)
-    .eq('status', 'pending')
-    .select('id')
-    .maybeSingle();
+  const alreadyOwned = existingOrder?.id === orderId;
+  if (!alreadyOwned) {
+    try {
+      const { data: profile } = await supabase
+        .from('user_profiles')
+        .select('full_name')
+        .eq('id', user.id)
+        .maybeSingle();
 
-  if (completionError || !completedOrder) {
-    console.error('[create-free-order] Order completion failed:', completionError?.message);
-    return response({ error: 'Access was created but the order could not be finalized.' }, { status: 500 });
-  }
+      if (user.email && (plan.billing_period === 'monthly' || plan.billing_period === 'yearly')) {
+        await sendSubscriptionActivated(user.email, {
+          customerName: profile?.full_name ?? '',
+          productName: product.name,
+          planName: plan.name,
+          billingPeriod: plan.billing_period,
+          amount: 0,
+          currency: String(plan.currency || 'USD').toUpperCase(),
+          renewalDate: entitlement.periodEnd ?? new Date().toISOString(),
+          subscriptionId: entitlement.subscriptionId ?? orderId,
+        });
+      }
 
-  try {
-    const { data: profile } = await supabase
-      .from('user_profiles')
-      .select('full_name')
-      .eq('id', user.id)
-      .maybeSingle();
-
-    if (user.email && (plan.billing_period === 'monthly' || plan.billing_period === 'yearly' || plan.billing_period === 'lifetime')) {
-      await sendSubscriptionActivated(user.email, {
-        customerName: profile?.full_name ?? '',
-        productName: product.name,
-        planName: plan.name,
-        billingPeriod: plan.billing_period,
-        amount: 0,
-        currency: String(plan.currency || 'USD').toUpperCase(),
-        renewalDate: periodEnd ?? now,
-        subscriptionId: order.id,
-      });
+      if (user.email && (plan.billing_period === 'one_time' || plan.billing_period === 'lifetime')) {
+        const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL ?? 'https://summeca.com').replace(/\/$/, '');
+        await sendDownloadLink(user.email, {
+          customerName: profile?.full_name ?? '',
+          productName: product.name,
+          downloadUrl: `${siteUrl}/user-dashboard/downloads`,
+          orderId,
+        });
+      }
+    } catch (emailError) {
+      console.warn('[create-free-order] Confirmation email failed (non-fatal):', emailError);
     }
-
-    if (user.email && (plan.billing_period === 'one_time' || plan.billing_period === 'lifetime')) {
-      const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL ?? 'https://summeca.com').replace(/\/$/, '');
-      await sendDownloadLink(user.email, {
-        customerName: profile?.full_name ?? '',
-        productName: product.name,
-        downloadUrl: `${siteUrl}/user-dashboard/downloads`,
-        orderId: order.id,
-      });
-    }
-  } catch (emailError) {
-    console.warn('[create-free-order] Confirmation email failed (non-fatal):', emailError);
   }
 
-  return response({ orderId: order.id, alreadyOwned: false }, { status: 201 });
+  return response({ orderId, alreadyOwned }, { status: alreadyOwned ? 200 : 201 });
 }
