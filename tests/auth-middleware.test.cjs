@@ -193,3 +193,22 @@ test('paid checkout sessions are idempotent and crypto instructions are recovera
   assert.match(recovery, /\.eq\('user_id', user\.id\)/);
   assert.doesNotMatch(recovery, /createServiceClient/);
 });
+
+test('dashboard never sums unlike currencies and password email status reflects delivery result', () => {
+  const dashboard = fs.readFileSync(
+    'src/app/user-dashboard/components/DashboardOverview.tsx',
+    'utf8'
+  );
+  const password = fs.readFileSync(
+    'src/app/api/security/change-password/route.ts',
+    'utf8'
+  );
+
+  assert.match(dashboard, /spendByCurrency/);
+  assert.match(dashboard, /Object\.entries\(spendByCurrency\)/);
+  assert.match(dashboard, /spendTotals\.map\(\(\[code,amount\]\)=>currency\(amount,code\)\)/);
+  assert.doesNotMatch(dashboard, /completedOrders\.reduce\(\(s,o\)=>s\+Number/);
+  assert.match(password, /const emailResult = await sendEmail/);
+  assert.match(password, /emailNotificationSent = emailResult\.success/);
+  assert.doesNotMatch(password, /await sendEmail\([\s\S]{0,800}emailNotificationSent = true/);
+});
