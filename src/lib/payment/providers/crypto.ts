@@ -15,6 +15,7 @@ const PAY_CURRENCY: Record<string, string> = {
   crypto_eth: 'eth',
   crypto_ltc: 'ltc',
   crypto_trx: 'trx',
+  crypto_bnb: 'bnbbsc',
   crypto_usdt: 'usdttrc20',
   crypto_usdt_trc20: 'usdttrc20',
   crypto_usdt_erc20: 'usdterc20',
@@ -103,6 +104,7 @@ function paymentMethodFromPayCurrency(payCurrency?: string): PaymentMethodType {
   if (normalized === 'eth') return 'crypto_eth';
   if (normalized === 'ltc') return 'crypto_ltc';
   if (normalized === 'trx') return 'crypto_trx';
+  if (normalized === 'bnbbsc') return 'crypto_bnb';
   if (normalized === 'usdttrc20') return 'crypto_usdt_trc20';
   if (normalized === 'usdterc20') return 'crypto_usdt_erc20';
   if (normalized === 'usdcmatic') return 'crypto_usdc_polygon';
@@ -234,7 +236,7 @@ export class CryptoProvider implements IPaymentProvider {
         return {
           success: false,
           error: minimumError
-            ? 'This crypto option is below the provider minimum for the current order total. Try TRX or another available crypto option.'
+            ? 'This crypto option is below the provider minimum for the current order total. Try another available crypto option.'
             : providerError,
         };
       }
