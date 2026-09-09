@@ -1,12 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 
-function toCSV(rows: Record<string, unknown>[]): string {
+export function toCSV(rows: Record<string, unknown>[]): string {
   if (!rows.length) return '';
   const headers = Object.keys(rows[0]);
   const escape = (v: unknown) => {
-    const s = v == null ? '' : String(v);
-    if (s.includes(',') || s.includes('"') || s.includes('\n')) {
+    const raw = v == null ? '' : String(v);
+    // Spreadsheet applications may execute cells beginning with formula sigils.
+    // Only neutralize strings so legitimate negative numeric values stay numeric.
+    const s = typeof v === 'string' && /^[\t\r ]*[=+\-@]/.test(raw) ? `'${raw}` : raw;
+    if (/[",\r\n]/.test(s)) {
       return `"${s.replace(/"/g, '""')}"`;
     }
     return s;
@@ -201,6 +204,7 @@ export async function GET(req: NextRequest) {
       'Content-Type': 'text/csv; charset=utf-8',
       'Content-Disposition': `attachment; filename="${filename}"`,
       'Cache-Control': 'no-store',
+      'X-Content-Type-Options': 'nosniff',
     },
   });
 }
