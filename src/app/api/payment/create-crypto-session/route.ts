@@ -15,6 +15,7 @@ const SUPPORTED_METHODS = new Set([
   'crypto_usdt_trc20',
   'crypto_usdt_erc20',
   'crypto_trx',
+  'crypto_bnb',
 ]);
 
 function noStoreJson(body: unknown, init?: ResponseInit) {
@@ -61,7 +62,7 @@ export async function POST(request: NextRequest) {
     return noStoreJson({ error: 'productId and planId are required.' }, { status: 400 });
   }
   if (!SUPPORTED_METHODS.has(paymentMethodType)) {
-    return noStoreJson({ error: 'Only USDT and TRX payments are supported.' }, { status: 400 });
+    return noStoreJson({ error: 'Only USDT, TRX and BNB payments are supported.' }, { status: 400 });
   }
 
   const supabase = createServiceClient();
