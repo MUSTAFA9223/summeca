@@ -189,7 +189,7 @@ function buildEmail(type: string, data: Record<string, unknown>): { subject: str
     }
     case "security_password_changed": {
       const subject = "Your SUMMECA password was changed";
-      return { subject, html: baseTemplate("Password changed", `Hi ${name}, your account password was changed.`, `${row("Changed", date(data.changedAt))}${button("Review account security", data.securityUrl)}`, "If you did not make this change, secure your account immediately.") };
+      return { subject, html: baseTemplate("Password changed", `Hi ${name}, your account password was changed.`, `<table class="meta">${row("Changed", date(data.changedAt))}</table>${button("Review account security", data.securityUrl)}`, "If you did not make this change, secure your account immediately.") };
     }
     case "security_alert": {
       const subject = "SUMMECA security alert";
