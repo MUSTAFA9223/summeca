@@ -23,7 +23,7 @@ function loadTsModule(path, requireMap = {}) {
 }
 
 test('admin CSV export neutralizes spreadsheet formulas without changing numeric negatives', () => {
-  const { toCSV } = loadTsModule('src/app/api/admin/export/route.ts');
+  const { toCSV } = loadTsModule('src/lib/security/csv.ts');
   assert.equal(typeof toCSV, 'function');
 
   const csv = toCSV([{
