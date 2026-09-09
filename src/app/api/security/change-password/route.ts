@@ -79,7 +79,7 @@ export async function POST(req: NextRequest) {
 
     let emailNotificationSent = false;
     try {
-      await sendEmail({
+      const emailResult = await sendEmail({
         type: 'security_password_changed',
         to: user.email,
         data: {
@@ -88,7 +88,7 @@ export async function POST(req: NextRequest) {
           securityUrl: `${siteUrl}/user-dashboard/security`,
         },
       } as Parameters<typeof sendEmail>[0]);
-      emailNotificationSent = true;
+      emailNotificationSent = emailResult.success;
     } catch (emailErr) {
       console.warn('[change-password] Confirmation email failed:', emailErr);
     }
