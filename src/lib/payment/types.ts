@@ -9,11 +9,14 @@
  *   Status transitions happen exclusively via server-side webhook verification.
  */
 
-export type PaymentProvider = 'payoneer' | 'crypto' | 'manual';
+export type PaymentProvider = 'payoneer' | 'fastspring' | 'crypto' | 'manual';
 
 export type PaymentMethodType =
   | 'card'
   | 'payoneer'
+  | 'paypal'
+  | 'apple_pay'
+  | 'google_pay'
   | 'crypto_btc'
   | 'crypto_eth'
   | 'crypto_usdt'
@@ -26,6 +29,8 @@ export interface PaymentMetadata {
   provider_payment_ref?: string;
   card_brand?: string;
   card_last4?: string;
+  /** Provider environment marker when the provider exposes live/test state. */
+  provider_live?: boolean;
 }
 
 export interface CreatePaymentSessionInput {
@@ -37,6 +42,10 @@ export interface CreatePaymentSessionInput {
   productName: string;
   planName: string;
   userId: string;
+  /** Provider catalog identifier/path. Never supplied by the browser. */
+  providerProductPath?: string;
+  customerEmail?: string;
+  billingPeriod?: 'one_time' | 'monthly' | 'yearly' | 'lifetime';
   successUrl?: string;
   cancelUrl?: string;
 }
@@ -76,4 +85,6 @@ export interface IPaymentProvider {
   readonly name: PaymentProvider;
   createSession(input: CreatePaymentSessionInput): Promise<CreatePaymentSessionResult>;
   verifyWebhook(input: WebhookVerificationInput): Promise<WebhookVerificationResult>;
+  /** Providers such as FastSpring may deliver multiple events in one signed envelope. */
+  verifyWebhookBatch?(input: WebhookVerificationInput): Promise<WebhookVerificationResult[]>;
 }
