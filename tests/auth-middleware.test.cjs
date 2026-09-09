@@ -151,3 +151,19 @@ test('transactional email function only accepts exact server credentials', () =>
   assert.doesNotMatch(functionSource, /authHeader && authHeader\.startsWith\(["']Bearer ["']\)/);
   assert.doesNotMatch(functionSource, /Access-Control-Allow-Origin["']:\s*["']\*["']/);
 });
+
+
+test('private product uploads are admin-authorized and downloads stay server-controlled', () => {
+  const configRoute = fs.readFileSync('src/app/api/admin/entitlements/config/route.ts', 'utf8');
+  const downloadRoute = fs.readFileSync('src/app/api/downloads/[id]/route.ts', 'utf8');
+  const downloadsPage = fs.readFileSync('src/app/user-dashboard/downloads/page.tsx', 'utf8');
+
+  assert.match(configRoute, /requireAdmin\(session\)/);
+  assert.match(configRoute, /createSignedUploadUrl\(path\)/);
+  assert.match(configRoute, /origin === new URL\(request\.url\)\.origin/);
+  assert.match(downloadRoute, /\.eq\('user_id', user\.id\)/);
+  assert.match(downloadRoute, /createSignedUrl\(objectPath, SIGNED_URL_SECONDS/);
+  assert.match(downloadRoute, /record_download_access/);
+  assert.match(downloadsPage, /\/api\/downloads\//);
+  assert.doesNotMatch(downloadsPage, /window\.open\(download\.file_url/);
+});
