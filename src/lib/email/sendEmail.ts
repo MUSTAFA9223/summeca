@@ -12,7 +12,7 @@
  *   EMAIL_INTERNAL_SECRET  — Optional: extra server-to-server auth header secret
  */
 
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createServiceClient } from '@/lib/supabase/server';
 
 export type EmailType =
   | 'order_confirmation' |'payment_receipt' |'download_link' |'password_reset' |'renewal_reminder' |'refund_confirmation' |'refund_requested' |'refund_approved' |'refund_rejected' |'refund_completed'
@@ -273,12 +273,36 @@ export async function sendPaymentReceipt(
 
 /**
  * Convenience: send download link email.
- * Call after download entitlement is created.
+ * The email is suppressed unless a real, currently available private-file
+ * entitlement exists for the completed order.
  */
 export async function sendDownloadLink(
   to: string,
   data: DownloadLinkData
 ): Promise<void> {
+  try {
+    const service = createServiceClient();
+    const { data: entitlement, error } = await service
+      .from('downloads')
+      .select('id, file_url, status, expires_at')
+      .eq('order_id', data.orderId)
+      .eq('status', 'available')
+      .neq('file_url', '')
+      .maybeSingle();
+
+    const expired = entitlement?.expires_at
+      ? new Date(entitlement.expires_at).getTime() <= Date.now()
+      : false;
+
+    if (error || !entitlement || expired || !String(entitlement.file_url ?? '').trim()) {
+      console.info('[sendEmail] download_link skipped: no valid file entitlement for order', data.orderId);
+      return;
+    }
+  } catch (error) {
+    console.warn('[sendEmail] download_link skipped because entitlement validation failed:', error);
+    return;
+  }
+
   const result = await sendEmail({ type: 'download_link', to, data });
   if (!result.success) {
     console.warn('[sendEmail] download_link failed:', result.error);
@@ -315,11 +339,17 @@ export async function sendRenewalReminder(
 
 /**
  * Convenience: send subscription activated email.
+ * Only recurring monthly/yearly plans have a meaningful renewal date.
  */
 export async function sendSubscriptionActivated(
   to: string,
   data: SubscriptionActivatedData
 ): Promise<void> {
+  if (data.billingPeriod !== 'monthly' && data.billingPeriod !== 'yearly') {
+    console.info('[sendEmail] subscription_activated skipped for non-recurring plan:', data.billingPeriod);
+    return;
+  }
+
   const result = await sendEmail({ type: 'subscription_activated', to, data });
   if (!result.success) {
     console.warn('[sendEmail] subscription_activated failed:', result.error);
