@@ -198,3 +198,81 @@ test('referral SECURITY DEFINER functions are service-only', () => {
   assert.match(callback, /claim_referral_code_for_user/);
   assert.match(generateRoute, /const service = createServiceClient\(\)/);
 });
+
+
+test('concurrent Payoneer approvals contact the provider only once, and timeouts stay claimed', async () => {
+  const ts = require('typescript');
+  const vm = require('node:vm');
+  const source = fs.readFileSync('src/app/api/admin/refunds/[id]/route.ts', 'utf8');
+  const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText;
+
+  for (const timeout of [false, true]) {
+    let status = 'under_review';
+    let calls = 0;
+    let release;
+    const gate = new Promise(resolve => { release = resolve; });
+    const refund = { id: 'refund-1', order_id: 'order-1', amount: 25, currency: 'USD',
+      status: 'under_review', provider_refund_id: null,
+      orders: { id: 'order-1', status: 'completed', amount: 25, currency: 'USD',
+        provider_payment_ref: 'payment-1', metadata: { provider: 'payoneer' } } };
+    const db = { from() {
+      let update, expected;
+      const q = {
+        select() { return q; },
+        update(value) { update = value; return q; },
+        eq(key, value) { if (key === 'status') expected = value; return q; },
+        async single() { return { data: { ...refund, status }, error: null }; },
+        async maybeSingle() {
+          if (update && status === expected) {
+            status = update.status;
+            return { data: { id: refund.id }, error: null };
+          }
+          return { data: null, error: null };
+        },
+      };
+      return q;
+    }};
+    const exports = {};
+    vm.runInNewContext(compiled, {
+      exports, Buffer, AbortSignal, URL, console: { error() {}, warn() {} },
+      process: { env: { PAYONEER_MERCHANT_CODE: 'test', PAYONEER_PAYMENT_TOKEN: 'test' } },
+      require(name) {
+        if (name === 'next/server') return { NextResponse: {
+          json(body, options = {}) { return { status: options.status || 200, body }; },
+        }};
+        if (name.includes('supabase/server')) return { createClient: async () => db, createServiceClient: () => db };
+        if (name.includes('requireAdmin')) return { requireAdmin: async () => ({ id: 'admin' }) };
+        if (name.includes('sendEmail')) return { sendEmail: async () => ({ success: true }) };
+        throw new Error('Unexpected dependency: ' + name);
+      },
+      fetch: async () => {
+        calls += 1;
+        await gate;
+        if (timeout) throw new Error('timeout');
+        return { ok: true, json: async () => ({ identification: { longId: 'provider-refund' } }) };
+      },
+    });
+    const req = action => ({ url: 'https://summeca.com/api/admin/refunds/refund-1',
+      headers: new Headers({ origin: 'https://summeca.com' }), json: async () => ({ action }) });
+    const ctx = { params: Promise.resolve({ id: 'refund-1' }) };
+    const first = exports.PATCH(req('approved'), ctx);
+    // Allow both invocations to read the same initial state before the CAS.
+    const second = exports.PATCH(req('approved'), ctx);
+    await new Promise(resolve => setImmediate(resolve));
+    release();
+    const responses = await Promise.all([first, second]);
+    assert.equal(calls, 1);
+    assert.equal(status, 'processing');
+    assert.ok(responses.some(r => r.status === 409 || r.status === 400));
+    assert.equal((await exports.PATCH(req('completed'), ctx)).status, 409);
+    assert.equal((await exports.PATCH(req('failed'), ctx)).status, 409);
+    assert.equal(calls, 1);
+  }
+});
+
+test('admin order action opens review instead of executing another provider refund', () => {
+  const source = fs.readFileSync('src/app/api/admin/refund/route.ts', 'utf8');
+  assert.doesNotMatch(source, /checkout\/charges|fetch\(|status: 'refunded'/);
+  assert.match(source, /created.error\?\.code === '23505'/);
+  assert.match(source, /amount: order.amount, currency: order.currency/);
+});

@@ -30,6 +30,9 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  if (request.headers.get('origin') !== new URL(request.url).origin) {
+    return NextResponse.json({ error: 'Cross-site request rejected.' }, { status: 403 });
+  }
   const { id: refundId } = await params;
   const sessionClient = await createClient();
   const user = await requireAdmin(sessionClient);
@@ -42,6 +45,10 @@ export async function PATCH(
     return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
   }
 
+  if (!body || typeof body !== 'object' ||
+      (body.adminNote !== undefined && typeof body.adminNote !== 'string')) {
+    return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
+  }
   const action = body.action as RefundAction | undefined;
   const adminNote = body.adminNote?.trim();
   if (!action || !VALID_ACTIONS.includes(action)) {
@@ -57,7 +64,7 @@ export async function PATCH(
     .select(`
       id, order_id, user_id, amount, currency, reason, status, provider_refund_id,
       orders (
-        id, status, provider_payment_ref, metadata,
+        id, status, amount, currency, provider_payment_ref, metadata,
         products ( name ),
         product_plans ( name ),
         user_profiles ( email, full_name )
@@ -79,6 +86,18 @@ export async function PATCH(
   const order = refund.orders as any;
   const provider = String((order?.metadata as Record<string, unknown> | null)?.provider ?? 'manual');
   let providerRefundId = refund.provider_refund_id || undefined;
+  let expectedStatus = currentStatus;
+  let nextStatus: RefundAction = action;
+  if (!order || order.status !== 'completed') {
+    return NextResponse.json({ error: 'Order is no longer eligible for refund.' }, { status: 409 });
+  }
+  if (provider !== 'manual' &&
+      (action === 'completed' || action === 'failed' ||
+       (action === 'rejected' && (providerRefundId || currentStatus === 'approved')))) {
+    return NextResponse.json({
+      error: 'Provider-backed refunds require verified reconciliation. No new refund was sent.',
+    }, { status: 409 });
+  }
 
   // Starting an approved Payoneer refund must succeed at Payoneer first.
   if (action === 'approved' && provider === 'payoneer') {
@@ -93,6 +112,24 @@ export async function PATCH(
     if (!merchantCode || !paymentToken) {
       return NextResponse.json({ error: 'Payoneer refunds are not configured on the server' }, { status: 503 });
     }
+
+    if (providerRefundId) {
+      return NextResponse.json({ error: 'A provider refund already exists. Await reconciliation.' }, { status: 409 });
+    }
+    if (Number(refund.amount) !== Number(order.amount) || refund.currency !== order.currency) {
+      return NextResponse.json({ error: 'Refund amount does not match the stored order.' }, { status: 409 });
+    }
+    // Durable compare-and-set BEFORE the external side effect. Never reset this
+    // claim on timeout: the provider might have accepted the request.
+    const claim = await supabase.from('refunds')
+      .update({ status: 'processing', reviewed_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+      .eq('id', refundId).eq('status', 'under_review')
+      .select('id').maybeSingle();
+    if (claim.error || !claim.data) {
+      return NextResponse.json({ error: 'Refund was already claimed or changed. Refresh its status.' }, { status: 409 });
+    }
+    expectedStatus = 'processing';
+    nextStatus = 'processing';
 
     const baseUrl = environment === 'live'
       ? 'https://api.live.oscato.com'
@@ -112,7 +149,7 @@ export async function PATCH(
           body: JSON.stringify({
             amount: Number(refund.amount),
             currency: refund.currency.toUpperCase(),
-            reference: `REFUND-${refundId.slice(0, 8).toUpperCase()}`,
+            reference: `REFUND-${refundId}`,
           }),
           signal: AbortSignal.timeout(15_000),
         }
@@ -120,17 +157,17 @@ export async function PATCH(
 
       if (!refundRes.ok) {
         console.error(`[admin/refunds] Payoneer refund failed with status ${refundRes.status}`);
-        return NextResponse.json({ error: 'Payoneer did not accept the refund request' }, { status: 502 });
+        return NextResponse.json({ error: 'Payoneer did not confirm acceptance. Refund remains processing; reconcile with the provider before any retry.' }, { status: 502 });
       }
 
       const refundData = (await refundRes.json()) as { identification?: { longId?: string } };
       providerRefundId = refundData?.identification?.longId;
       if (!providerRefundId) {
-        return NextResponse.json({ error: 'Payoneer did not return a refund reference' }, { status: 502 });
+        return NextResponse.json({ error: 'No refund reference was returned. Refund remains processing; provider reconciliation is required.' }, { status: 502 });
       }
     } catch (err) {
       console.error('[admin/refunds] Payoneer refund request failed:', err);
-      return NextResponse.json({ error: 'Payoneer refund request failed' }, { status: 502 });
+      return NextResponse.json({ error: 'Provider response is uncertain. Refund remains processing; do not submit another refund.' }, { status: 502 });
     }
   } else if (action === 'approved' && provider !== 'manual' && provider !== 'payoneer') {
     return NextResponse.json(
@@ -149,7 +186,7 @@ export async function PATCH(
 
   const now = new Date().toISOString();
   const updatePayload: Record<string, unknown> = {
-    status: action,
+    status: nextStatus,
     updated_at: now,
   };
 
@@ -162,7 +199,7 @@ export async function PATCH(
     .from('refunds')
     .update(updatePayload)
     .eq('id', refundId)
-    .eq('status', currentStatus)
+    .eq('status', expectedStatus)
     .select('id')
     .maybeSingle();
 
@@ -241,7 +278,7 @@ export async function PATCH(
     success: true,
     refundId,
     previousStatus: currentStatus,
-    newStatus: action,
+    newStatus: nextStatus,
     ...(providerRefundId ? { providerRefundId } : {}),
   });
 }
