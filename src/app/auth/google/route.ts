@@ -32,6 +32,17 @@ function getAuthCookiePrefix(): string | null {
   }
 }
 
+function getCanonicalCookieDomain(): string | null {
+  try {
+    const hostname = new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://summeca.com').hostname
+      .toLowerCase()
+      .replace(/^www\./, '');
+    return hostname === 'summeca.com' ? hostname : null;
+  } catch {
+    return null;
+  }
+}
+
 function clearStaleAuthCookies(request: NextRequest, response: NextResponse) {
   const prefix = getAuthCookiePrefix();
   if (!prefix) return;
@@ -46,6 +57,26 @@ function clearStaleAuthCookies(request: NextRequest, response: NextResponse) {
       secure: process.env.NODE_ENV === 'production',
       httpOnly: false,
     });
+  }
+}
+
+function appendDomainAuthCookieCleanup(request: NextRequest, response: NextResponse) {
+  const prefix = getAuthCookiePrefix();
+  const domain = getCanonicalCookieDomain();
+  if (!prefix || !domain) return;
+
+  const names = new Set(
+    request.cookies.getAll()
+      .filter((cookie) => cookie.name.startsWith(prefix))
+      .map((cookie) => cookie.name),
+  );
+  const secure = process.env.NODE_ENV === 'production' ? '; Secure' : '';
+
+  for (const name of names) {
+    response.headers.append(
+      'Set-Cookie',
+      `${name}=; Path=/; Domain=${domain}; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax${secure}`,
+    );
   }
 }
 
@@ -124,6 +155,7 @@ export async function GET(request: NextRequest) {
       httpOnly: false,
     });
   });
+  appendDomainAuthCookieCleanup(request, response);
   disableCaching(response);
   return response;
 }
