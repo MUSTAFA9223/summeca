@@ -42,7 +42,11 @@ export default function LoginForm({ onForgotPassword, onSwitchToSignup }: LoginF
       const response = await fetch('/api/auth/password-sign-in', {
         method: 'POST',
         credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
+        cache: 'no-store',
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-store',
+        },
         body: JSON.stringify({
           email: data.email,
           password: data.password,
@@ -63,9 +67,9 @@ export default function LoginForm({ onForgotPassword, onSwitchToSignup }: LoginF
       const destination = getSafeNextPath(result.destination || null) ?? '/user-dashboard';
       toast.success('Welcome back to SUMMECA!');
 
-      // The server response sets the Supabase session cookies. A full navigation
-      // makes those first-party cookies available to Cloudflare middleware before
-      // the protected dashboard request, including on mobile browsers and WebViews.
+      // The server has already replaced stale auth-cookie chunks and written the
+      // new session. Full navigation prevents Chrome from reusing a pre-login RSC
+      // response or back-forward cache entry for the protected destination.
       window.location.replace(destination);
       return;
     } catch (error: any) {
