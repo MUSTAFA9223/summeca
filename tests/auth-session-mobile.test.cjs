@@ -47,21 +47,24 @@ test('Google OAuth starts server-side with canonical callback and fresh PKCE coo
   assert.match(callback, /clearStaleAuthCookies\(request, response\)/);
 });
 
-test('password sign-in is server-issued and replaces stale Chrome auth cookie chunks', () => {
+test('password sign-in uses a native browser POST and redirects with the fresh session', () => {
   const form = fs.readFileSync('src/app/sign-up-login-screen/components/LoginForm.tsx', 'utf8');
   const route = fs.readFileSync('src/app/api/auth/password-sign-in/route.ts', 'utf8');
   const page = fs.readFileSync('src/app/sign-up-login-screen/page.tsx', 'utf8');
 
-  assert.match(form, /fetch\('\/api\/auth\/password-sign-in'/);
-  assert.match(form, /credentials:\s*'include'/);
-  assert.match(form, /cache:\s*'no-store'/);
-  assert.match(form, /window\.location\.replace\(destination\)/);
+  assert.match(form, /action="\/api\/auth\/password-sign-in"/);
+  assert.match(form, /method="post"/);
+  assert.match(form, /name="email"/);
+  assert.match(form, /name="password"/);
+  assert.doesNotMatch(form, /fetch\('\/api\/auth\/password-sign-in'/);
+  assert.doesNotMatch(form, /window\.location\.replace\(/);
   assert.doesNotMatch(form, /useAuth\(|signIn\(data\.email/);
-  assert.match(form, /value\.startsWith\('\/sign-up-login-screen'\)/);
 
+  assert.match(route, /request\.formData\(\)/);
   assert.match(route, /createServerClient/);
   assert.match(route, /getAll\(\)\s*\{\s*return \[\];/);
   assert.match(route, /auth\.signInWithPassword\(\{ email, password \}\)/);
+  assert.match(route, /NextResponse\.redirect\(new URL\(destination, request\.url\), 303\)/);
   assert.match(route, /clearStaleAuthCookies\(request, response\)/);
   assert.match(route, /cookie\.name\.startsWith\(prefix\)/);
   assert.match(route, /maxAge:\s*0/);
