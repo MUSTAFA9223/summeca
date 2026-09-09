@@ -39,8 +39,8 @@ function isAuthorized(req: Request): boolean {
   const internalSecret = req.headers.get("x-internal-secret") ?? "";
   if (INTERNAL_SECRET && constantTimeEqual(internalSecret, INTERNAL_SECRET)) return true;
   const authorization = req.headers.get("Authorization") ?? "";
-  const bearer = authorization.startsWith("Bearer ") ? authorization.slice(7) : "";
-  return Boolean(SERVICE_ROLE_KEY) && constantTimeEqual(bearer, SERVICE_ROLE_KEY);
+  const bearerToken = authorization.startsWith("Bearer ") ? authorization.slice(7) : "";
+  return Boolean(SERVICE_ROLE_KEY) && constantTimeEqual(bearerToken, SERVICE_ROLE_KEY);
 }
 
 function safeUrl(value: unknown): string {
