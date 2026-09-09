@@ -24,6 +24,17 @@ function isSupabaseAuthCookie(name: string) {
   );
 }
 
+function getCanonicalCookieDomain(): string | null {
+  try {
+    const hostname = new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://summeca.com').hostname
+      .toLowerCase()
+      .replace(/^www\./, '');
+    return hostname === 'summeca.com' ? hostname : null;
+  } catch {
+    return null;
+  }
+}
+
 function clearBrowserAuthCookies(request: NextRequest, response: NextResponse) {
   for (const cookie of request.cookies.getAll()) {
     if (!isSupabaseAuthCookie(cookie.name)) continue;
@@ -35,6 +46,25 @@ function clearBrowserAuthCookies(request: NextRequest, response: NextResponse) {
       secure: process.env.NODE_ENV === 'production',
       httpOnly: false,
     });
+  }
+}
+
+function appendDomainAuthCookieCleanup(request: NextRequest, response: NextResponse) {
+  const domain = getCanonicalCookieDomain();
+  if (!domain) return;
+
+  const names = new Set(
+    request.cookies.getAll()
+      .filter((cookie) => isSupabaseAuthCookie(cookie.name))
+      .map((cookie) => cookie.name),
+  );
+  const secure = process.env.NODE_ENV === 'production' ? '; Secure' : '';
+
+  for (const name of names) {
+    response.headers.append(
+      'Set-Cookie',
+      `${name}=; Path=/; Domain=${domain}; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax${secure}`,
+    );
   }
 }
 
@@ -56,9 +86,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Password must be between 8 and 128 characters.' }, { status: 400 });
   }
 
-  // Recovery is intentionally isolated from the browser's SSR cookie session.
-  // verifyOtp creates only an in-memory recovery session here, so no recovery
-  // refresh token can overwrite the browser's normal auth cookies.
   const supabase = createRecoveryClient();
   const { data: recoveryData, error: verifyError } = await supabase.auth.verifyOtp({
     type: 'recovery',
@@ -76,8 +103,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: updateError.message || 'Unable to update your password.' }, { status: 400 });
   }
 
-  // Revoke the temporary recovery session. Because this client has no persisted
-  // storage, the browser is not asked to refresh or reuse this one-time token.
   const { error: signOutError } = await supabase.auth.signOut({ scope: 'global' });
   if (signOutError) {
     console.warn('[password-recovery] Recovery-session sign-out failed:', signOutError.code || signOutError.message);
@@ -88,9 +113,9 @@ export async function POST(request: NextRequest) {
     { headers: { 'Cache-Control': 'private, no-store, max-age=0' } },
   );
 
-  // If the same browser still carries an older/revoked Supabase auth cookie,
-  // remove it explicitly before the clean sign-in page is loaded. This avoids
-  // a stale refresh token blocking an immediate login with the new password.
+  // Clear both current host-only cookies and legacy Domain=summeca.com copies so
+  // Chrome cannot keep a revoked recovery/session generation beside the next login.
   clearBrowserAuthCookies(request, response);
+  appendDomainAuthCookieCleanup(request, response);
   return response;
 }
