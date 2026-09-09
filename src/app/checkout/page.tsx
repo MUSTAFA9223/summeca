@@ -236,16 +236,21 @@ function CheckoutInner() {
     if (!couponCode.trim() || !cartItem) return;
     setCouponLoading(true); setCouponError(''); setAppliedCoupon(null); setCryptoSession(null);
     try {
-      const { data, error } = await supabase.from('coupons')
-        .select('id, code, coupon_type, discount_value, applies_to, max_uses, used_count, valid_from, valid_until, is_active')
-        .ilike('code', couponCode.trim()).eq('is_active', true).maybeSingle();
-      if (error || !data) { setCouponError('Coupon code not found or inactive.'); return; }
-      const now = new Date();
-      if (data.valid_from && new Date(data.valid_from) > now) { setCouponError('This coupon is not active yet.'); return; }
-      if (data.valid_until && new Date(data.valid_until) < now) { setCouponError('This coupon has expired.'); return; }
-      if (data.max_uses !== null && data.used_count >= data.max_uses) { setCouponError('This coupon has reached its usage limit.'); return; }
-      if (data.applies_to && data.applies_to !== cartItem.product.id) { setCouponError('This coupon is not valid for the selected product.'); return; }
-      setAppliedCoupon(data as Coupon);
+      const response = await fetch('/api/payment/quote', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          productId: cartItem.product.id,
+          planId: cartItem.plan.id,
+          couponCode: couponCode.trim(),
+        }),
+      });
+      const data = await response.json().catch(() => ({})) as { error?: string; coupon?: Coupon | null };
+      if (!response.ok || !data.coupon) {
+        setCouponError(data.error || 'Coupon code not found or unavailable.');
+        return;
+      }
+      setAppliedCoupon(data.coupon);
     } catch { setCouponError('Failed to validate coupon.'); }
     finally { setCouponLoading(false); }
   };
