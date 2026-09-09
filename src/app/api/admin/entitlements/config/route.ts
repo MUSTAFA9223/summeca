@@ -32,6 +32,23 @@ function cleanFileName(value: unknown, fallback: string) {
   return cleaned || fallback;
 }
 
+function isSameOrigin(request: NextRequest) {
+  const origin = request.headers.get('origin');
+  return Boolean(origin) && origin === new URL(request.url).origin;
+}
+
+function createUploadPath(productId: string, fileName: unknown) {
+  const safeName = String(fileName ?? '')
+    .normalize('NFKC')
+    .replace(/[\r\n]/g, '')
+    .replace(/[^a-zA-Z0-9._-]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(-180);
+
+  if (!safeName || safeName === '.' || safeName === '..') return null;
+  return `products/${productId}/${crypto.randomUUID()}-${safeName}`;
+}
+
 async function authenticateAdmin() {
   const session = await createClient();
   const admin = await requireAdmin(session);
@@ -157,8 +174,60 @@ export async function GET() {
   }
 }
 
+export async function POST(request: NextRequest) {
+  try {
+    if (!isSameOrigin(request)) {
+      return noStoreJson({ error: 'Cross-site request rejected.' }, { status: 403 });
+    }
+
+    const auth = await authenticateAdmin();
+    if (!auth) return noStoreJson({ error: 'Admin access required.' }, { status: 403 });
+
+    let body: { productId?: string; fileName?: string };
+    try {
+      body = await request.json();
+    } catch {
+      return noStoreJson({ error: 'Invalid request body.' }, { status: 400 });
+    }
+
+    const productId = String(body.productId ?? '').trim();
+    const path = createUploadPath(productId, body.fileName);
+    if (!productId || !path) {
+      return noStoreJson({ error: 'A product and valid filename are required.' }, { status: 400 });
+    }
+
+    const { data: product, error: productError } = await auth.session
+      .from('products')
+      .select('id')
+      .eq('id', productId)
+      .maybeSingle();
+
+    if (productError) return noStoreJson({ error: 'Could not validate product.' }, { status: 500 });
+    if (!product) return noStoreJson({ error: 'Product not found.' }, { status: 404 });
+
+    const service = createServiceClient();
+    const { data, error } = await service.storage
+      .from(DOWNLOAD_BUCKET)
+      .createSignedUploadUrl(path);
+
+    if (error || !data?.token) {
+      console.error('[admin/entitlements/config] Signed upload creation failed:', error?.message);
+      return noStoreJson({ error: 'Could not prepare a secure upload.' }, { status: 503 });
+    }
+
+    return noStoreJson({ path, token: data.token });
+  } catch (error) {
+    console.error('[admin/entitlements/config] POST failed:', error);
+    return noStoreJson({ error: 'Could not prepare a secure upload.' }, { status: 500 });
+  }
+}
+
 export async function PUT(request: NextRequest) {
   try {
+    if (!isSameOrigin(request)) {
+      return noStoreJson({ error: 'Cross-site request rejected.' }, { status: 403 });
+    }
+
     const auth = await authenticateAdmin();
     if (!auth) return noStoreJson({ error: 'Admin access required.' }, { status: 403 });
 

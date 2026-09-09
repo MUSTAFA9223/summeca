@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { AlertCircle, CheckCircle, ChevronLeft, ChevronRight, Download, FileKey, RefreshCw, Save, Search, XCircle } from 'lucide-react';
+import { AlertCircle, CheckCircle, ChevronLeft, ChevronRight, Download, FileKey, RefreshCw, Save, Search, UploadCloud, XCircle } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { toast } from 'sonner';
 
@@ -65,6 +65,8 @@ export default function AdminEntitlementsPage() {
   const [downloadName, setDownloadName] = useState('');
   const [configLoading, setConfigLoading] = useState(true);
   const [configSaving, setConfigSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   const [items, setItems] = useState<Entitlement[]>([]);
   const [loading, setLoading] = useState(true);
@@ -132,6 +134,56 @@ export default function AdminEntitlementsPage() {
   useEffect(() => {
     void fetchEntitlements();
   }, [fetchEntitlements]);
+
+  const uploadAndConfigure = async () => {
+    if (!selectedProductId || !selectedFile) return;
+    setUploading(true);
+    try {
+      const prepareResponse = await fetch('/api/admin/entitlements/config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          productId: selectedProductId,
+          fileName: selectedFile.name,
+        }),
+      });
+      const prepared = await safeJson(prepareResponse);
+      if (!prepareResponse.ok || !prepared.path || !prepared.token) {
+        throw new Error(prepared.error || 'Could not prepare secure upload.');
+      }
+
+      const { error: uploadError } = await supabase.storage
+        .from('downloads')
+        .uploadToSignedUrl(prepared.path, prepared.token, selectedFile, {
+          contentType: selectedFile.type || 'application/octet-stream',
+        });
+      if (uploadError) throw new Error(uploadError.message);
+
+      const configResponse = await fetch('/api/admin/entitlements/config', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          productId: selectedProductId,
+          path: prepared.path,
+          name: selectedFile.name,
+        }),
+      });
+      const configured = await safeJson(configResponse);
+      if (!configResponse.ok) {
+        throw new Error(configured.error || 'The file uploaded, but delivery configuration could not be saved.');
+      }
+
+      toast.success(configured.reconciled > 0
+        ? `File uploaded securely; ${configured.reconciled} existing purchase${configured.reconciled === 1 ? '' : 's'} reconciled.`
+        : 'File uploaded and configured securely.');
+      setSelectedFile(null);
+      await Promise.all([fetchDeliveryConfig(), fetchEntitlements()]);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Could not upload product file.');
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const saveDelivery = async () => {
     if (!selectedProductId) return;
@@ -208,7 +260,7 @@ export default function AdminEntitlementsPage() {
               <h2 className="text-sm font-800 text-foreground">Private product file</h2>
             </div>
             <p className="text-xs text-muted-foreground mt-1 max-w-2xl">
-              Upload the file into the private Supabase Storage bucket named <span className="font-mono">downloads</span>, then save only its object path here. Public URLs are rejected. Products without a configured file are treated as non-download products and no fake file entitlement is created.
+              Upload a product file securely here, or verify an existing object path in the private <span className="font-mono">downloads</span> bucket. Public URLs are rejected. Products without a configured file do not create fake download entitlements.
             </p>
           </div>
           <button type="button" onClick={() => void fetchDeliveryConfig()} disabled={configLoading} className="inline-flex items-center gap-1.5 text-xs font-600 px-3 py-2 border border-border rounded-lg hover:bg-secondary disabled:opacity-50">
@@ -243,9 +295,25 @@ export default function AdminEntitlementsPage() {
           </div>
         )}
 
+        <div className="rounded-xl border border-dashed border-border p-3 space-y-2">
+          <label className="block text-xs font-700 text-muted-foreground">Upload a new private file</label>
+          <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
+            <input
+              type="file"
+              onChange={(event) => setSelectedFile(event.target.files?.[0] ?? null)}
+              disabled={uploading || !selectedProductId}
+              className="block w-full text-xs text-muted-foreground file:mr-3 file:rounded-lg file:border-0 file:bg-secondary file:px-3 file:py-2 file:text-xs file:font-700 file:text-foreground"
+            />
+            <button type="button" onClick={uploadAndConfigure} disabled={uploading || !selectedProductId || !selectedFile} className="btn-primary inline-flex shrink-0 items-center justify-center gap-2 disabled:opacity-50">
+              <UploadCloud size={13} /> {uploading ? 'Uploading…' : 'Upload & Configure'}
+            </button>
+          </div>
+          <p className="text-[11px] text-muted-foreground">The upload uses a short-lived signed token and a unique object path; existing files are never overwritten.</p>
+        </div>
+
         <div className="flex flex-wrap gap-2">
-          <button type="button" onClick={saveDelivery} disabled={configSaving || !selectedProductId || !objectPath.trim()} className="btn-primary inline-flex items-center gap-2 disabled:opacity-50">
-            <Save size={13} /> {configSaving ? 'Saving…' : 'Verify & Save'}
+          <button type="button" onClick={saveDelivery} disabled={configSaving || uploading || !selectedProductId || !objectPath.trim()} className="btn-primary inline-flex items-center gap-2 disabled:opacity-50">
+            <Save size={13} /> {configSaving ? 'Saving…' : 'Verify Existing Path & Save'}
           </button>
           {selectedProduct?.download && (
             <button type="button" onClick={removeDelivery} disabled={configSaving} className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-danger/20 text-danger text-sm font-600 hover:bg-danger/5 disabled:opacity-50">
