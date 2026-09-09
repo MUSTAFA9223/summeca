@@ -117,10 +117,17 @@ export default function ResetPasswordPage() {
         if (updateError) throw updateError;
         await supabase.auth.signOut({ scope: 'global' });
       }
+      // The server has revoked the recovery session. Clear this tab's cached
+      // auth state too, then perform a full navigation so AuthProvider cannot
+      // carry the old recovery refresh token into the next sign-in attempt.
+      await supabase.auth.signOut({ scope: 'local' }).catch(() => undefined);
       setSuccess(true);
       setRecoveryTokenHash(null);
       setPassword('');
       setConfirmPassword('');
+      window.setTimeout(() => {
+        window.location.replace('/sign-up-login-screen?password_reset=success');
+      }, 1200);
     } catch (updateError: unknown) {
       setError(updateError instanceof Error ? updateError.message : 'Unable to update your password. Please request a new reset link.');
     } finally {
@@ -130,7 +137,7 @@ export default function ResetPasswordPage() {
 
   if (checkingSession) return <main className="min-h-screen bg-background flex items-center justify-center px-4"><div className="flex items-center gap-3 text-muted-foreground"><Loader2 size={20} className="animate-spin" /><span className="text-sm">Checking reset link...</span></div></main>;
 
-  if (success) return <main className="min-h-screen bg-background flex items-center justify-center px-4 py-12"><section className="w-full max-w-md bg-card border border-border rounded-2xl p-7 shadow-sm text-center"><div className="w-14 h-14 rounded-2xl bg-success/10 flex items-center justify-center mx-auto mb-5"><CheckCircle2 size={28} className="text-success" /></div><h1 className="text-2xl font-700 text-foreground mb-2">Password updated</h1><p className="text-sm text-muted-foreground mb-6">Your SUMMECA password has been changed successfully. Sign in again with your new password.</p><Link href="/sign-up-login-screen" className="btn-primary w-full inline-flex items-center justify-center py-2.5">Back to sign in</Link></section></main>;
+  if (success) return <main className="min-h-screen bg-background flex items-center justify-center px-4 py-12"><section className="w-full max-w-md bg-card border border-border rounded-2xl p-7 shadow-sm text-center"><div className="w-14 h-14 rounded-2xl bg-success/10 flex items-center justify-center mx-auto mb-5"><CheckCircle2 size={28} className="text-success" /></div><h1 className="text-2xl font-700 text-foreground mb-2">Password updated</h1><p className="text-sm text-muted-foreground mb-6">Your SUMMECA password has been changed successfully. Redirecting you to a clean sign-in page...</p><a href="/sign-up-login-screen?password_reset=success" className="btn-primary w-full inline-flex items-center justify-center py-2.5">Continue to sign in</a></section></main>;
 
   if (pendingTokenHash) return <main className="min-h-screen bg-background flex items-center justify-center px-4 py-12"><section className="w-full max-w-md bg-card border border-border rounded-2xl p-7 shadow-sm text-center"><div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-5"><KeyRound size={27} className="text-primary" /></div><h1 className="text-2xl font-700 text-foreground mb-2">Confirm password reset</h1><p className="text-sm text-muted-foreground mb-6">Tap the button below to continue and choose a new password. The secure link will only be used when you submit the new password.</p><button type="button" onClick={confirmRecoveryLink} className="btn-primary w-full py-2.5 inline-flex items-center justify-center">Continue password reset</button></section></main>;
 
