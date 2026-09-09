@@ -10,6 +10,7 @@ import {
   CheckCircle2,
   ChevronRight,
   Copy,
+  CreditCard,
   ExternalLink,
   Info,
   Loader2,
@@ -65,7 +66,7 @@ interface Coupon {
 }
 
 type ProviderStatus = 'checking' | 'available' | 'unavailable';
-type CheckoutMethod = 'payoneer' | 'crypto';
+type CheckoutMethod = 'fastspring' | 'payoneer' | 'crypto';
 
 type CryptoSession = {
   orderId: string;
@@ -126,9 +127,11 @@ function CheckoutInner() {
   const [couponLoading, setCouponLoading] = useState(false);
   const [pageLoading, setPageLoading] = useState(true);
   const [pageError, setPageError] = useState('');
+  const [fastspringStatus, setFastSpringStatus] = useState<ProviderStatus>('checking');
+  const [fastspringLive, setFastSpringLive] = useState(false);
   const [payoneerStatus, setPayoneerStatus] = useState<ProviderStatus>('checking');
   const [cryptoStatus, setCryptoStatus] = useState<ProviderStatus>('checking');
-  const [checkoutMethod, setCheckoutMethod] = useState<CheckoutMethod>('payoneer');
+  const [checkoutMethod, setCheckoutMethod] = useState<CheckoutMethod>('fastspring');
   const [cryptoMethod, setCryptoMethod] = useState('crypto_usdt_trc20');
   const [cryptoSession, setCryptoSession] = useState<CryptoSession | null>(null);
   const [checkoutSubmitting, setCheckoutSubmitting] = useState(false);
@@ -139,21 +142,36 @@ function CheckoutInner() {
       const check = async (url: string, setter: (value: ProviderStatus) => void) => {
         try {
           const res = await fetch(url, { cache: 'no-store' });
-          const data = res.ok ? await res.json() as { available?: boolean } : {};
+          const data = res.ok ? await res.json() as { available?: boolean; live?: boolean } : {};
           setter(data.available === true ? 'available' : 'unavailable');
-        } catch { setter('unavailable'); }
+          return data;
+        } catch {
+          setter('unavailable');
+          return {} as { available?: boolean; live?: boolean };
+        }
       };
-      await Promise.all([
+      const [fastspring] = await Promise.all([
+        check('/api/payment/fastspring-status', setFastSpringStatus),
         check('/api/payment/payoneer-status', setPayoneerStatus),
         check('/api/payment/crypto-status', setCryptoStatus),
       ]);
+      setFastSpringLive(fastspring.live === true);
     }
     void checkProviders();
   }, []);
 
   useEffect(() => {
-    if (payoneerStatus !== 'available' && cryptoStatus === 'available') setCheckoutMethod('crypto');
-  }, [cryptoStatus, payoneerStatus]);
+    if (checkoutMethod === 'fastspring' && fastspringStatus === 'unavailable') {
+      if (payoneerStatus === 'available') setCheckoutMethod('payoneer');
+      else if (cryptoStatus === 'available') setCheckoutMethod('crypto');
+    } else if (checkoutMethod === 'payoneer' && payoneerStatus === 'unavailable') {
+      if (fastspringStatus === 'available') setCheckoutMethod('fastspring');
+      else if (cryptoStatus === 'available') setCheckoutMethod('crypto');
+    } else if (checkoutMethod === 'crypto' && cryptoStatus === 'unavailable') {
+      if (fastspringStatus === 'available') setCheckoutMethod('fastspring');
+      else if (payoneerStatus === 'available') setCheckoutMethod('payoneer');
+    }
+  }, [checkoutMethod, cryptoStatus, fastspringStatus, payoneerStatus]);
 
   const loadCartItem = useCallback(async () => {
     if (!productIdParam) { setPageError('No product selected.'); setPageLoading(false); return; }
@@ -232,7 +250,11 @@ function CheckoutInner() {
     finally { setCouponLoading(false); }
   };
 
-  const selectedProviderAvailable = checkoutMethod === 'payoneer' ? payoneerStatus === 'available' : cryptoStatus === 'available';
+  const selectedProviderAvailable = checkoutMethod === 'fastspring'
+    ? fastspringStatus === 'available'
+    : checkoutMethod === 'payoneer'
+      ? payoneerStatus === 'available'
+      : cryptoStatus === 'available';
 
   const handleCheckout = async () => {
     if (!user) {
@@ -249,7 +271,9 @@ function CheckoutInner() {
         ? '/api/payment/create-free-order'
         : checkoutMethod === 'crypto'
           ? '/api/payment/create-crypto-session'
-          : '/api/payment/create-payoneer-session';
+          : checkoutMethod === 'fastspring'
+            ? '/api/payment/create-fastspring-session'
+            : '/api/payment/create-payoneer-session';
       const res = await fetch(endpoint, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -284,7 +308,7 @@ function CheckoutInner() {
       <Link href="/products" className="hover:text-foreground flex items-center gap-1"><ArrowLeft size={14} /> Products</Link><ChevronRight size={13} /><span className="text-foreground font-600">Checkout</span>
     </div>
     <div className="mb-8">
-      <div className="flex items-center gap-3"><div className="w-10 h-10 rounded-xl bg-gradient-teal flex items-center justify-center"><ShoppingCart size={18} className="text-white" /></div><div><h1 className="text-2xl font-800">Secure Checkout</h1><p className="text-sm text-muted-foreground">Choose Payoneer, USDT, TRX or BNB. Payment return pages never complete paid orders.</p></div></div>
+      <div className="flex items-center gap-3"><div className="w-10 h-10 rounded-xl bg-gradient-teal flex items-center justify-center"><ShoppingCart size={18} className="text-white" /></div><div><h1 className="text-2xl font-800">Secure Checkout</h1><p className="text-sm text-muted-foreground">Pay by card, Payoneer, or supported cryptocurrency. Payment return pages never complete paid orders.</p></div></div>
       <div className="flex items-center gap-2 mt-4 p-3 bg-success/5 border border-success/15 rounded-xl"><Shield size={14} className="text-success" /><p className="text-xs">SUMMECA recalculates pricing server-side and grants access only after trusted payment verification.</p></div>
     </div>
 
@@ -305,11 +329,14 @@ function CheckoutInner() {
 
         {!isFreeOrder && <div className="bg-card border border-border rounded-2xl p-5 space-y-3">
           <h2 className="text-sm font-700 flex items-center gap-2"><Wallet size={15} /> Payment Method</h2>
+          <button type="button" onClick={() => { setCheckoutMethod('fastspring'); setCryptoSession(null); }} className={`w-full text-left rounded-xl border p-4 flex gap-3 ${checkoutMethod === 'fastspring' ? 'border-primary bg-primary/5' : 'border-border'}`}>
+            <CreditCard size={20} className="text-primary" /><div className="flex-1"><div className="font-700 text-sm">Card · Visa / Mastercard</div><p className="text-xs text-muted-foreground mt-1">Secure FastSpring hosted checkout. PayPal, Apple Pay and Google Pay may also appear when available.</p>{fastspringStatus === 'available' && !fastspringLive && <p className="text-[11px] text-warning mt-1">Test mode — test payments never grant production access.</p>}</div><span className="text-[10px]">{fastspringStatus === 'available' ? (fastspringLive ? 'Available' : 'Test mode') : fastspringStatus === 'checking' ? 'Checking…' : 'Not configured'}</span>
+          </button>
           <button type="button" onClick={() => { setCheckoutMethod('payoneer'); setCryptoSession(null); }} className={`w-full text-left rounded-xl border p-4 flex gap-3 ${checkoutMethod === 'payoneer' ? 'border-primary bg-primary/5' : 'border-border'}`}>
             <Wallet size={20} className="text-primary" /><div className="flex-1"><div className="font-700 text-sm">Payoneer Checkout</div><p className="text-xs text-muted-foreground mt-1">Hosted Payoneer checkout.</p></div><span className="text-[10px]">{payoneerStatus === 'available' ? 'Available' : payoneerStatus === 'checking' ? 'Checking…' : 'Not configured'}</span>
           </button>
           <button type="button" onClick={() => { setCheckoutMethod('crypto'); setCryptoSession(null); }} className={`w-full text-left rounded-xl border p-4 flex gap-3 ${checkoutMethod === 'crypto' ? 'border-primary bg-primary/5' : 'border-border'}`}>
-            <Bitcoin size={20} className="text-primary" /><div className="flex-1"><div className="font-700 text-sm">USDT / TRX / BNB · NOWPayments</div><p className="text-xs text-muted-foreground mt-1">USDT remains the primary option. TRX and BNB are available as alternatives for lower-total orders; minimums are checked live by the provider.</p></div><span className="text-[10px]">{cryptoStatus === 'available' ? 'Available' : cryptoStatus === 'checking' ? 'Checking…' : 'Not configured'}</span>
+            <Bitcoin size={20} className="text-primary" /><div className="flex-1"><div className="font-700 text-sm">USDT / TRX / BNB · NOWPayments</div><p className="text-xs text-muted-foreground mt-1">USDT remains the primary option. TRX and BNB are alternatives; minimums are checked live by the provider.</p></div><span className="text-[10px]">{cryptoStatus === 'available' ? 'Available' : cryptoStatus === 'checking' ? 'Checking…' : 'Not configured'}</span>
           </button>
           {checkoutMethod === 'crypto' && <select value={cryptoMethod} onChange={(e) => { setCryptoMethod(e.target.value); setCryptoSession(null); setPageError(''); }} className="w-full px-3 py-3 bg-background border border-border rounded-xl text-sm">{CRYPTO_METHODS.map((method) => <option key={method.value} value={method.value}>{method.label}</option>)}</select>}
         </div>}
@@ -336,9 +363,9 @@ function CheckoutInner() {
         {!user && !authLoading && <div className="mt-4 p-3 bg-warning/5 border border-warning/20 rounded-xl text-xs">Sign in to continue.</div>}
         {pageError && <div className="mt-4 p-3 bg-danger/5 border border-danger/20 rounded-xl text-xs text-danger">{pageError}</div>}
         <button onClick={() => void handleCheckout()} disabled={authLoading || checkoutSubmitting || (!isFreeOrder && !selectedProviderAvailable) || Boolean(cryptoSession)} className="mt-4 w-full py-3.5 bg-gradient-teal text-white font-700 text-sm rounded-xl disabled:opacity-50 flex items-center justify-center gap-2">
-          {checkoutSubmitting ? <><Loader2 size={16} className="animate-spin" /> Processing…</> : !user ? 'Sign In to Continue' : isFreeOrder ? <><CheckCircle2 size={15} /> Get Free Access</> : checkoutMethod === 'crypto' ? <><Bitcoin size={15} /> Create {cryptoAssetLabel(cryptoMethod)} Payment</> : <><ExternalLink size={14} /> Pay with Payoneer</>}
+          {checkoutSubmitting ? <><Loader2 size={16} className="animate-spin" /> Processing…</> : !user ? 'Sign In to Continue' : isFreeOrder ? <><CheckCircle2 size={15} /> Get Free Access</> : checkoutMethod === 'crypto' ? <><Bitcoin size={15} /> Create {cryptoAssetLabel(cryptoMethod)} Payment</> : checkoutMethod === 'fastspring' ? <><CreditCard size={15} /> Pay by Card</> : <><ExternalLink size={14} /> Pay with Payoneer</>}
         </button>
-        <p className="text-center text-xs text-muted-foreground mt-3 flex items-center justify-center gap-1"><Lock size={11} /> {isFreeOrder ? 'No payment information required' : 'Secrets and wallet keys are never exposed to the browser'}</p>
+        <p className="text-center text-xs text-muted-foreground mt-3 flex items-center justify-center gap-1"><Lock size={11} /> {isFreeOrder ? 'No payment information required' : 'Payment credentials are handled by the selected provider and never stored by SUMMECA'}</p>
         <div className="mt-5 pt-4 border-t border-border text-center"><Link href={`/products/${cartItem.product.slug}`} className="text-xs text-muted-foreground">← Back to product</Link></div>
       </div></div>
     </div>}
