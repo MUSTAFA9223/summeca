@@ -10,6 +10,12 @@ type PendingCookie = {
   options?: Parameters<NextResponse['cookies']['set']>[2];
 };
 
+type SignInBody = {
+  email?: unknown;
+  password?: unknown;
+  next?: unknown;
+};
+
 function getSafeNext(value: unknown): string | null {
   if (typeof value !== 'string') return null;
   if (!value.startsWith('/') || value.startsWith('//') || value.startsWith('/sign-up-login-screen')) return null;
@@ -51,10 +57,42 @@ function noStoreHeaders(extra: Record<string, string> = {}) {
   };
 }
 
+function isNativeForm(request: NextRequest) {
+  const contentType = request.headers.get('content-type') || '';
+  return contentType.includes('application/x-www-form-urlencoded') || contentType.includes('multipart/form-data');
+}
+
+function loginPageResponse(request: NextRequest, reason: string, status = 303) {
+  const url = new URL('/sign-up-login-screen', request.url);
+  url.searchParams.set('login_error', reason);
+  const response = NextResponse.redirect(url, status);
+  Object.entries(noStoreHeaders()).forEach(([key, value]) => response.headers.set(key, value));
+  return response;
+}
+
+async function readBody(request: NextRequest, nativeForm: boolean): Promise<SignInBody | null> {
+  try {
+    if (nativeForm) {
+      const form = await request.formData();
+      return {
+        email: form.get('email'),
+        password: form.get('password'),
+        next: form.get('next'),
+      };
+    }
+    return await request.json() as SignInBody;
+  } catch {
+    return null;
+  }
+}
+
 export async function POST(request: NextRequest) {
+  const nativeForm = isNativeForm(request);
   const requestOrigin = new URL(request.url).origin;
   const origin = request.headers.get('origin');
+
   if ((origin && origin !== requestOrigin) || request.headers.get('sec-fetch-site') === 'cross-site') {
+    if (nativeForm) return loginPageResponse(request, 'invalid_request');
     return NextResponse.json({ error: 'Invalid request origin.' }, { status: 403, headers: noStoreHeaders() });
   }
 
@@ -63,6 +101,7 @@ export async function POST(request: NextRequest) {
     windowMs: 15 * 60_000,
   });
   if (!rate.allowed) {
+    if (nativeForm) return loginPageResponse(request, 'rate_limited');
     return NextResponse.json(
       { error: 'Too many sign-in attempts. Please try again later.' },
       {
@@ -74,10 +113,9 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  let body: { email?: unknown; password?: unknown; next?: unknown };
-  try {
-    body = await request.json();
-  } catch {
+  const body = await readBody(request, nativeForm);
+  if (!body) {
+    if (nativeForm) return loginPageResponse(request, 'invalid_request');
     return NextResponse.json({ error: 'Invalid request.' }, { status: 400, headers: noStoreHeaders() });
   }
 
@@ -86,6 +124,7 @@ export async function POST(request: NextRequest) {
   const requestedNext = getSafeNext(body.next);
 
   if (!email || email.length > 320 || !password || password.length > 256) {
+    if (nativeForm) return loginPageResponse(request, 'invalid_credentials');
     return NextResponse.json({ error: 'Invalid email or password.' }, { status: 400, headers: noStoreHeaders() });
   }
 
@@ -95,8 +134,8 @@ export async function POST(request: NextRequest) {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        // Password sign-in is a fresh authentication operation. Do not let a stale
-        // or partially-written Chrome cookie generation participate in this request.
+        // A password login is a brand-new session. Never feed stale Chrome cookie
+        // chunks into the authentication operation itself.
         getAll() {
           return [];
         },
@@ -111,6 +150,7 @@ export async function POST(request: NextRequest) {
 
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
   if (error || !data.user || !data.session) {
+    if (nativeForm) return loginPageResponse(request, 'invalid_credentials');
     return NextResponse.json(
       { error: 'Invalid email or password.' },
       { status: 401, headers: noStoreHeaders() },
@@ -127,13 +167,14 @@ export async function POST(request: NextRequest) {
     if (profile?.is_admin === true) destination = '/admin';
   }
 
-  const response = NextResponse.json(
-    { success: true, destination },
-    { headers: noStoreHeaders() },
-  );
+  // Native browser form submission is intentional here. Chrome receives both the
+  // Set-Cookie headers and the 303 navigation in one HTTP response, so there is no
+  // fetch/cookie timing window before the protected dashboard request.
+  const response = nativeForm
+    ? NextResponse.redirect(new URL(destination, request.url), 303)
+    : NextResponse.json({ success: true, destination }, { headers: noStoreHeaders() });
 
-  // Chrome can retain obsolete Supabase chunk cookies from older session writes.
-  // Remove the whole SUMMECA auth cookie family before writing the new generation.
+  Object.entries(noStoreHeaders()).forEach(([key, value]) => response.headers.set(key, value));
   clearStaleAuthCookies(request, response);
 
   for (const { name, value, options } of pendingCookies) {
