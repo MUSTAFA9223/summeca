@@ -1,4 +1,6 @@
 import type { NextRequest } from 'next/server';
+import { createHmac } from 'node:crypto';
+import { createServiceClient } from '@/lib/supabase/server';
 
 type Bucket = {
   count: number;
@@ -16,14 +18,7 @@ function cleanupExpired(now: number) {
   }
 }
 
-/**
- * Lightweight fixed-window rate limiter.
- *
- * This protects individual server instances from accidental/abusive bursts.
- * It is not a replacement for a shared distributed limiter when the app is
- * scaled across many independent workers.
- */
-export function checkRateLimit(
+function checkLocalBurst(
   key: string,
   options: { limit: number; windowMs: number }
 ): { allowed: boolean; remaining: number; resetAt: number } {
@@ -47,6 +42,52 @@ export function checkRateLimit(
     remaining: Math.max(0, options.limit - existing.count),
     resetAt: existing.resetAt,
   };
+}
+
+/**
+ * Fixed-window limiter shared by every Cloudflare Worker instance.
+ *
+ * A small in-process bucket rejects obvious local bursts first. Requests that
+ * pass it are counted atomically in Postgres, so distributing requests across
+ * multiple workers cannot multiply the configured limit.
+ */
+export async function checkRateLimit(
+  key: string,
+  options: { limit: number; windowMs: number }
+): Promise<{ allowed: boolean; remaining: number; resetAt: number }> {
+  const local = checkLocalBurst(key, options);
+  if (!local.allowed) return local;
+
+  const serviceSecret = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!serviceSecret) {
+    console.error('[rateLimit] Distributed limiter is not configured.');
+    return { allowed: false, remaining: 0, resetAt: Date.now() + 5_000 };
+  }
+
+  const keyHash = createHmac('sha256', serviceSecret).update(key).digest('hex');
+  try {
+    const service = createServiceClient();
+    const { data, error } = await service.rpc('consume_api_rate_limit', {
+      p_key_hash: keyHash,
+      p_limit: options.limit,
+      p_window_ms: options.windowMs,
+    });
+    if (error || !data || typeof data !== 'object' || Array.isArray(data)) {
+      console.error('[rateLimit] Distributed limiter query failed:', error?.message);
+      return { allowed: false, remaining: 0, resetAt: Date.now() + 5_000 };
+    }
+
+    const result = data as Record<string, unknown>;
+    const resetAt = Date.parse(String(result.reset_at ?? ''));
+    return {
+      allowed: result.allowed === true,
+      remaining: Math.max(0, Number(result.remaining) || 0),
+      resetAt: Number.isFinite(resetAt) ? resetAt : Date.now() + options.windowMs,
+    };
+  } catch (error) {
+    console.error('[rateLimit] Distributed limiter unavailable:', error);
+    return { allowed: false, remaining: 0, resetAt: Date.now() + 5_000 };
+  }
 }
 
 export function getRequestIdentity(request: NextRequest, userId?: string | null): string {

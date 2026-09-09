@@ -11,7 +11,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const rate = checkRateLimit(`change-password:${getRequestIdentity(req, user.id)}`, {
+    const rate = await checkRateLimit(`change-password:${getRequestIdentity(req, user.id)}`, {
       limit: 5,
       windowMs: 15 * 60_000,
     });
@@ -102,3 +102,4 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
+

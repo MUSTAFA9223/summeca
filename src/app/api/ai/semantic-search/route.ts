@@ -9,7 +9,7 @@ import { checkRateLimit, getRequestIdentity } from '@/lib/security/rateLimit';
 import OpenAI from 'openai';
 
 export async function POST(request: NextRequest) {
-  const rate = checkRateLimit(`semantic-search:${getRequestIdentity(request)}`, {
+  const rate = await checkRateLimit(`semantic-search:${getRequestIdentity(request)}`, {
     limit: 10,
     windowMs: 60_000,
   });
@@ -106,3 +106,4 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ matchedIds: [], query });
   }
 }
+

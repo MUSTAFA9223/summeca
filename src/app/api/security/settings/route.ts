@@ -39,7 +39,7 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const rate = checkRateLimit(`security-settings:${getRequestIdentity(req, user.id)}`, {
+    const rate = await checkRateLimit(`security-settings:${getRequestIdentity(req, user.id)}`, {
       limit: 20,
       windowMs: 10 * 60_000,
     });
@@ -95,3 +95,4 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
+

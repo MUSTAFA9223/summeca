@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const rate = checkRateLimit(`refund-request:${getRequestIdentity(request, user.id)}`, {
+  const rate = await checkRateLimit(`refund-request:${getRequestIdentity(request, user.id)}`, {
     limit: 5,
     windowMs: 60 * 60_000,
   });
@@ -171,3 +171,4 @@ export async function POST(request: NextRequest) {
     { headers: { 'Cache-Control': 'no-store' } }
   );
 }
+
