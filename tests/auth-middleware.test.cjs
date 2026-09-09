@@ -87,6 +87,10 @@ test('reset page exchanges a PKCE recovery code before validating the user', () 
   assert.match(source, /searchParams\.get\('code'\)/);
   assert.match(source, /exchangeCodeForSession\(\s*code\s*,?/);
   assert.match(source, /auth\.updateUser\(\{ password \}\)/);
+  assert.match(source, /data:\s*recoveryData[\s\S]*auth\.verifyOtp/);
+  assert.match(source, /recoveryData\.user\s*\|\|\s*!recoveryData\.session/);
+  const confirmation = source.slice(source.indexOf('async function confirmRecoveryLink'), source.indexOf('async function handleSubmit'));
+  assert.doesNotMatch(confirmation, /auth\.getUser\(\)/);
 });
 test('admin product CRUD stays behind the protected server API', () => {
   const pageSource = fs.readFileSync('src/app/admin/products/page.tsx', 'utf8');
