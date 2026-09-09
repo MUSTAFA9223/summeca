@@ -16,11 +16,46 @@ function getSafeNext(value: unknown): string | null {
   return value;
 }
 
+function getAuthCookiePrefix(): string | null {
+  try {
+    const projectRef = new URL(process.env.NEXT_PUBLIC_SUPABASE_URL!).hostname.split('.')[0];
+    return projectRef ? `sb-${projectRef}-auth-token` : null;
+  } catch {
+    return null;
+  }
+}
+
+function clearStaleAuthCookies(request: NextRequest, response: NextResponse) {
+  const prefix = getAuthCookiePrefix();
+  if (!prefix) return;
+
+  for (const cookie of request.cookies.getAll()) {
+    if (!cookie.name.startsWith(prefix)) continue;
+    response.cookies.set(cookie.name, '', {
+      path: '/',
+      expires: new Date(0),
+      maxAge: 0,
+      sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production',
+      httpOnly: false,
+    });
+  }
+}
+
+function noStoreHeaders(extra: Record<string, string> = {}) {
+  return {
+    'Cache-Control': 'private, no-store, max-age=0',
+    Pragma: 'no-cache',
+    Expires: '0',
+    ...extra,
+  };
+}
+
 export async function POST(request: NextRequest) {
   const requestOrigin = new URL(request.url).origin;
   const origin = request.headers.get('origin');
   if ((origin && origin !== requestOrigin) || request.headers.get('sec-fetch-site') === 'cross-site') {
-    return NextResponse.json({ error: 'Invalid request origin.' }, { status: 403 });
+    return NextResponse.json({ error: 'Invalid request origin.' }, { status: 403, headers: noStoreHeaders() });
   }
 
   const rate = checkRateLimit(`password-sign-in:${getRequestIdentity(request)}`, {
@@ -32,10 +67,9 @@ export async function POST(request: NextRequest) {
       { error: 'Too many sign-in attempts. Please try again later.' },
       {
         status: 429,
-        headers: {
+        headers: noStoreHeaders({
           'Retry-After': String(Math.max(1, Math.ceil((rate.resetAt - Date.now()) / 1000))),
-          'Cache-Control': 'private, no-store',
-        },
+        }),
       },
     );
   }
@@ -44,7 +78,7 @@ export async function POST(request: NextRequest) {
   try {
     body = await request.json();
   } catch {
-    return NextResponse.json({ error: 'Invalid request.' }, { status: 400 });
+    return NextResponse.json({ error: 'Invalid request.' }, { status: 400, headers: noStoreHeaders() });
   }
 
   const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : '';
@@ -52,7 +86,7 @@ export async function POST(request: NextRequest) {
   const requestedNext = getSafeNext(body.next);
 
   if (!email || email.length > 320 || !password || password.length > 256) {
-    return NextResponse.json({ error: 'Invalid email or password.' }, { status: 400 });
+    return NextResponse.json({ error: 'Invalid email or password.' }, { status: 400, headers: noStoreHeaders() });
   }
 
   const pendingCookies: PendingCookie[] = [];
@@ -61,8 +95,10 @@ export async function POST(request: NextRequest) {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
+        // Password sign-in is a fresh authentication operation. Do not let a stale
+        // or partially-written Chrome cookie generation participate in this request.
         getAll() {
-          return request.cookies.getAll();
+          return [];
         },
         setAll(cookiesToSet) {
           cookiesToSet.forEach(({ name, value, options }) => {
@@ -77,7 +113,7 @@ export async function POST(request: NextRequest) {
   if (error || !data.user || !data.session) {
     return NextResponse.json(
       { error: 'Invalid email or password.' },
-      { status: 401, headers: { 'Cache-Control': 'private, no-store' } },
+      { status: 401, headers: noStoreHeaders() },
     );
   }
 
@@ -93,8 +129,12 @@ export async function POST(request: NextRequest) {
 
   const response = NextResponse.json(
     { success: true, destination },
-    { headers: { 'Cache-Control': 'private, no-store' } },
+    { headers: noStoreHeaders() },
   );
+
+  // Chrome can retain obsolete Supabase chunk cookies from older session writes.
+  // Remove the whole SUMMECA auth cookie family before writing the new generation.
+  clearStaleAuthCookies(request, response);
 
   for (const { name, value, options } of pendingCookies) {
     response.cookies.set(name, value, {
