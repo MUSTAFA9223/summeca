@@ -44,6 +44,13 @@ test('Google OAuth starts server-side with canonical callback and first-party PK
   assert.match(callback, /exchangeCodeForSession\([\s\S]*flowId \? \{ flowId \}/);
 });
 
+test('password sign-in performs a full navigation so fresh auth cookies reach protected routes', () => {
+  const source = fs.readFileSync('src/app/sign-up-login-screen/components/LoginForm.tsx', 'utf8');
+  assert.match(source, /window\.location\.replace\(destination\)/);
+  assert.doesNotMatch(source, /router\.replace\(destination\)/);
+  assert.match(source, /value\.startsWith\('\/sign-up-login-screen'\)/);
+});
+
 test('auth email and recovery redirects prefer the configured canonical site URL', () => {
   const source = fs.readFileSync('src/contexts/AuthContext.tsx', 'utf8');
   const envCheck = source.indexOf('if (process.env.NEXT_PUBLIC_SITE_URL)');
