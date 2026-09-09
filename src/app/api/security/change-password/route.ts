@@ -47,20 +47,20 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Password changes are unavailable for this account.' }, { status: 400 });
     }
 
-    // A valid session alone is not enough for this sensitive action. Re-authenticate
-    // the account with the current password before allowing a password replacement.
-    const { data: reauth, error: reauthError } = await supabase.auth.signInWithPassword({
-      email: user.email,
-      password: currentPassword,
+    // Verify the existing password inside the password-update request itself.
+    // Do not call signInWithPassword here: doing so creates/rotates a second
+    // session immediately before a security-sensitive password change and can
+    // leave the browser holding stale refresh-token cookies afterwards.
+    const { error: updateError } = await supabase.auth.updateUser({
+      password: newPassword,
+      current_password: currentPassword,
     });
-    if (reauthError || reauth.user?.id !== user.id) {
-      return NextResponse.json({ error: 'Current password is incorrect.' }, { status: 403 });
-    }
-
-    const { error: updateError } = await supabase.auth.updateUser({ password: newPassword });
     if (updateError) {
-      console.warn('[change-password] Supabase rejected password update:', updateError.message);
-      return NextResponse.json({ error: 'Failed to update password. Please check the password requirements and try again.' }, { status: 400 });
+      console.warn('[change-password] Supabase rejected password update:', updateError.code || updateError.message);
+      if (updateError.code === 'weak_password' || updateError.code === 'same_password') {
+        return NextResponse.json({ error: updateError.message }, { status: 400 });
+      }
+      return NextResponse.json({ error: 'Current password is incorrect or could not be verified.' }, { status: 403 });
     }
 
     const service = createServiceClient();
