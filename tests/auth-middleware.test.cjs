@@ -184,3 +184,17 @@ test('RLS hardening keeps trust fields server-controlled', () => {
   assert.doesNotMatch(checkout, /\.from\('coupons'\)/);
   assert.doesNotMatch(referralRoute, /\.from\('referrals'\)\.insert/);
 });
+
+
+test('referral SECURITY DEFINER functions are service-only', () => {
+  const migration = fs.readFileSync('supabase/migrations/20260909165000_service_only_referral_rpcs.sql', 'utf8');
+  const callback = fs.readFileSync('src/app/auth/callback/route.ts', 'utf8');
+  const generateRoute = fs.readFileSync('src/app/api/referrals/generate/route.ts', 'utf8');
+
+  assert.match(migration, /revoke all on function public\.generate_referral_code\(uuid\) from public, anon, authenticated/);
+  assert.match(migration, /grant execute on function public\.generate_referral_code\(uuid\) to service_role/);
+  assert.match(migration, /claim_referral_code_for_user/);
+  assert.match(callback, /createServiceClient\(\)/);
+  assert.match(callback, /claim_referral_code_for_user/);
+  assert.match(generateRoute, /const service = createServiceClient\(\)/);
+});

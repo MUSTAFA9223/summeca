@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
+import { createServiceClient } from '@/lib/supabase/server';
 
 function getSafeNext(value: string | null): string {
   if (!value || !value.startsWith('/') || value.startsWith('//')) {
@@ -75,8 +76,10 @@ export async function GET(request: NextRequest) {
   }
 
   if (referralCode) {
-    const { error: referralError } = await supabase.rpc('claim_referral_code', {
+    const service = createServiceClient();
+    const { error: referralError } = await service.rpc('claim_referral_code_for_user', {
       code: referralCode,
+      user_id: data.user.id,
     });
     if (referralError) {
       console.warn('Referral claim after Google OAuth failed:', referralError.message);
