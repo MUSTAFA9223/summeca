@@ -3,7 +3,7 @@
  * Generate a unique referral code for the authenticated user.
  */
 import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createServiceClient } from '@/lib/supabase/server';
 
 export const dynamic = 'force-dynamic';
 
@@ -33,7 +33,8 @@ export async function POST() {
       return NextResponse.json({ referral_code: existing.referral_code });
     }
 
-    const { data: codeData, error: codeError } = await supabase.rpc('generate_referral_code', {
+    const service = createServiceClient();
+    const { data: codeData, error: codeError } = await service.rpc('generate_referral_code', {
       user_id: user.id,
     });
 
