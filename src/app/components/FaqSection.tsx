@@ -1,80 +1,58 @@
 'use client';
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 
 const faqs = [
   {
-    id: 'faq-01',
+    id: 'products',
     question: 'What types of products does SUMMECA offer?',
-    answer: 'SUMMECA offers three product categories: AI Tools (intelligent automation for writing, analysis, and business tasks), SaaS Applications (cloud-based software subscriptions), and Digital Products (templates, planners, and prompt packs available as one-time purchases).',
+    answer: 'SUMMECA publishes AI tools, SaaS applications, templates, datasets, and other digital products. Only products with an active production offer appear in the public catalog.',
   },
   {
-    id: 'faq-04',
-    question: 'How do digital product downloads work?',
-    answer: 'After purchasing a digital product, it appears in your Downloads section. Download links are securely generated and tied to your account. You can re-download purchased files at any time from your dashboard.',
+    id: 'delivery',
+    question: 'How does product access work after checkout?',
+    answer: 'Paid access is granted after the payment provider confirms the transaction server-side. Free offers are completed through the protected order flow. Downloads appear in your dashboard only when the purchased product includes a configured download entitlement.',
   },
   {
-    id: 'faq-05',
-    question: 'What AI providers power the tools?',
-    answer: 'SUMMECA uses an AI gateway that abstracts across multiple providers including OpenAI, Anthropic, and Google. This means tools can route to the best model for each task without you needing to manage individual API keys.',
+    id: 'payments',
+    question: 'Which payment methods can I use?',
+    answer: 'The checkout page shows the payment methods that are configured and available at that moment. SUMMECA does not advertise a payment processor as available when it is only in test mode or is not configured for production.',
+  },
+  {
+    id: 'ai',
+    question: 'How are SUMMECA AI features powered?',
+    answer: 'AI features use the providers configured for the specific SUMMECA service. Provider and model availability can change, so the site does not promise a specific third-party model unless that product explicitly states it.',
   },
 ];
 
 export default function FaqSection() {
-  const [openId, setOpenId] = useState<string | null>('faq-01');
+  const [openId, setOpenId] = useState<string | null>('products');
 
   return (
-    <section className="py-24 bg-white">
-      <div className="max-w-screen-xl mx-auto px-6 lg:px-8">
-        <div className="max-w-3xl mx-auto">
-          <div className="text-center mb-12">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/8 border border-primary/15 mb-4">
-              <span className="text-xs font-600 text-primary uppercase tracking-wider">FAQ</span>
+    <section className="bg-white py-24">
+      <div className="mx-auto max-w-screen-xl px-6 lg:px-8">
+        <div className="mx-auto max-w-3xl">
+          <div className="mb-12 text-center">
+            <div className="mb-4 inline-flex items-center gap-1.5 rounded-full border border-primary/15 bg-primary/8 px-3 py-1">
+              <span className="text-xs font-semibold uppercase tracking-wider text-primary">FAQ</span>
             </div>
-            <h2 className="text-3xl font-800 text-foreground mb-3">
-              Frequently asked questions
-            </h2>
-            <p className="text-secondary-foreground text-sm">
-              Everything you need to know about SUMMECA.
-            </p>
+            <h2 className="text-3xl font-extrabold text-foreground">Frequently asked questions</h2>
+            <p className="mt-3 text-sm text-secondary-foreground">Practical answers based on the production storefront.</p>
           </div>
 
           <div className="space-y-2.5">
-            {faqs?.map((faq) => {
-              const isOpen = openId === faq?.id;
+            {faqs.map((faq) => {
+              const open = openId === faq.id;
               return (
-                <div
-                  key={faq?.id}
-                  className={`rounded-2xl border transition-all duration-250 overflow-hidden ${
-                    isOpen
-                      ? 'border-primary/25 bg-gradient-to-br from-primary/4 to-accent/3 shadow-card'
-                      : 'border-border bg-white hover:border-primary/20 hover:shadow-card'
-                  }`}
-                >
-                  <button
-                    className="w-full flex items-center justify-between px-6 py-4 text-left"
-                    onClick={() => setOpenId(isOpen ? null : faq?.id)}
-                  >
-                    <span className={`text-sm font-600 pr-4 ${isOpen ? 'text-primary' : 'text-foreground'}`}>
-                      {faq?.question}
+                <div key={faq.id} className={`overflow-hidden rounded-2xl border transition ${open ? 'border-primary/25 bg-primary/5' : 'border-border bg-white hover:border-primary/20'}`}>
+                  <button className="flex w-full items-center justify-between px-6 py-4 text-left" onClick={() => setOpenId(open ? null : faq.id)}>
+                    <span className={`pr-4 text-sm font-semibold ${open ? 'text-primary' : 'text-foreground'}`}>{faq.question}</span>
+                    <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full ${open ? 'bg-primary text-white' : 'bg-secondary text-muted-foreground'}`}>
+                      <ChevronDown size={13} className={`transition-transform ${open ? 'rotate-180' : ''}`} />
                     </span>
-                    <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 transition-all duration-200 ${
-                      isOpen ? 'bg-primary text-white' : 'bg-secondary text-muted-foreground'
-                    }`}>
-                      <ChevronDown
-                        size={13}
-                        className={`transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
-                      />
-                    </div>
                   </button>
-                  {isOpen && (
-                    <div className="px-6 pb-5 fade-in">
-                      <p className="text-sm text-secondary-foreground leading-relaxed">
-                        {faq?.answer}
-                      </p>
-                    </div>
-                  )}
+                  {open && <div className="px-6 pb-5"><p className="text-sm leading-7 text-secondary-foreground">{faq.answer}</p></div>}
                 </div>
               );
             })}
