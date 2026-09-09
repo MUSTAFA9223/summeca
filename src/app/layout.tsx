@@ -45,7 +45,8 @@ export const metadata: Metadata = {
     description: siteDescription,
   },
   icons: {
-    icon: [{ url: '/favicon.ico', type: 'image/x-icon' }],
+    icon: [{ url: '/assets/images/summeca-mark.svg', type: 'image/svg+xml' }],
+    shortcut: ['/assets/images/summeca-mark.svg'],
   },
 };
 
