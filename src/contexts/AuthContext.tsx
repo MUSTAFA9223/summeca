@@ -51,13 +51,19 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       if (event === 'PASSWORD_RECOVERY') redirectRecoveryToResetPage();
     });
 
-    supabase.auth.getSession().then(({ data: { session: initialSession } }) => {
-      if (!active) return;
-      setSession(initialSession);
-      setUser(initialSession?.user ?? null);
+    // A recovery token must establish its own fresh session. Do not refresh a
+    // stale cookie in parallel with verifyOtp: that race can overwrite the new
+    // recovery session with "Refresh Token Not Found" on another browser.
+    if (hasRecoveryMarkerInUrl()) {
       setLoading(false);
-      if (initialSession && hasRecoveryMarkerInUrl()) redirectRecoveryToResetPage();
-    });
+    } else {
+      supabase.auth.getSession().then(({ data: { session: initialSession } }) => {
+        if (!active) return;
+        setSession(initialSession);
+        setUser(initialSession?.user ?? null);
+        setLoading(false);
+      });
+    }
 
     return () => {
       active = false;

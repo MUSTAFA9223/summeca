@@ -81,6 +81,7 @@ test('password recovery email redirects directly to reset page', () => {
   const source = fs.readFileSync('src/contexts/AuthContext.tsx', 'utf8');
   assert.match(source, /redirectTo:\s*`\$\{getSiteUrl\(\)\}\/reset-password`/);
   assert.doesNotMatch(source, /resetPasswordForEmail[\s\S]*auth\/callback\?next=\/reset-password/);
+  assert.match(source, /if \(hasRecoveryMarkerInUrl\(\)\)[\s\S]*setLoading\(false\)[\s\S]*else[\s\S]*auth\.getSession\(\)/);
 });
 test('reset page exchanges a PKCE recovery code before validating the user', () => {
   const source = fs.readFileSync('src/app/reset-password/page.tsx', 'utf8');
@@ -89,6 +90,8 @@ test('reset page exchanges a PKCE recovery code before validating the user', () 
   assert.match(source, /auth\.updateUser\(\{ password \}\)/);
   assert.match(source, /data:\s*recoveryData[\s\S]*auth\.verifyOtp/);
   assert.match(source, /recoveryData\.user\s*\|\|\s*!recoveryData\.session/);
+  assert.match(source, /setRecoverySession\(\{[\s\S]*access_token:[\s\S]*refresh_token:/);
+  assert.match(source, /auth\.setSession\(recoverySession\)[\s\S]*auth\.updateUser\(\{ password \}\)/);
   const confirmation = source.slice(source.indexOf('async function confirmRecoveryLink'), source.indexOf('async function handleSubmit'));
   assert.doesNotMatch(confirmation, /auth\.getUser\(\)/);
 });
