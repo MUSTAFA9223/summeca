@@ -88,12 +88,18 @@ test('reset page exchanges a PKCE recovery code before validating the user', () 
   assert.match(source, /searchParams\.get\('code'\)/);
   assert.match(source, /exchangeCodeForSession\(\s*code\s*,?/);
   assert.match(source, /auth\.updateUser\(\{ password \}\)/);
-  assert.match(source, /data:\s*recoveryData[\s\S]*auth\.verifyOtp/);
-  assert.match(source, /recoveryData\.user\s*\|\|\s*!recoveryData\.session/);
-  assert.match(source, /setRecoverySession\(\{[\s\S]*access_token:[\s\S]*refresh_token:/);
-  assert.match(source, /auth\.setSession\(recoverySession\)[\s\S]*auth\.updateUser\(\{ password \}\)/);
-  const confirmation = source.slice(source.indexOf('async function confirmRecoveryLink'), source.indexOf('async function handleSubmit'));
+  assert.match(source, /setRecoveryTokenHash\(pendingTokenHash\)/);
+  assert.match(source, /fetch\('\/api\/auth\/recovery\/reset-password'/);
+  const confirmation = source.slice(source.indexOf('function confirmRecoveryLink'), source.indexOf('async function handleSubmit'));
   assert.doesNotMatch(confirmation, /auth\.getUser\(\)/);
+});
+
+test('cross-device password update verifies the token and updates on the server', () => {
+  const source = fs.readFileSync('src/app/api/auth/recovery/reset-password/route.ts', 'utf8');
+  assert.match(source, /auth\.verifyOtp\(\{[\s\S]*type:\s*'recovery'[\s\S]*token_hash:\s*tokenHash/);
+  assert.match(source, /auth\.updateUser\(\{ password:\s*newPassword \}\)/);
+  assert.match(source, /auth\.signOut\(\{ scope:\s*'global' \}\)/);
+  assert.doesNotMatch(source, /createServiceClient|SUPABASE_SERVICE_ROLE_KEY/);
 });
 test('admin product CRUD stays behind the protected server API', () => {
   const pageSource = fs.readFileSync('src/app/admin/products/page.tsx', 'utf8');
