@@ -15,6 +15,38 @@ type PendingCookie = {
   options?: Parameters<NextResponse['cookies']['set']>[2];
 };
 
+function getAuthCookiePrefix(): string | null {
+  try {
+    const projectRef = new URL(process.env.NEXT_PUBLIC_SUPABASE_URL!).hostname.split('.')[0];
+    return projectRef ? `sb-${projectRef}-auth-token` : null;
+  } catch {
+    return null;
+  }
+}
+
+function clearStaleAuthCookies(request: NextRequest, response: NextResponse) {
+  const prefix = getAuthCookiePrefix();
+  if (!prefix) return;
+
+  for (const cookie of request.cookies.getAll()) {
+    if (!cookie.name.startsWith(prefix)) continue;
+    response.cookies.set(cookie.name, '', {
+      path: '/',
+      expires: new Date(0),
+      maxAge: 0,
+      sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production',
+      httpOnly: false,
+    });
+  }
+}
+
+function disableCaching(response: NextResponse) {
+  response.headers.set('Cache-Control', 'private, no-store, max-age=0');
+  response.headers.set('Pragma', 'no-cache');
+  response.headers.set('Expires', '0');
+}
+
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
@@ -27,13 +59,11 @@ export async function GET(request: NextRequest) {
   if (!code) {
     const loginUrl = new URL('/sign-up-login-screen', origin);
     loginUrl.searchParams.set('oauth_error', 'missing_code');
-    return NextResponse.redirect(loginUrl);
+    const response = NextResponse.redirect(loginUrl);
+    disableCaching(response);
+    return response;
   }
 
-  // Keep cookies produced by exchangeCodeForSession and attach them directly to
-  // the redirect response. This is important on serverless/Cloudflare runtimes,
-  // where mutating Next's global cookie store does not reliably propagate to a
-  // separately-created redirect response.
   const pendingCookies: PendingCookie[] = [];
   const responseHeaders = new Headers();
 
@@ -62,8 +92,6 @@ export async function GET(request: NextRequest) {
     flowId ? { flowId } : undefined,
   );
 
-  // supabase-js currently defers the SIGNED_IN notification to a macrotask.
-  // Give the SSR cookie adapter one turn to receive and persist the session.
   await new Promise<void>((resolve) => setTimeout(resolve, 0));
 
   if (error || !data.user) {
@@ -71,7 +99,7 @@ export async function GET(request: NextRequest) {
     const loginUrl = new URL('/sign-up-login-screen', origin);
     loginUrl.searchParams.set('oauth_error', 'callback_failed');
     const response = NextResponse.redirect(loginUrl);
-    response.headers.set('Cache-Control', 'private, no-store');
+    disableCaching(response);
     return response;
   }
 
@@ -95,11 +123,20 @@ export async function GET(request: NextRequest) {
   const destination = profile?.is_admin ? '/admin' : requestedNext;
   const response = NextResponse.redirect(new URL(destination, origin));
 
+  // Remove stale cookie generations first, then let the freshly-exchanged session
+  // overwrite the active chunk names. Obsolete higher-numbered chunks stay deleted.
+  clearStaleAuthCookies(request, response);
   pendingCookies.forEach(({ name, value, options }) => {
-    response.cookies.set(name, value, options);
+    response.cookies.set(name, value, {
+      ...options,
+      path: options?.path || '/',
+      sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production',
+      httpOnly: false,
+    });
   });
   responseHeaders.forEach((value, key) => response.headers.set(key, value));
-  response.headers.set('Cache-Control', 'private, no-store');
+  disableCaching(response);
 
   return response;
 }
