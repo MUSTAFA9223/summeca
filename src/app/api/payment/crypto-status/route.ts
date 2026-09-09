@@ -13,6 +13,7 @@ export async function GET() {
     methods: available
       ? [
           'crypto_usdt_trc20',
+          'crypto_trx',
           'crypto_usdt_erc20',
         ]
       : [],
