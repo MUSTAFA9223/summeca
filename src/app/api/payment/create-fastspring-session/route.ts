@@ -11,6 +11,12 @@ import { createClient, createServiceClient } from '@/lib/supabase/server';
 import { getProvider } from '@/lib/payment/registry';
 import { getFastSpringReadiness } from '@/lib/payment/providers/fastspring';
 import { sendOrderConfirmation } from '@/lib/email/sendEmail';
+import {
+  beginCheckoutAttempt,
+  finishCheckoutAttempt,
+  readCheckoutIdempotencyKey,
+  safeCheckoutError,
+} from '@/lib/payment/checkoutAttempt';
 
 interface CreateSessionRequest {
   productId?: string;
@@ -42,6 +48,10 @@ export async function POST(request: NextRequest) {
   const { data: { user }, error: authError } = await sessionClient.auth.getUser();
   if (authError || !user) {
     return noStoreJson({ error: 'Authentication required.' }, { status: 401 });
+  }
+  const idempotencyKey = readCheckoutIdempotencyKey(request);
+  if (!idempotencyKey) {
+    return noStoreJson({ error: 'A valid Idempotency-Key header is required.' }, { status: 400 });
   }
 
   let body: CreateSessionRequest;
@@ -113,19 +123,36 @@ export async function POST(request: NextRequest) {
     return noStoreJson({ error: 'Zero-value orders require the free checkout flow.' }, { status: 422 });
   }
 
-  const { data: orderData, error: orderError } = await supabase.rpc('create_priced_order', {
-    p_user: user.id,
-    p_plan: planId,
-    p_coupon: couponId,
-    p_expected: finalAmount,
+  const { attempt, error: orderError } = await beginCheckoutAttempt(supabase, {
+    userId: user.id,
+    planId,
+    couponId,
+    expectedAmount: finalAmount,
+    provider: 'fastspring',
+    idempotencyKey,
   });
-  if (orderError || !orderData) {
-    console.error('[create-fastspring-session] Atomic order creation failed:', orderError?.message);
-    return noStoreJson({ error: checkoutError(orderError?.message) }, { status: 409 });
+  if (orderError || !attempt) {
+    console.error('[create-fastspring-session] Idempotent order creation failed:', orderError);
+    return noStoreJson({ error: checkoutError(orderError) }, { status: 409 });
   }
 
-  const order = orderData as Record<string, unknown>;
+  const order = attempt.order;
   const orderId = String(order.id ?? '');
+  if (attempt.state === 'ready') {
+    const redirectUrl = String(attempt.data.redirectUrl ?? '');
+    if (!redirectUrl) return noStoreJson({ error: 'Saved FastSpring session is incomplete.' }, { status: 500 });
+    return noStoreJson({ orderId, redirectUrl, provider: 'fastspring', testMode: !readiness.live, reused: true });
+  }
+  if (attempt.state === 'processing') {
+    return noStoreJson(
+      { error: 'This checkout is already being created. Please wait before trying again.' },
+      { status: 409 }
+    );
+  }
+  if (attempt.state === 'failed') {
+    return noStoreJson({ error: attempt.error, retryableNewAttempt: true }, { status: 409 });
+  }
+
   const orderAmount = Number(order.amount ?? finalAmount);
   const orderCurrency = String(order.currency ?? currency).toUpperCase();
   const createdAt = String(order.created_at ?? new Date().toISOString());
@@ -154,14 +181,23 @@ export async function POST(request: NextRequest) {
   });
 
   if (!sessionResult.success || !sessionResult.redirectUrl || !sessionResult.providerPaymentRef) {
-    await supabase
-      .from('orders')
-      .update({ status: 'failed', updated_at: new Date().toISOString() })
-      .eq('id', orderId)
-      .eq('status', 'pending_payment');
+    const providerError = safeCheckoutError(
+      sessionResult.error,
+      'Failed to create FastSpring checkout session.'
+    );
+    await finishCheckoutAttempt(supabase, {
+      orderId,
+      success: false,
+      sessionData: { error: providerError },
+      metadata: {
+        ...(order.metadata && typeof order.metadata === 'object' ? order.metadata as Record<string, unknown> : {}),
+        provider: 'fastspring',
+        payment_method_type: 'card',
+      },
+    });
 
     return noStoreJson(
-      { error: sessionResult.error ?? 'Failed to create FastSpring checkout session.' },
+      { error: providerError, retryableNewAttempt: true },
       { status: 502 },
     );
   }
@@ -172,25 +208,29 @@ export async function POST(request: NextRequest) {
   const priorMetadata = order.metadata && typeof order.metadata === 'object'
     ? order.metadata as Record<string, unknown>
     : {};
-  const { error: metadataError } = await supabase
-    .from('orders')
-    .update({
-      metadata: {
-        ...priorMetadata,
-        provider: 'fastspring',
-        payment_method_type: 'card',
-        fastspring_session_id: sessionResult.providerPaymentRef,
-        fastspring_product_path: providerProductPath,
-        fastspring_live: readiness.live,
-      },
-      updated_at: new Date().toISOString(),
-    })
-    .eq('id', orderId)
-    .eq('status', 'pending_payment');
+  const saved = await finishCheckoutAttempt(supabase, {
+    orderId,
+    success: true,
+    sessionData: {
+      redirectUrl: sessionResult.redirectUrl,
+      providerPaymentRef: sessionResult.providerPaymentRef,
+    },
+    metadata: {
+      ...priorMetadata,
+      provider: 'fastspring',
+      payment_method_type: 'card',
+      fastspring_session_id: sessionResult.providerPaymentRef,
+      fastspring_product_path: providerProductPath,
+      fastspring_live: readiness.live,
+    },
+  });
 
-  if (metadataError) {
-    console.error('[create-fastspring-session] Failed to save provider metadata:', metadataError.message);
-    return noStoreJson({ error: 'Failed to finalize FastSpring checkout session.' }, { status: 500 });
+  if (!saved) {
+    console.error('[create-fastspring-session] Provider session created but durable save failed:', orderId);
+    return noStoreJson(
+      { error: 'Checkout session requires reconciliation. Do not submit another payment yet.' },
+      { status: 500 }
+    );
   }
 
   try {

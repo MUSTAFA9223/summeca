@@ -161,3 +161,35 @@ test('verified refund webhook delegates reconciliation to one service-only datab
   assert.match(migration, /REVOKE ALL ON FUNCTION[\s\S]*FROM PUBLIC, anon, authenticated/);
   assert.match(migration, /GRANT EXECUTE ON FUNCTION[\s\S]*TO service_role/);
 });
+
+test('paid checkout sessions are idempotent and crypto instructions are recoverable', () => {
+  const routes = [
+    'src/app/api/payment/create-payoneer-session/route.ts',
+    'src/app/api/payment/create-fastspring-session/route.ts',
+    'src/app/api/payment/create-crypto-session/route.ts',
+  ].map((file) => fs.readFileSync(file, 'utf8'));
+  const checkout = fs.readFileSync('src/app/checkout/page.tsx', 'utf8');
+  const recovery = fs.readFileSync('src/app/api/payment/checkout-session/route.ts', 'utf8');
+  const migration = fs.readFileSync(
+    'supabase/migrations/20260909223031_idempotent_checkout_sessions.sql',
+    'utf8'
+  );
+
+  for (const route of routes) {
+    assert.match(route, /readCheckoutIdempotencyKey\(request\)/);
+    assert.match(route, /beginCheckoutAttempt\(/);
+    assert.match(route, /finishCheckoutAttempt\(/);
+    assert.doesNotMatch(route, /\.rpc\('create_priced_order'/);
+  }
+  assert.match(migration, /CREATE UNIQUE INDEX[\s\S]*user_id, checkout_idempotency_key/);
+  assert.match(migration, /pg_advisory_xact_lock/);
+  assert.match(migration, /REVOKE ALL ON FUNCTION[\s\S]*FROM PUBLIC, anon, authenticated/);
+  assert.match(migration, /GRANT EXECUTE ON FUNCTION[\s\S]*TO service_role/);
+  assert.match(checkout, /'Idempotency-Key': paidAttempt\.idempotencyKey/);
+  assert.match(checkout, /window\.sessionStorage/);
+  assert.doesNotMatch(checkout, /localStorage/);
+  assert.match(checkout, /\/api\/payment\/checkout-session\?order_id=/);
+  assert.match(recovery, /auth\.getUser\(\)/);
+  assert.match(recovery, /\.eq\('user_id', user\.id\)/);
+  assert.doesNotMatch(recovery, /createServiceClient/);
+});

@@ -10,6 +10,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient, createServiceClient } from '@/lib/supabase/server';
 import { getProvider } from '@/lib/payment/registry';
 import { sendOrderConfirmation } from '@/lib/email/sendEmail';
+import {
+  beginCheckoutAttempt,
+  finishCheckoutAttempt,
+  readCheckoutIdempotencyKey,
+  safeCheckoutError,
+} from '@/lib/payment/checkoutAttempt';
 
 interface CreateSessionRequest {
   productId?: string;
@@ -38,6 +44,10 @@ export async function POST(request: NextRequest) {
   const { data: { user }, error: authError } = await sessionClient.auth.getUser();
   if (authError || !user) {
     return noStoreJson({ error: 'Authentication required.' }, { status: 401 });
+  }
+  const idempotencyKey = readCheckoutIdempotencyKey(request);
+  if (!idempotencyKey) {
+    return noStoreJson({ error: 'A valid Idempotency-Key header is required.' }, { status: 400 });
   }
 
   let body: CreateSessionRequest;
@@ -106,20 +116,42 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const { data: orderData, error: orderError } = await supabase.rpc('create_priced_order', {
-    p_user: user.id,
-    p_plan: planId,
-    p_coupon: couponId,
-    p_expected: finalAmount,
+  const { attempt, error: orderError } = await beginCheckoutAttempt(supabase, {
+    userId: user.id,
+    planId,
+    couponId,
+    expectedAmount: finalAmount,
+    provider: 'payoneer',
+    idempotencyKey,
   });
 
-  if (orderError || !orderData) {
-    console.error('[create-payoneer-session] Atomic order creation failed:', orderError?.message);
-    return noStoreJson({ error: checkoutError(orderError?.message) }, { status: 409 });
+  if (orderError || !attempt) {
+    console.error('[create-payoneer-session] Idempotent order creation failed:', orderError);
+    return noStoreJson({ error: checkoutError(orderError) }, { status: 409 });
   }
 
-  const order = orderData as Record<string, unknown>;
+  const order = attempt.order;
   const orderId = String(order.id ?? '');
+  if (attempt.state === 'ready') {
+    const redirectUrl = String(attempt.data.redirectUrl ?? '');
+    if (!redirectUrl) return noStoreJson({ error: 'Saved Payoneer session is incomplete.' }, { status: 500 });
+    return noStoreJson({
+      orderId,
+      redirectUrl,
+      providerPaymentRef: String(attempt.data.providerPaymentRef ?? '') || undefined,
+      reused: true,
+    });
+  }
+  if (attempt.state === 'processing') {
+    return noStoreJson(
+      { error: 'This checkout is already being created. Please wait before trying again.' },
+      { status: 409 }
+    );
+  }
+  if (attempt.state === 'failed') {
+    return noStoreJson({ error: attempt.error, retryableNewAttempt: true }, { status: 409 });
+  }
+
   const orderAmount = Number(order.amount ?? finalAmount);
   const orderCurrency = String(order.currency ?? currency).toUpperCase();
   const createdAt = String(order.created_at ?? new Date().toISOString());
@@ -145,32 +177,45 @@ export async function POST(request: NextRequest) {
   });
 
   if (!sessionResult.success || !sessionResult.redirectUrl) {
-    await supabase
-      .from('orders')
-      .update({ status: 'failed', updated_at: new Date().toISOString() })
-      .eq('id', orderId)
-      .eq('status', 'pending_payment');
+    const providerError = safeCheckoutError(sessionResult.error, 'Failed to create payment session.');
+    await finishCheckoutAttempt(supabase, {
+      orderId,
+      success: false,
+      sessionData: { error: providerError },
+      metadata: {
+        ...(order.metadata && typeof order.metadata === 'object' ? order.metadata as Record<string, unknown> : {}),
+        provider: 'payoneer',
+        payment_method_type: 'payoneer',
+      },
+    });
 
     return noStoreJson(
-      { error: sessionResult.error ?? 'Failed to create payment session.' },
+      { error: providerError, retryableNewAttempt: true },
       { status: 502 },
     );
   }
 
-  if (sessionResult.providerPaymentRef) {
-    const { error: refError } = await supabase
-      .from('orders')
-      .update({
-        provider_payment_ref: sessionResult.providerPaymentRef,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', orderId)
-      .eq('status', 'pending_payment');
-
-    if (refError) {
-      console.error('[create-payoneer-session] Failed to save provider ref:', refError.message);
-      return noStoreJson({ error: 'Failed to finalize payment session.' }, { status: 500 });
-    }
+  const saved = await finishCheckoutAttempt(supabase, {
+    orderId,
+    success: true,
+    providerPaymentRef: sessionResult.providerPaymentRef,
+    sessionData: {
+      redirectUrl: sessionResult.redirectUrl,
+      providerPaymentRef: sessionResult.providerPaymentRef ?? null,
+    },
+    metadata: {
+      ...(order.metadata && typeof order.metadata === 'object' ? order.metadata as Record<string, unknown> : {}),
+      provider: 'payoneer',
+      payment_method_type: 'payoneer',
+      ...(sessionResult.providerPaymentRef ? { provider_payment_ref: sessionResult.providerPaymentRef } : {}),
+    },
+  });
+  if (!saved) {
+    console.error('[create-payoneer-session] Provider session created but durable save failed:', orderId);
+    return noStoreJson(
+      { error: 'Checkout session requires reconciliation. Do not submit another payment yet.' },
+      { status: 500 }
+    );
   }
 
   try {
