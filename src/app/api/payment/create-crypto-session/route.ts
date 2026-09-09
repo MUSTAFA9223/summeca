@@ -3,6 +3,12 @@ import { createClient, createServiceClient } from '@/lib/supabase/server';
 import { getProvider } from '@/lib/payment/registry';
 import { getCryptoMinimumCheck } from '@/lib/payment/providers/crypto';
 import { sendOrderConfirmation } from '@/lib/email/sendEmail';
+import {
+  beginCheckoutAttempt,
+  finishCheckoutAttempt,
+  readCheckoutIdempotencyKey,
+  safeCheckoutError,
+} from '@/lib/payment/checkoutAttempt';
 
 interface CreateCryptoSessionRequest {
   productId?: string;
@@ -45,6 +51,10 @@ export async function POST(request: NextRequest) {
   const { data: { user }, error: authError } = await sessionClient.auth.getUser();
   if (authError || !user) {
     return noStoreJson({ error: 'Authentication required.' }, { status: 401 });
+  }
+  const idempotencyKey = readCheckoutIdempotencyKey(request);
+  if (!idempotencyKey) {
+    return noStoreJson({ error: 'A valid Idempotency-Key header is required.' }, { status: 400 });
   }
 
   let body: CreateCryptoSessionRequest;
@@ -125,19 +135,34 @@ export async function POST(request: NextRequest) {
     }, { status: 422 });
   }
 
-  const { data: orderData, error: orderError } = await supabase.rpc('create_priced_order', {
-    p_user: user.id,
-    p_plan: planId,
-    p_coupon: couponId,
-    p_expected: finalAmount,
+  const { attempt, error: orderError } = await beginCheckoutAttempt(supabase, {
+    userId: user.id,
+    planId,
+    couponId,
+    expectedAmount: finalAmount,
+    provider: 'crypto',
+    idempotencyKey,
   });
-  if (orderError || !orderData) {
-    console.error('[create-crypto-session] Atomic order creation failed:', orderError?.message);
-    return noStoreJson({ error: checkoutError(orderError?.message) }, { status: 409 });
+  if (orderError || !attempt) {
+    console.error('[create-crypto-session] Idempotent order creation failed:', orderError);
+    return noStoreJson({ error: checkoutError(orderError) }, { status: 409 });
   }
 
-  const order = orderData as Record<string, unknown>;
+  const order = attempt.order;
   const orderId = String(order.id ?? '');
+  if (attempt.state === 'ready') {
+    return noStoreJson({ orderId, ...attempt.data, reused: true });
+  }
+  if (attempt.state === 'processing') {
+    return noStoreJson(
+      { error: 'This crypto payment is already being created. Please wait before trying again.' },
+      { status: 409 }
+    );
+  }
+  if (attempt.state === 'failed') {
+    return noStoreJson({ error: attempt.error, retryableNewAttempt: true }, { status: 409 });
+  }
+
   const orderAmount = Number(order.amount ?? finalAmount);
   const orderCurrency = String(order.currency ?? plan.currency).toUpperCase();
   const createdAt = String(order.created_at ?? new Date().toISOString());
@@ -158,37 +183,52 @@ export async function POST(request: NextRequest) {
   });
 
   if (!sessionResult.success || !sessionResult.providerPaymentRef || !sessionResult.paymentAddress || !sessionResult.cryptoAmount) {
-    await supabase
-      .from('orders')
-      .update({ status: 'failed', updated_at: new Date().toISOString() })
-      .eq('id', orderId)
-      .eq('status', 'pending_payment');
+    const providerError = safeCheckoutError(sessionResult.error, 'Failed to create crypto payment.');
+    await finishCheckoutAttempt(supabase, {
+      orderId,
+      success: false,
+      sessionData: { error: providerError },
+      metadata: {
+        ...(order.metadata && typeof order.metadata === 'object' ? order.metadata as Record<string, unknown> : {}),
+        provider: 'crypto',
+        payment_method_type: paymentMethodType,
+      },
+    });
 
-    return noStoreJson({ error: sessionResult.error ?? 'Failed to create crypto payment.' }, { status: 502 });
+    return noStoreJson({ error: providerError, retryableNewAttempt: true }, { status: 502 });
   }
 
   const priorMetadata = order.metadata && typeof order.metadata === 'object'
     ? order.metadata as Record<string, unknown>
     : {};
 
-  const { error: updateError } = await supabase
-    .from('orders')
-    .update({
+  const sessionData = {
+    paymentAddress: sessionResult.paymentAddress,
+    cryptoAmount: sessionResult.cryptoAmount,
+    paymentMethodType,
+    instructions: sessionResult.instructions ?? null,
+    providerPaymentRef: sessionResult.providerPaymentRef,
+    createdAt: new Date().toISOString(),
+  };
+  const saved = await finishCheckoutAttempt(supabase, {
+    orderId,
+    success: true,
+    providerPaymentRef: sessionResult.providerPaymentRef,
+    sessionData,
+    metadata: {
+      ...priorMetadata,
+      provider: 'crypto',
+      payment_method_type: paymentMethodType,
       provider_payment_ref: sessionResult.providerPaymentRef,
-      metadata: {
-        ...priorMetadata,
-        provider: 'crypto',
-        payment_method_type: paymentMethodType,
-        provider_payment_ref: sessionResult.providerPaymentRef,
-      },
-      updated_at: new Date().toISOString(),
-    })
-    .eq('id', orderId)
-    .eq('status', 'pending_payment');
+    },
+  });
 
-  if (updateError) {
-    console.error('[create-crypto-session] Failed to save crypto provider ref:', updateError.message);
-    return noStoreJson({ error: 'Failed to finalize crypto payment session.' }, { status: 500 });
+  if (!saved) {
+    console.error('[create-crypto-session] Provider payment created but durable save failed:', orderId);
+    return noStoreJson(
+      { error: 'Crypto payment requires reconciliation. Do not create another payment yet.' },
+      { status: 500 }
+    );
   }
 
   try {
@@ -217,10 +257,6 @@ export async function POST(request: NextRequest) {
   return noStoreJson({
     orderId,
     provider: 'nowpayments',
-    providerPaymentRef: sessionResult.providerPaymentRef,
-    paymentAddress: sessionResult.paymentAddress,
-    cryptoAmount: sessionResult.cryptoAmount,
-    paymentMethodType,
-    instructions: sessionResult.instructions,
+    ...sessionData,
   });
 }

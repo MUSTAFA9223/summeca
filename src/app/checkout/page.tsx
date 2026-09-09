@@ -103,6 +103,16 @@ function formatCurrency(amount: number, currency = 'USD') {
   }).format(amount);
 }
 
+function checkoutAttemptKey(fingerprint: string) {
+  const storageKey = 'summeca:checkout:' + fingerprint;
+  const existing = window.sessionStorage.getItem(storageKey);
+  const valid = existing && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(existing);
+  if (valid) return { idempotencyKey: existing, storageKey };
+  const idempotencyKey = window.crypto.randomUUID();
+  window.sessionStorage.setItem(storageKey, idempotencyKey);
+  return { idempotencyKey, storageKey };
+}
+
 function CheckoutSkeleton() {
   return <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 animate-pulse">
     <div className="lg:col-span-3 space-y-4"><div className="h-8 bg-secondary/60 rounded-xl w-48" /><div className="h-40 bg-secondary/40 rounded-2xl" /><div className="h-48 bg-secondary/40 rounded-2xl" /></div>
@@ -117,6 +127,7 @@ function CheckoutInner() {
   const supabase = useMemo(() => createClient(), []);
   const productIdParam = searchParams.get('product_id');
   const planIdParam = searchParams.get('plan_id');
+  const checkoutOrderIdParam = searchParams.get('order_id');
 
   const [cartItem, setCartItem] = useState<CartItem | null>(null);
   const [allPlans, setAllPlans] = useState<ProductPlan[]>([]);
@@ -196,6 +207,43 @@ function CheckoutInner() {
 
   useEffect(() => { if (!authLoading) void loadCartItem(); }, [authLoading, loadCartItem]);
 
+  useEffect(() => {
+    if (authLoading || !user || !checkoutOrderIdParam) return;
+    let cancelled = false;
+    async function restoreCheckoutSession() {
+      try {
+        const response = await fetch(
+          '/api/payment/checkout-session?order_id=' + encodeURIComponent(checkoutOrderIdParam),
+          { cache: 'no-store' }
+        );
+        const data = await response.json().catch(() => ({})) as {
+          provider?: string;
+          session?: Record<string, unknown>;
+        };
+        if (!response.ok || cancelled || data.provider !== 'crypto' || !data.session) return;
+        const paymentAddress = String(data.session.paymentAddress ?? '');
+        const cryptoAmount = String(data.session.cryptoAmount ?? '');
+        const paymentMethodType = String(data.session.paymentMethodType ?? '');
+        if (!paymentAddress || !cryptoAmount || !paymentMethodType) return;
+        setCheckoutMethod('crypto');
+        setCryptoSession({
+          orderId: checkoutOrderIdParam,
+          paymentAddress,
+          cryptoAmount,
+          paymentMethodType,
+          instructions: typeof data.session.instructions === 'string'
+            ? data.session.instructions
+            : undefined,
+        });
+      } catch {
+        // The normal checkout form remains available when a stale order URL
+        // cannot be restored.
+      }
+    }
+    void restoreCheckoutSession();
+    return () => { cancelled = true; };
+  }, [authLoading, checkoutOrderIdParam, user]);
+
   const pricing = useMemo(() => {
     if (!cartItem) return null;
     try { return getEffectivePrice(cartItem.plan); }
@@ -271,6 +319,7 @@ function CheckoutInner() {
     }
     if (!cartItem || (!isFreeOrder && !selectedProviderAvailable)) return;
     setCheckoutSubmitting(true); setPageError(''); setCryptoSession(null);
+    let attemptStorageKey = '';
     try {
       const endpoint = isFreeOrder
         ? '/api/payment/create-free-order'
@@ -279,8 +328,23 @@ function CheckoutInner() {
           : checkoutMethod === 'fastspring'
             ? '/api/payment/create-fastspring-session'
             : '/api/payment/create-payoneer-session';
+      const paidAttempt = !isFreeOrder
+        ? checkoutAttemptKey([
+            user.id,
+            cartItem.product.id,
+            cartItem.plan.id,
+            appliedCoupon?.id ?? 'none',
+            checkoutMethod,
+            checkoutMethod === 'crypto' ? cryptoMethod : 'default',
+          ].join(':'))
+        : null;
+      attemptStorageKey = paidAttempt?.storageKey ?? '';
       const res = await fetch(endpoint, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(paidAttempt ? { 'Idempotency-Key': paidAttempt.idempotencyKey } : {}),
+        },
         body: JSON.stringify({
           productId: cartItem.product.id,
           planId: cartItem.plan.id,
@@ -288,18 +352,30 @@ function CheckoutInner() {
           ...(checkoutMethod === 'crypto' ? { paymentMethodType: cryptoMethod } : {}),
         }),
       });
-      const data = await res.json() as {
+      const data = await res.json().catch(() => ({})) as {
         orderId?: string; redirectUrl?: string; paymentAddress?: string; cryptoAmount?: string;
         paymentMethodType?: string; instructions?: string; error?: string;
+        retryableNewAttempt?: boolean;
       };
-      if (!res.ok || !data.orderId) { setPageError(data.error ?? 'Failed to start checkout.'); return; }
+      if (!res.ok || !data.orderId) {
+        if (data.retryableNewAttempt && attemptStorageKey) {
+          window.sessionStorage.removeItem(attemptStorageKey);
+        }
+        setPageError(data.error ?? 'Failed to start checkout.');
+        return;
+      }
       if (isFreeOrder) { router.push(`/checkout/success?order_id=${encodeURIComponent(data.orderId)}&free=1`); return; }
       if (checkoutMethod === 'crypto') {
         if (!data.paymentAddress || !data.cryptoAmount || !data.paymentMethodType) { setPageError('Crypto provider returned incomplete payment details.'); return; }
         setCryptoSession({ orderId: data.orderId, paymentAddress: data.paymentAddress, cryptoAmount: data.cryptoAmount, paymentMethodType: data.paymentMethodType, instructions: data.instructions });
+        if (attemptStorageKey) window.sessionStorage.removeItem(attemptStorageKey);
+        const restoredUrl = new URLSearchParams(searchParams.toString());
+        restoredUrl.set('order_id', data.orderId);
+        router.replace('/checkout?' + restoredUrl.toString());
         return;
       }
       if (!data.redirectUrl) { setPageError('Payment provider did not return a checkout URL.'); return; }
+      if (attemptStorageKey) window.sessionStorage.removeItem(attemptStorageKey);
       window.location.assign(data.redirectUrl);
     } catch { setPageError('Failed to start checkout. Please try again.'); }
     finally { setCheckoutSubmitting(false); }
