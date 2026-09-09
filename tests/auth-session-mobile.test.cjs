@@ -22,7 +22,7 @@ test('password recovery uses an isolated non-persistent auth client and clears s
   assert.doesNotMatch(source, /@\/lib\/supabase\/server/);
 });
 
-test('Google OAuth starts server-side with canonical callback and first-party PKCE cookies', () => {
+test('Google OAuth starts server-side with canonical callback and fresh PKCE cookies', () => {
   const button = fs.readFileSync('src/app/sign-up-login-screen/components/GoogleOAuthButton.tsx', 'utf8');
   const starter = fs.readFileSync('src/app/auth/google/route.ts', 'utf8');
   const callback = fs.readFileSync('src/app/auth/callback/route.ts', 'utf8');
@@ -37,31 +37,44 @@ test('Google OAuth starts server-side with canonical callback and first-party PK
   assert.match(starter, /appendPkceFlowIdToRedirects:\s*true/);
   assert.match(starter, /auth\.signInWithOAuth\(\{/);
   assert.match(starter, /skipBrowserRedirect:\s*true/);
+  assert.match(starter, /getAll\(\)\s*\{\s*return \[\];/);
+  assert.match(starter, /clearStaleAuthCookies\(request, response\)/);
   assert.match(starter, /pendingCookies/);
   assert.match(starter, /response\.cookies\.set/);
 
   assert.match(callback, /searchParams\.get\('sb_flow_id'\)/);
   assert.match(callback, /exchangeCodeForSession\([\s\S]*flowId \? \{ flowId \}/);
+  assert.match(callback, /clearStaleAuthCookies\(request, response\)/);
 });
 
-test('password sign-in is issued by the server and performs a full navigation', () => {
+test('password sign-in is server-issued and replaces stale Chrome auth cookie chunks', () => {
   const form = fs.readFileSync('src/app/sign-up-login-screen/components/LoginForm.tsx', 'utf8');
   const route = fs.readFileSync('src/app/api/auth/password-sign-in/route.ts', 'utf8');
+  const page = fs.readFileSync('src/app/sign-up-login-screen/page.tsx', 'utf8');
 
   assert.match(form, /fetch\('\/api\/auth\/password-sign-in'/);
   assert.match(form, /credentials:\s*'include'/);
+  assert.match(form, /cache:\s*'no-store'/);
   assert.match(form, /window\.location\.replace\(destination\)/);
   assert.doesNotMatch(form, /useAuth\(|signIn\(data\.email/);
   assert.match(form, /value\.startsWith\('\/sign-up-login-screen'\)/);
 
   assert.match(route, /createServerClient/);
+  assert.match(route, /getAll\(\)\s*\{\s*return \[\];/);
   assert.match(route, /auth\.signInWithPassword\(\{ email, password \}\)/);
+  assert.match(route, /clearStaleAuthCookies\(request, response\)/);
+  assert.match(route, /cookie\.name\.startsWith\(prefix\)/);
+  assert.match(route, /maxAge:\s*0/);
   assert.match(route, /pendingCookies/);
   assert.match(route, /response\.cookies\.set/);
   assert.match(route, /sameSite:\s*'lax'/);
   assert.match(route, /secure:\s*process\.env\.NODE_ENV === 'production'/);
-  assert.match(route, /Cache-Control': 'private, no-store'/);
+  assert.match(route, /private, no-store, max-age=0/);
+  assert.match(route, /Pragma:\s*'no-cache'/);
   assert.match(route, /sec-fetch-site/);
+
+  assert.match(page, /dynamic\s*=\s*'force-dynamic'/);
+  assert.match(page, /revalidate\s*=\s*0/);
 });
 
 test('auth email and recovery redirects prefer the configured canonical site URL', () => {
