@@ -1,15 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
-import { useForm } from 'react-hook-form';
+import React, { useEffect, useState } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
-import { toast } from 'sonner';
 import GoogleOAuthButton from './GoogleOAuthButton';
-
-interface LoginFormData {
-  email: string;
-  password: string;
-}
 
 interface LoginFormProps {
   onForgotPassword: () => void;
@@ -17,67 +10,29 @@ interface LoginFormProps {
 }
 
 function getSafeNextPath(value: string | null) {
-  if (!value || !value.startsWith('/') || value.startsWith('//')) return null;
-  if (value.startsWith('/sign-up-login-screen')) return null;
+  if (!value || !value.startsWith('/') || value.startsWith('//')) return '';
+  if (value.startsWith('/sign-up-login-screen')) return '';
   return value;
 }
 
-function getRequestedNextPath() {
-  if (typeof window === 'undefined') return null;
-  return getSafeNextPath(new URLSearchParams(window.location.search).get('next'));
+function getLoginError(value: string | null) {
+  if (value === 'rate_limited') return 'Too many sign-in attempts. Please try again shortly.';
+  if (value === 'invalid_request') return 'The sign-in request could not be completed. Please try again.';
+  if (value === 'invalid_credentials') return 'Invalid email or password. Please try again.';
+  return '';
 }
 
 export default function LoginForm({ onForgotPassword, onSwitchToSignup }: LoginFormProps) {
   const [showPassword, setShowPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [nextPath, setNextPath] = useState('');
+  const [loginError, setLoginError] = useState('');
 
-  const { register, handleSubmit, formState: { errors }, setError } = useForm<LoginFormData>({
-    defaultValues: { email: '', password: '' },
-  });
-
-  const onSubmit = async (data: LoginFormData) => {
-    setIsLoading(true);
-    try {
-      const requestedNextPath = getRequestedNextPath();
-      const response = await fetch('/api/auth/password-sign-in', {
-        method: 'POST',
-        credentials: 'include',
-        cache: 'no-store',
-        headers: {
-          'Content-Type': 'application/json',
-          'Cache-Control': 'no-store',
-        },
-        body: JSON.stringify({
-          email: data.email,
-          password: data.password,
-          next: requestedNextPath,
-        }),
-      });
-
-      const result = await response.json().catch(() => null) as {
-        success?: boolean;
-        destination?: string;
-        error?: string;
-      } | null;
-
-      if (!response.ok || result?.success !== true) {
-        throw new Error(result?.error || 'Invalid email or password. Please try again.');
-      }
-
-      const destination = getSafeNextPath(result.destination || null) ?? '/user-dashboard';
-      toast.success('Welcome back to SUMMECA!');
-
-      // The server has already replaced stale auth-cookie chunks and written the
-      // new session. Full navigation prevents Chrome from reusing a pre-login RSC
-      // response or back-forward cache entry for the protected destination.
-      window.location.replace(destination);
-      return;
-    } catch (error: any) {
-      setError('root', { message: error?.message || 'Invalid email or password. Please try again.' });
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    setNextPath(getSafeNextPath(params.get('next')));
+    setLoginError(getLoginError(params.get('login_error')));
+  }, []);
 
   return (
     <div className="fade-in">
@@ -89,13 +44,33 @@ export default function LoginForm({ onForgotPassword, onSwitchToSignup }: LoginF
       <GoogleOAuthButton label="Continue with Google" />
       <div className="flex items-center gap-3 mb-5"><div className="flex-1 h-px bg-border"/><span className="text-xs text-muted-foreground">or with email</span><div className="flex-1 h-px bg-border"/></div>
 
-      {errors.root && <div className="mb-4 px-4 py-3 rounded-xl bg-danger/5 border border-danger/20"><p className="text-xs text-danger font-500">{errors.root.message}</p></div>}
+      {loginError && (
+        <div className="mb-4 px-4 py-3 rounded-xl bg-danger/5 border border-danger/20">
+          <p className="text-xs text-danger font-500">{loginError}</p>
+        </div>
+      )}
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+      <form
+        action="/api/auth/password-sign-in"
+        method="post"
+        className="space-y-4"
+        onSubmit={() => setIsSubmitting(true)}
+      >
+        <input type="hidden" name="next" value={nextPath} />
+
         <div>
           <label className="block text-sm font-600 text-foreground mb-1.5" htmlFor="login-email">Email address</label>
-          <input id="login-email" type="email" autoComplete="email" placeholder="you@company.com" className={`w-full px-3.5 py-2.5 rounded-xl border text-sm text-foreground placeholder-muted-foreground bg-card focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all duration-150 ${errors.email ? 'border-danger' : 'border-input'}`} {...register('email', { required: 'Email is required', pattern: { value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, message: 'Enter a valid email address' } })}/>
-          {errors.email && <p className="mt-1 text-xs text-danger">{errors.email.message}</p>}
+          <input
+            id="login-email"
+            name="email"
+            type="email"
+            autoComplete="email"
+            inputMode="email"
+            required
+            maxLength={320}
+            placeholder="you@company.com"
+            className="w-full px-3.5 py-2.5 rounded-xl border border-input text-sm text-foreground placeholder-muted-foreground bg-card focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all duration-150"
+          />
         </div>
 
         <div>
@@ -104,14 +79,22 @@ export default function LoginForm({ onForgotPassword, onSwitchToSignup }: LoginF
             <button type="button" onClick={onForgotPassword} className="text-xs text-primary hover:text-primary/80 font-500 transition-colors">Forgot password?</button>
           </div>
           <div className="relative">
-            <input id="login-password" type={showPassword ? 'text' : 'password'} autoComplete="current-password" placeholder="Enter your password" className={`w-full px-3.5 py-2.5 pr-10 rounded-xl border text-sm text-foreground placeholder-muted-foreground bg-card focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all duration-150 ${errors.password ? 'border-danger' : 'border-input'}`} {...register('password', { required: 'Password is required' })}/>
+            <input
+              id="login-password"
+              name="password"
+              type={showPassword ? 'text' : 'password'}
+              autoComplete="current-password"
+              required
+              maxLength={256}
+              placeholder="Enter your password"
+              className="w-full px-3.5 py-2.5 pr-10 rounded-xl border border-input text-sm text-foreground placeholder-muted-foreground bg-card focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all duration-150"
+            />
             <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors" aria-label={showPassword ? 'Hide password' : 'Show password'}>{showPassword ? <EyeOff size={16}/> : <Eye size={16}/>}</button>
           </div>
-          {errors.password && <p className="mt-1 text-xs text-danger">{errors.password.message}</p>}
         </div>
 
-        <button type="submit" disabled={isLoading} className="w-full bg-primary text-primary-foreground py-2.5 px-4 rounded-xl text-sm font-600 hover:bg-primary/90 disabled:opacity-60 transition-all duration-150">
-          {isLoading ? 'Signing in…' : 'Sign in'}
+        <button type="submit" disabled={isSubmitting} className="w-full bg-primary text-primary-foreground py-2.5 px-4 rounded-xl text-sm font-600 hover:bg-primary/90 disabled:opacity-60 transition-all duration-150">
+          {isSubmitting ? 'Signing in…' : 'Sign in'}
         </button>
       </form>
 
