@@ -90,6 +90,8 @@ test('reset page exchanges a PKCE recovery code before validating the user', () 
   assert.match(source, /auth\.updateUser\(\{ password \}\)/);
   assert.match(source, /setRecoveryTokenHash\(pendingTokenHash\)/);
   assert.match(source, /fetch\('\/api\/auth\/recovery\/reset-password'/);
+  assert.match(source, /auth\.signOut\(\{ scope:\s*'local' \}\)/);
+  assert.match(source, /window\.location\.replace\('\/sign-up-login-screen\?password_reset=success'\)/);
   const confirmation = source.slice(source.indexOf('function confirmRecoveryLink'), source.indexOf('async function handleSubmit'));
   assert.doesNotMatch(confirmation, /auth\.getUser\(\)/);
 });
