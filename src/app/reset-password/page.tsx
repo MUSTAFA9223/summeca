@@ -10,6 +10,7 @@ export default function ResetPasswordPage() {
   const [checkingSession, setCheckingSession] = useState(true);
   const [sessionValid, setSessionValid] = useState(false);
   const [pendingTokenHash, setPendingTokenHash] = useState<string | null>(null);
+  const [recoverySession, setRecoverySession] = useState<{ access_token: string; refresh_token: string } | null>(null);
   const [confirmingRecovery, setConfirmingRecovery] = useState(false);
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -97,6 +98,10 @@ export default function ResetPasswordPage() {
       if (!recoveryData.user || !recoveryData.session) {
         throw new Error('Recovery session was not created.');
       }
+      setRecoverySession({
+        access_token: recoveryData.session.access_token,
+        refresh_token: recoveryData.session.refresh_token,
+      });
 
       const url = new URL(window.location.href);
       url.searchParams.delete('token_hash');
@@ -121,13 +126,19 @@ export default function ResetPasswordPage() {
     setError('');
     if (password.length < 8) return setError('Password must be at least 8 characters long.');
     if (password !== confirmPassword) return setError('Passwords do not match.');
+    if (!recoverySession) return setError('Your recovery session is missing. Please request a new reset link.');
 
     setSubmitting(true);
     try {
+      // Re-assert the exact session returned by verifyOtp. It is kept only in
+      // component memory and prevents stale browser cookies from being used.
+      const { error: sessionError } = await supabase.auth.setSession(recoverySession);
+      if (sessionError) throw sessionError;
       const { error: updateError } = await supabase.auth.updateUser({ password });
       if (updateError) throw updateError;
       await supabase.auth.signOut({ scope: 'global' });
       setSuccess(true);
+      setRecoverySession(null);
       setPassword('');
       setConfirmPassword('');
     } catch (updateError: unknown) {
