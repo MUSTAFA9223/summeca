@@ -45,7 +45,7 @@ test('admin CSV export neutralizes spreadsheet formulas without changing numeric
   assert.match(csv, /"hello,world"/);
 });
 
-test('marketing queue uses real subscription data and requires explicit email consent', () => {
+test('marketing delivery uses real audiences, explicit consent and provider-backed status', () => {
   const source = fs.readFileSync('src/app/api/admin/marketing/send/route.ts', 'utf8');
   assert.match(source, /from\('subscriptions'\)/);
   assert.match(source, /subscriptionStatus = segment === 'subscription_users' \? 'active' : 'trialing'/);
@@ -53,6 +53,19 @@ test('marketing queue uses real subscription data and requires explicit email co
   assert.match(source, /eq\('email_marketing', true\)/);
   assert.match(source, /missing preference row is not consent/i);
   assert.match(source, /request\.headers\.get\('origin'\) !== new URL\(request\.url\)\.origin/);
+  assert.match(source, /upsert\(queueRows, \{ onConflict: 'campaign_id,user_id' \}\)/);
+  assert.match(source, /update\(\{ status: 'sending' \}\)/);
+  assert.match(source, /functions\.invoke\('send-marketing-email'/);
+  assert.match(source, /email_status: status/);
+  assert.match(source, /finalStatus = failedIds\.size === 0 \? 'sent' : 'failed'/);
+
+  const worker = fs.readFileSync('supabase/functions/send-marketing-email/index.ts', 'utf8');
+  assert.match(worker, /emails\/batch/);
+  assert.match(worker, /'Idempotency-Key'/);
+  assert.match(worker, /summeca-marketing-\$\{campaignId\}-\$\{offset \/ BATCH_SIZE\}/);
+  assert.match(worker, /constantTimeEqual\(bearerToken, SERVICE_ROLE_KEY\)/);
+  assert.match(worker, /const BATCH_SIZE = 100/);
+  assert.match(worker, /const MAX_RECIPIENTS = 500/);
 });
 
 test('generated rich text is reduced to display-safe HTML before admin rendering', () => {
@@ -80,4 +93,33 @@ test('generated rich text is reduced to display-safe HTML before admin rendering
   assert.match(aiRoute, /sanitizeGeneratedContent\(parsedOutput\)/);
   assert.match(marketingRoute, /sanitizeGeneratedContent\(parsed\)/);
   assert.match(marketingRoute, /generatedTextToSafeHtml\(result\.text\)/);
+});
+
+test('legacy user-dashboard components contain no fabricated customer data or fake success flows', () => {
+  const subscriptions = fs.readFileSync('src/app/user-dashboard/components/ActiveSubscriptions.tsx', 'utf8');
+  const downloads = fs.readFileSync('src/app/user-dashboard/components/DownloadsPanel.tsx', 'utf8');
+  const apiKeys = fs.readFileSync('src/app/user-dashboard/components/ApiKeysPanel.tsx', 'utf8');
+
+  assert.doesNotMatch(subscriptions, /sub-001|AI Content Generator|Business Dashboard|4,350 \/ 5,000/);
+  assert.match(subscriptions, /\/user-dashboard\/subscriptions/);
+
+  assert.doesNotMatch(downloads, /dl-001|Teacher Planner 2026|business-templates-v3|setTimeout|toast\.success/);
+  assert.match(downloads, /\/user-dashboard\/downloads/);
+
+  assert.doesNotMatch(apiKeys, /smc_live_|smc_test_|setTimeout|toast\.success|HIDDEN_FOR_SECURITY/);
+  assert.match(apiKeys, /API-key issuance is not enabled/);
+});
+
+test('failed or cancelled unpaid orders release reserved coupon usage atomically', () => {
+  const migration = fs.readFileSync(
+    'supabase/migrations/20260909191000_release_failed_coupon_reservations.sql',
+    'utf8',
+  );
+
+  assert.match(migration, /old\.status in \('pending'::public\.order_status, 'pending_payment'::public\.order_status\)/);
+  assert.match(migration, /new\.status in \('failed'::public\.order_status, 'cancelled'::public\.order_status\)/);
+  assert.match(migration, /coupon_reserved/);
+  assert.match(migration, /used_count = greatest\(coalesce\(used_count, 0\) - 1, 0\)/);
+  assert.match(migration, /new\.metadata :=/);
+  assert.match(migration, /before update of status on public\.orders/);
 });
