@@ -13,7 +13,7 @@ interface AppLogoProps {
 }
 
 const AppLogo = memo(function AppLogo({
-  src = '/assets/images/app_logo.png',
+  src = '/assets/images/summeca-mark.svg',
   iconName = 'SparklesIcon',
   size = 64,
   className = '',
@@ -33,7 +33,7 @@ const AppLogo = memo(function AppLogo({
       {src ? (
         <AppImage
           src={src}
-          alt="Logo" 
+          alt="SUMMECA logo"
           width={size}
           height={size}
           className="flex-shrink-0"
