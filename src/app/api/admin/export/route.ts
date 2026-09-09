@@ -1,25 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-
-export function toCSV(rows: Record<string, unknown>[]): string {
-  if (!rows.length) return '';
-  const headers = Object.keys(rows[0]);
-  const escape = (v: unknown) => {
-    const raw = v == null ? '' : String(v);
-    // Spreadsheet applications may execute cells beginning with formula sigils.
-    // Only neutralize strings so legitimate negative numeric values stay numeric.
-    const s = typeof v === 'string' && /^[\t\r ]*[=+\-@]/.test(raw) ? `'${raw}` : raw;
-    if (/[",\r\n]/.test(s)) {
-      return `"${s.replace(/"/g, '""')}"`;
-    }
-    return s;
-  };
-  const lines = [
-    headers.join(','),
-    ...rows.map((r) => headers.map((h) => escape(r[h])).join(',')),
-  ];
-  return lines.join('\n');
-}
+import { toCSV } from '@/lib/security/csv';
 
 function buildDateFilter(dateRange: string, customFrom?: string, customTo?: string) {
   const now = new Date();
@@ -61,7 +42,7 @@ function buildDateFilter(dateRange: string, customFrom?: string, customTo?: stri
       if (customTo) { to = new Date(customTo); to.setHours(23, 59, 59, 999); }
       break;
     }
-    default: break; // all_time
+    default: break;
   }
   return { from, to };
 }
@@ -69,7 +50,6 @@ function buildDateFilter(dateRange: string, customFrom?: string, customTo?: stri
 export async function GET(req: NextRequest) {
   const supabase = await createClient();
 
-  // Server-side admin check
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
@@ -88,12 +68,9 @@ export async function GET(req: NextRequest) {
   const dateRange = searchParams.get('dateRange') ?? 'all_time';
   const customFrom = searchParams.get('from') ?? undefined;
   const customTo = searchParams.get('to') ?? undefined;
-
   const { from, to } = buildDateFilter(dateRange, customFrom, customTo);
-
   const today = new Date().toISOString().slice(0, 10);
   const filename = `SUMMECA-${type}-${today}.csv`;
-
   let csvData = '';
 
   try {
@@ -133,7 +110,6 @@ export async function GET(req: NextRequest) {
       if (from) q = q.gte('created_at', from.toISOString());
       if (to) q = q.lte('created_at', to.toISOString());
       const { data } = await q;
-      // Never export passwords, tokens, stripe_customer_id
       const rows = (data ?? []).map((u: any) => ({
         customer_id: u.id,
         email: u.email,
@@ -150,7 +126,6 @@ export async function GET(req: NextRequest) {
       if (from) q = q.gte('created_at', from.toISOString());
       if (to) q = q.lte('created_at', to.toISOString());
       const { data } = await q;
-      // metadata excluded — may contain provider secrets
       csvData = toCSV((data ?? []) as Record<string, unknown>[]);
     } else if (type === 'subscriptions') {
       let q = supabase
