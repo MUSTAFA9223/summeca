@@ -12,6 +12,8 @@ const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") ?? "";
 const SITE_URL = Deno.env.get("NEXT_PUBLIC_SITE_URL") ?? "https://summeca.com";
 const FROM_EMAIL = Deno.env.get("EMAIL_FROM") ?? "no-reply@summeca.com";
 const INTERNAL_SECRET = Deno.env.get("EMAIL_INTERNAL_SECRET") ?? "";
+const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+const ALLOWED_ORIGIN = new URL(SITE_URL).origin;
 const BRAND_NAME = "SUMMECA";
 
 // ─── Security: HTML Escaping ──────────────────────────────────────────────────
@@ -660,35 +662,45 @@ async function sendViaResend(
 
 // ─── Authorization Check ──────────────────────────────────────────────────────
 
-function isAuthorized(req: Request): boolean {
-  // If no internal secret is configured, only allow requests from Supabase service role
-  // (Edge Functions are called server-to-server via supabase.functions.invoke with service key)
-  // Additionally support an explicit internal secret header for extra security
-  if (INTERNAL_SECRET) {
-    const authHeader = req.headers.get("x-internal-secret");
-    if (authHeader === INTERNAL_SECRET) return true;
-  }
+function constantTimeEqual(left: string, right: string): boolean {
+  if (!left || !right || left.length !== right.length) return false;
 
-  // Allow Supabase service-role invocations (Authorization: Bearer <service_role_key>)
-  // The Supabase platform validates the JWT before reaching the function,
-  // so if we reach here the caller is authenticated via Supabase auth.
-  const authHeader = req.headers.get("Authorization");
-  if (authHeader && authHeader.startsWith("Bearer ")) {
+  let difference = 0;
+  for (let index = 0; index < left.length; index += 1) {
+    difference |= left.charCodeAt(index) ^ right.charCodeAt(index);
+  }
+  return difference === 0;
+}
+
+function isAuthorized(req: Request): boolean {
+  const internalSecret = req.headers.get("x-internal-secret") ?? "";
+  if (INTERNAL_SECRET && constantTimeEqual(internalSecret, INTERNAL_SECRET)) {
     return true;
   }
 
-  return false;
+  const authorization = req.headers.get("Authorization") ?? "";
+  const bearerToken = authorization.startsWith("Bearer ")
+    ? authorization.slice("Bearer ".length)
+    : "";
+
+  return Boolean(SERVICE_ROLE_KEY) && constantTimeEqual(bearerToken, SERVICE_ROLE_KEY);
 }
 
 // ─── Main handler ─────────────────────────────────────────────────────────────
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
+    const origin = req.headers.get("Origin");
+    if (origin !== ALLOWED_ORIGIN) {
+      return new Response("Forbidden", { status: 403 });
+    }
+
     return new Response("ok", {
       headers: {
-        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Origin": ALLOWED_ORIGIN,
         "Access-Control-Allow-Methods": "POST, OPTIONS",
         "Access-Control-Allow-Headers": "Authorization, Content-Type, x-internal-secret",
+        "Vary": "Origin",
       },
     });
   }
