@@ -45,9 +45,6 @@ async function requireAdmin() {
     return { error: noStoreJson({ error: 'Admin access required.' }, { status: 403 }) };
   }
 
-  // Use the authenticated session client for admin product operations.
-  // The database already has authenticated-admin RLS policies on products,
-  // so this avoids depending on a service-role secret in the Cloudflare worker.
   return { service: sessionClient };
 }
 
@@ -121,6 +118,22 @@ function noStoreJson(body: unknown, init?: ResponseInit) {
   return response;
 }
 
+async function assertPublishable(
+  service: Awaited<ReturnType<typeof createClient>>,
+  productId: string,
+) {
+  const { count, error } = await service
+    .from('product_plans')
+    .select('id', { count: 'exact', head: true })
+    .eq('product_id', productId)
+    .eq('is_active', true);
+
+  if (error) throw new Error(`Could not validate product pricing: ${error.message}`);
+  if (!count) {
+    throw new Error('Add at least one active pricing plan before publishing this product.');
+  }
+}
+
 export async function GET(request: NextRequest) {
   try {
     const auth = await requireAdmin();
@@ -167,6 +180,8 @@ export async function POST(request: NextRequest) {
         const id = cleanText(body.id, 100);
 
         if (id) {
+          if (payload.status === 'active') await assertPublishable(auth.service, id);
+
           const { data, error } = await auth.service
             .from('products')
             .update(payload)
@@ -175,6 +190,10 @@ export async function POST(request: NextRequest) {
             .single();
           if (error) throw error;
           return noStoreJson({ product: data });
+        }
+
+        if (payload.status === 'active') {
+          throw new Error('Create the product as a draft, add at least one active pricing plan, then publish it.');
         }
 
         const { data, error } = await auth.service
@@ -191,6 +210,7 @@ export async function POST(request: NextRequest) {
         const status = cleanText(body.status, 20);
         if (!id) throw new Error('Product id is required.');
         if (!STATUSES.has(status)) throw new Error('Invalid product status.');
+        if (status === 'active') await assertPublishable(auth.service, id);
 
         const { data, error } = await auth.service
           .from('products')
