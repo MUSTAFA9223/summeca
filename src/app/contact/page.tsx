@@ -4,7 +4,6 @@ import {
   LifeBuoy,
   Mail,
   PackageCheck,
-  ShieldCheck,
   ShoppingCart,
 } from 'lucide-react';
 import PublicNav from '@/components/PublicNav';
@@ -12,7 +11,7 @@ import PublicFooter from '@/components/PublicFooter';
 
 export const metadata: Metadata = {
   title: 'Contact | SUMMECA',
-  description: 'Contact the right SUMMECA team for general, sales, support, orders, billing, or administrative questions.',
+  description: 'Contact the right SUMMECA team for general, sales, support, orders, or billing questions.',
 };
 
 const contactTeams = [
@@ -50,13 +49,6 @@ const contactTeams = [
     email: 'billing@summeca.com',
     description: 'Payments, invoices, receipts, subscriptions, billing problems, refunds, and payment-related questions.',
     subject: 'Billing Question',
-  },
-  {
-    icon: ShieldCheck,
-    title: 'Administration',
-    email: 'admin@summeca.com',
-    description: 'Official administrative, security, compliance, and other business matters that require site administration.',
-    subject: 'Administrative Inquiry',
   },
 ];
 
