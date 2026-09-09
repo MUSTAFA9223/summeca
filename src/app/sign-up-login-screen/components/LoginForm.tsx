@@ -4,7 +4,6 @@ import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
-import { useAuth } from '@/contexts/AuthContext';
 import GoogleOAuthButton from './GoogleOAuthButton';
 
 interface LoginFormData {
@@ -31,7 +30,6 @@ function getRequestedNextPath() {
 export default function LoginForm({ onForgotPassword, onSwitchToSignup }: LoginFormProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const { signIn } = useAuth();
 
   const { register, handleSubmit, formState: { errors }, setError } = useForm<LoginFormData>({
     defaultValues: { email: '', password: '' },
@@ -40,36 +38,34 @@ export default function LoginForm({ onForgotPassword, onSwitchToSignup }: LoginF
   const onSubmit = async (data: LoginFormData) => {
     setIsLoading(true);
     try {
-      const authData = await signIn(data.email, data.password);
-      const signedInUser = authData?.user;
-      if (!signedInUser?.id) throw new Error('Unable to verify the signed-in account.');
-
       const requestedNextPath = getRequestedNextPath();
+      const response = await fetch('/api/auth/password-sign-in', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: data.email,
+          password: data.password,
+          next: requestedNextPath,
+        }),
+      });
 
-      // Role lookup improves the first redirect, but it must never turn a successful
-      // authentication into a failed login. Protected admin routes are enforced by
-      // middleware/server-side database checks, not by this client-side convenience.
-      let destination = requestedNextPath ?? '/user-dashboard';
-      if (!requestedNextPath) {
-        try {
-          const { createClient } = await import('@/lib/supabase/client');
-          const supabase = createClient();
-          const { data: profile } = await supabase
-            .from('user_profiles')
-            .select('is_admin')
-            .eq('id', signedInUser.id)
-            .maybeSingle();
-          if (profile?.is_admin === true) destination = '/admin';
-        } catch {
-          // Keep the safe regular-user destination when profile lookup is unavailable.
-        }
+      const result = await response.json().catch(() => null) as {
+        success?: boolean;
+        destination?: string;
+        error?: string;
+      } | null;
+
+      if (!response.ok || result?.success !== true) {
+        throw new Error(result?.error || 'Invalid email or password. Please try again.');
       }
 
+      const destination = getSafeNextPath(result.destination || null) ?? '/user-dashboard';
       toast.success('Welcome back to SUMMECA!');
 
-      // A full document navigation makes the freshly persisted Supabase auth cookies
-      // available to Cloudflare middleware immediately. Client-side router navigation
-      // can otherwise reuse a stale pre-login route response on some mobile browsers.
+      // The server response sets the Supabase session cookies. A full navigation
+      // makes those first-party cookies available to Cloudflare middleware before
+      // the protected dashboard request, including on mobile browsers and WebViews.
       window.location.replace(destination);
       return;
     } catch (error: any) {
