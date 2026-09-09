@@ -109,15 +109,32 @@ jobs:
           console.log(`/api/admin/products -> ${adminApi.status}`);
           if (adminApi.status !== 401) process.exit(35);
 
+          const passwordProbe = await fetch('https://summeca.com/api/auth/password-sign-in', {
+            method: 'POST',
+            redirect: 'manual',
+            headers: {
+              'content-type': 'application/json',
+              origin: 'https://summeca.com',
+            },
+            body: JSON.stringify({
+              email: 'mobile-smoke-test-invalid@summeca.invalid',
+              password: 'not-a-real-password',
+              next: '/user-dashboard',
+            }),
+          });
+          const passwordCache = passwordProbe.headers.get('cache-control') || '';
+          console.log(`/api/auth/password-sign-in -> ${passwordProbe.status} ${passwordCache}`);
+          if (passwordProbe.status !== 401 || !passwordCache.includes('no-store')) process.exit(36);
+
           const google = await fetch('https://summeca.com/auth/google?next=%2Fuser-dashboard', { redirect: 'manual' });
           const googleLocation = google.headers.get('location') || '';
           const googleCookies = google.headers.get('set-cookie') || '';
           console.log(`/auth/google -> ${google.status} ${googleLocation.slice(0, 120)}`);
-          if (![301, 302, 303, 307, 308].includes(google.status)) process.exit(36);
-          if (!googleLocation.includes('supabase.co/auth/v1/authorize') || !googleLocation.includes('provider=google')) process.exit(37);
+          if (![301, 302, 303, 307, 308].includes(google.status)) process.exit(37);
+          if (!googleLocation.includes('supabase.co/auth/v1/authorize') || !googleLocation.includes('provider=google')) process.exit(38);
           const redirectTo = new URL(googleLocation).searchParams.get('redirect_to') || '';
-          if (!redirectTo.startsWith('https://summeca.com/auth/callback')) process.exit(38);
-          if (!googleCookies.includes('code-verifier')) process.exit(39);
+          if (!redirectTo.startsWith('https://summeca.com/auth/callback')) process.exit(39);
+          if (!googleCookies.includes('code-verifier')) process.exit(40);
           NODE
 
       - name: Production payment readiness smoke test
