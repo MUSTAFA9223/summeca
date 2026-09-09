@@ -9,6 +9,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient, createServiceClient } from '@/lib/supabase/server';
 import { checkRateLimit, getRequestIdentity } from '@/lib/security/rateLimit';
+import { sanitizeGeneratedContent } from '@/lib/security/sanitizeGeneratedContent';
 import {
   generateProductContent,
   generateSEOContent,
@@ -160,6 +161,10 @@ export async function POST(request: NextRequest) {
   } catch {
     // Raw text is returned when the model response is not JSON.
   }
+
+  // Generated rich-text fields are untrusted even in the admin console. Keep
+  // history raw for auditing, but only return display-safe content to the UI.
+  parsedOutput = sanitizeGeneratedContent(parsedOutput);
 
   return NextResponse.json({
     success: true,
