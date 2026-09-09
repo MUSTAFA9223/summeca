@@ -5,7 +5,6 @@ import { useForm } from 'react-hook-form';
 import { Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
-import { useRouter } from 'next/navigation';
 import GoogleOAuthButton from './GoogleOAuthButton';
 
 interface LoginFormData {
@@ -20,6 +19,7 @@ interface LoginFormProps {
 
 function getSafeNextPath(value: string | null) {
   if (!value || !value.startsWith('/') || value.startsWith('//')) return null;
+  if (value.startsWith('/sign-up-login-screen')) return null;
   return value;
 }
 
@@ -32,7 +32,6 @@ export default function LoginForm({ onForgotPassword, onSwitchToSignup }: LoginF
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const { signIn } = useAuth();
-  const router = useRouter();
 
   const { register, handleSubmit, formState: { errors }, setError } = useForm<LoginFormData>({
     defaultValues: { email: '', password: '' },
@@ -67,8 +66,12 @@ export default function LoginForm({ onForgotPassword, onSwitchToSignup }: LoginF
       }
 
       toast.success('Welcome back to SUMMECA!');
-      router.replace(destination);
-      router.refresh();
+
+      // A full document navigation makes the freshly persisted Supabase auth cookies
+      // available to Cloudflare middleware immediately. Client-side router navigation
+      // can otherwise reuse a stale pre-login route response on some mobile browsers.
+      window.location.replace(destination);
+      return;
     } catch (error: any) {
       setError('root', { message: error?.message || 'Invalid email or password. Please try again.' });
     } finally {
