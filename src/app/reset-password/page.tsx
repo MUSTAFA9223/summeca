@@ -10,8 +10,7 @@ export default function ResetPasswordPage() {
   const [checkingSession, setCheckingSession] = useState(true);
   const [sessionValid, setSessionValid] = useState(false);
   const [pendingTokenHash, setPendingTokenHash] = useState<string | null>(null);
-  const [recoverySession, setRecoverySession] = useState<{ access_token: string; refresh_token: string } | null>(null);
-  const [confirmingRecovery, setConfirmingRecovery] = useState(false);
+  const [recoveryTokenHash, setRecoveryTokenHash] = useState<string | null>(null);
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -80,45 +79,20 @@ export default function ResetPasswordPage() {
     return () => { active = false; };
   }, [supabase]);
 
-  async function confirmRecoveryLink() {
-    if (!pendingTokenHash || confirmingRecovery) return;
-    setConfirmingRecovery(true);
+  function confirmRecoveryLink() {
+    if (!pendingTokenHash) return;
     setError('');
-
-    try {
-      const { data: recoveryData, error: verifyError } = await supabase.auth.verifyOtp({
-        type: 'recovery',
-        token_hash: pendingTokenHash,
-      });
-      if (verifyError) throw verifyError;
-      // verifyOtp already validates the one-time token and returns the newly
-      // established recovery session. Calling getUser immediately afterwards
-      // can race a stale browser refresh cookie, report "Refresh Token Not
-      // Found", and incorrectly reject a token that was successfully consumed.
-      if (!recoveryData.user || !recoveryData.session) {
-        throw new Error('Recovery session was not created.');
-      }
-      setRecoverySession({
-        access_token: recoveryData.session.access_token,
-        refresh_token: recoveryData.session.refresh_token,
-      });
-
-      const url = new URL(window.location.href);
-      url.searchParams.delete('token_hash');
-      url.searchParams.delete('type');
-      url.searchParams.delete('confirm');
-      window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
-
-      setPendingTokenHash(null);
-      setSessionValid(true);
-    } catch (recoveryError: unknown) {
-      console.error('Password recovery confirmation failed:', recoveryError);
-      setPendingTokenHash(null);
-      setSessionValid(false);
-      setError(recoveryError instanceof Error ? recoveryError.message : 'This reset link could not be verified.');
-    } finally {
-      setConfirmingRecovery(false);
-    }
+    // Keep the one-time token only in component memory and remove it from the
+    // address bar. It is consumed together with the password update by the
+    // server, avoiding browser refresh-token races and email scanner GETs.
+    setRecoveryTokenHash(pendingTokenHash);
+    const url = new URL(window.location.href);
+    url.searchParams.delete('token_hash');
+    url.searchParams.delete('type');
+    url.searchParams.delete('confirm');
+    window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
+    setPendingTokenHash(null);
+    setSessionValid(true);
   }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -126,19 +100,25 @@ export default function ResetPasswordPage() {
     setError('');
     if (password.length < 8) return setError('Password must be at least 8 characters long.');
     if (password !== confirmPassword) return setError('Passwords do not match.');
-    if (!recoverySession) return setError('Your recovery session is missing. Please request a new reset link.');
 
     setSubmitting(true);
     try {
-      // Re-assert the exact session returned by verifyOtp. It is kept only in
-      // component memory and prevents stale browser cookies from being used.
-      const { error: sessionError } = await supabase.auth.setSession(recoverySession);
-      if (sessionError) throw sessionError;
-      const { error: updateError } = await supabase.auth.updateUser({ password });
-      if (updateError) throw updateError;
-      await supabase.auth.signOut({ scope: 'global' });
+      if (recoveryTokenHash) {
+        const response = await fetch('/api/auth/recovery/reset-password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tokenHash: recoveryTokenHash, newPassword: password }),
+        });
+        const result = await response.json().catch(() => null) as { error?: string } | null;
+        if (!response.ok) throw new Error(result?.error || 'Unable to update your password. Please request a new reset link.');
+      } else {
+        // Compatibility for an already-established recovery session.
+        const { error: updateError } = await supabase.auth.updateUser({ password });
+        if (updateError) throw updateError;
+        await supabase.auth.signOut({ scope: 'global' });
+      }
       setSuccess(true);
-      setRecoverySession(null);
+      setRecoveryTokenHash(null);
       setPassword('');
       setConfirmPassword('');
     } catch (updateError: unknown) {
@@ -152,7 +132,7 @@ export default function ResetPasswordPage() {
 
   if (success) return <main className="min-h-screen bg-background flex items-center justify-center px-4 py-12"><section className="w-full max-w-md bg-card border border-border rounded-2xl p-7 shadow-sm text-center"><div className="w-14 h-14 rounded-2xl bg-success/10 flex items-center justify-center mx-auto mb-5"><CheckCircle2 size={28} className="text-success" /></div><h1 className="text-2xl font-700 text-foreground mb-2">Password updated</h1><p className="text-sm text-muted-foreground mb-6">Your SUMMECA password has been changed successfully. Sign in again with your new password.</p><Link href="/sign-up-login-screen" className="btn-primary w-full inline-flex items-center justify-center py-2.5">Back to sign in</Link></section></main>;
 
-  if (pendingTokenHash) return <main className="min-h-screen bg-background flex items-center justify-center px-4 py-12"><section className="w-full max-w-md bg-card border border-border rounded-2xl p-7 shadow-sm text-center"><div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-5"><KeyRound size={27} className="text-primary" /></div><h1 className="text-2xl font-700 text-foreground mb-2">Confirm password reset</h1><p className="text-sm text-muted-foreground mb-6">Tap the button below to verify this reset request and choose a new password.</p><button type="button" onClick={confirmRecoveryLink} disabled={confirmingRecovery} className="btn-primary w-full py-2.5 inline-flex items-center justify-center gap-2 disabled:opacity-60">{confirmingRecovery && <Loader2 size={16} className="animate-spin" />}{confirmingRecovery ? 'Verifying...' : 'Continue password reset'}</button></section></main>;
+  if (pendingTokenHash) return <main className="min-h-screen bg-background flex items-center justify-center px-4 py-12"><section className="w-full max-w-md bg-card border border-border rounded-2xl p-7 shadow-sm text-center"><div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-5"><KeyRound size={27} className="text-primary" /></div><h1 className="text-2xl font-700 text-foreground mb-2">Confirm password reset</h1><p className="text-sm text-muted-foreground mb-6">Tap the button below to continue and choose a new password. The secure link will only be used when you submit the new password.</p><button type="button" onClick={confirmRecoveryLink} className="btn-primary w-full py-2.5 inline-flex items-center justify-center">Continue password reset</button></section></main>;
 
   if (!sessionValid) return <main className="min-h-screen bg-background flex items-center justify-center px-4 py-12"><section className="w-full max-w-md bg-card border border-border rounded-2xl p-7 shadow-sm text-center"><div className="w-14 h-14 rounded-2xl bg-danger/10 flex items-center justify-center mx-auto mb-5"><KeyRound size={27} className="text-danger" /></div><h1 className="text-2xl font-700 text-foreground mb-2">Reset link is invalid</h1><p className="text-sm text-muted-foreground mb-6">This password reset link is invalid, expired, or has already been used. Request a fresh SUMMECA reset email and open only its newest link.</p>{error && <p className="text-xs text-danger mb-4">{error}</p>}<Link href="/sign-up-login-screen" className="btn-primary w-full inline-flex items-center justify-center py-2.5">Request a new reset link</Link></section></main>;
 
