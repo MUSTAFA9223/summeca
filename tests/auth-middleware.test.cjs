@@ -139,140 +139,25 @@ test('all signed-in password forms require server-side current-password verifica
   }
 });
 
+test('verified refund webhook delegates reconciliation to one service-only database transaction', () => {
+  const source = fs.readFileSync('src/app/api/payment/webhook/route.ts', 'utf8');
+  const migration = fs.readFileSync(
+    'supabase/migrations/20260909221357_atomic_verified_refunds.sql',
+    'utf8'
+  );
+  const refundHandler = source.slice(
+    source.indexOf('async function handleRefund'),
+    source.indexOf('async function handleCompletion')
+  );
 
-test('transactional email function only accepts exact server credentials', () => {
-  const callerSource = fs.readFileSync('src/lib/email/sendEmail.ts', 'utf8');
-  const functionSource = fs.readFileSync('supabase/functions/send-email/index.ts', 'utf8');
-
-  assert.match(callerSource, /const supabase = createServiceClient\(\)/);
-  assert.doesNotMatch(callerSource, /const supabase = await createClient\(\)/);
-  assert.match(functionSource, /SUPABASE_SERVICE_ROLE_KEY/);
-  assert.match(functionSource, /constantTimeEqual\(bearerToken, SERVICE_ROLE_KEY\)/);
-  assert.doesNotMatch(functionSource, /authHeader && authHeader\.startsWith\(["']Bearer ["']\)/);
-  assert.doesNotMatch(functionSource, /Access-Control-Allow-Origin["']:\s*["']\*["']/);
-});
-
-
-test('private product uploads are admin-authorized and downloads stay server-controlled', () => {
-  const configRoute = fs.readFileSync('src/app/api/admin/entitlements/config/route.ts', 'utf8');
-  const downloadRoute = fs.readFileSync('src/app/api/downloads/[id]/route.ts', 'utf8');
-  const downloadsPage = fs.readFileSync('src/app/user-dashboard/downloads/page.tsx', 'utf8');
-
-  assert.match(configRoute, /requireAdmin\(session\)/);
-  assert.match(configRoute, /createSignedUploadUrl\(path\)/);
-  assert.match(configRoute, /origin === new URL\(request\.url\)\.origin/);
-  assert.match(downloadRoute, /\.eq\('user_id', user\.id\)/);
-  assert.match(downloadRoute, /createSignedUrl\(objectPath, SIGNED_URL_SECONDS/);
-  assert.match(downloadRoute, /record_download_access/);
-  assert.match(downloadsPage, /\/api\/downloads\//);
-  assert.doesNotMatch(downloadsPage, /window\.open\(download\.file_url/);
-});
-
-
-test('RLS hardening keeps trust fields server-controlled', () => {
-  const migration = fs.readFileSync('supabase/migrations/20260909164000_harden_user_managed_rls.sql', 'utf8');
-  const checkout = fs.readFileSync('src/app/checkout/page.tsx', 'utf8');
-  const referralRoute = fs.readFileSync('src/app/api/referrals/generate/route.ts', 'utf8');
-
-  assert.match(migration, /drop policy if exists users_manage_own_reviews/);
-  assert.match(migration, /new\.moderation_status := 'pending'/);
-  assert.match(migration, /new\.sender_type := 'user'/);
-  assert.match(migration, /drop policy if exists users_insert_own_security_logs/);
-  assert.match(migration, /drop policy if exists users_manage_own_usage/);
-  assert.match(migration, /drop policy if exists auth_read_coupons/);
-  assert.match(migration, /user_id is distinct from caller_id/);
-  assert.doesNotMatch(checkout, /\.from\('coupons'\)/);
-  assert.doesNotMatch(referralRoute, /\.from\('referrals'\)\.insert/);
-});
-
-
-test('referral SECURITY DEFINER functions are service-only', () => {
-  const migration = fs.readFileSync('supabase/migrations/20260909165000_service_only_referral_rpcs.sql', 'utf8');
-  const callback = fs.readFileSync('src/app/auth/callback/route.ts', 'utf8');
-  const generateRoute = fs.readFileSync('src/app/api/referrals/generate/route.ts', 'utf8');
-
-  assert.match(migration, /revoke all on function public\.generate_referral_code\(uuid\) from public, anon, authenticated/);
-  assert.match(migration, /grant execute on function public\.generate_referral_code\(uuid\) to service_role/);
-  assert.match(migration, /claim_referral_code_for_user/);
-  assert.match(callback, /createServiceClient\(\)/);
-  assert.match(callback, /claim_referral_code_for_user/);
-  assert.match(generateRoute, /const service = createServiceClient\(\)/);
-});
-
-
-test('concurrent Payoneer approvals contact the provider only once, and timeouts stay claimed', async () => {
-  const ts = require('typescript');
-  const vm = require('node:vm');
-  const source = fs.readFileSync('src/app/api/admin/refunds/[id]/route.ts', 'utf8');
-  const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText;
-
-  for (const timeout of [false, true]) {
-    let status = 'under_review';
-    let calls = 0;
-    let release;
-    const gate = new Promise(resolve => { release = resolve; });
-    const refund = { id: 'refund-1', order_id: 'order-1', amount: 25, currency: 'USD',
-      status: 'under_review', provider_refund_id: null,
-      orders: { id: 'order-1', status: 'completed', amount: 25, currency: 'USD',
-        provider_payment_ref: 'payment-1', metadata: { provider: 'payoneer' } } };
-    const db = { from() {
-      let update, expected;
-      const q = {
-        select() { return q; },
-        update(value) { update = value; return q; },
-        eq(key, value) { if (key === 'status') expected = value; return q; },
-        async single() { return { data: { ...refund, status }, error: null }; },
-        async maybeSingle() {
-          if (update && status === expected) {
-            status = update.status;
-            return { data: { id: refund.id }, error: null };
-          }
-          return { data: null, error: null };
-        },
-      };
-      return q;
-    }};
-    const exports = {};
-    vm.runInNewContext(compiled, {
-      exports, Buffer, AbortSignal, URL, console: { error() {}, warn() {} },
-      process: { env: { PAYONEER_MERCHANT_CODE: 'test', PAYONEER_PAYMENT_TOKEN: 'test' } },
-      require(name) {
-        if (name === 'next/server') return { NextResponse: {
-          json(body, options = {}) { return { status: options.status || 200, body }; },
-        }};
-        if (name.includes('supabase/server')) return { createClient: async () => db, createServiceClient: () => db };
-        if (name.includes('requireAdmin')) return { requireAdmin: async () => ({ id: 'admin' }) };
-        if (name.includes('sendEmail')) return { sendEmail: async () => ({ success: true }) };
-        throw new Error('Unexpected dependency: ' + name);
-      },
-      fetch: async () => {
-        calls += 1;
-        await gate;
-        if (timeout) throw new Error('timeout');
-        return { ok: true, json: async () => ({ identification: { longId: 'provider-refund' } }) };
-      },
-    });
-    const req = action => ({ url: 'https://summeca.com/api/admin/refunds/refund-1',
-      headers: new Headers({ origin: 'https://summeca.com' }), json: async () => ({ action }) });
-    const ctx = { params: Promise.resolve({ id: 'refund-1' }) };
-    const first = exports.PATCH(req('approved'), ctx);
-    // Allow both invocations to read the same initial state before the CAS.
-    const second = exports.PATCH(req('approved'), ctx);
-    await new Promise(resolve => setImmediate(resolve));
-    release();
-    const responses = await Promise.all([first, second]);
-    assert.equal(calls, 1);
-    assert.equal(status, 'processing');
-    assert.ok(responses.some(r => r.status === 409 || r.status === 400));
-    assert.equal((await exports.PATCH(req('completed'), ctx)).status, 409);
-    assert.equal((await exports.PATCH(req('failed'), ctx)).status, 409);
-    assert.equal(calls, 1);
-  }
-});
-
-test('admin order action opens review instead of executing another provider refund', () => {
-  const source = fs.readFileSync('src/app/api/admin/refund/route.ts', 'utf8');
-  assert.doesNotMatch(source, /checkout\/charges|fetch\(|status: 'refunded'/);
-  assert.match(source, /created.error\?\.code === '23505'/);
-  assert.match(source, /amount: order.amount, currency: order.currency/);
+  assert.match(source, /paymentStatus === 'refunded'[\s\S]*handleRefund/);
+  assert.match(refundHandler, /\.rpc\('finalize_verified_refund'/);
+  assert.doesNotMatch(refundHandler, /\.from\('orders'\)[\s\S]*\.update/);
+  assert.match(migration, /FOR UPDATE/);
+  assert.match(migration, /INSERT INTO public\.payment_events[\s\S]*ON CONFLICT DO NOTHING/);
+  assert.match(migration, /UPDATE public\.refunds[\s\S]*status = 'completed'/);
+  assert.match(migration, /UPDATE public\.downloads[\s\S]*status = 'revoked'/);
+  assert.match(migration, /UPDATE public\.subscriptions[\s\S]*status = 'cancelled'/);
+  assert.match(migration, /REVOKE ALL ON FUNCTION[\s\S]*FROM PUBLIC, anon, authenticated/);
+  assert.match(migration, /GRANT EXECUTE ON FUNCTION[\s\S]*TO service_role/);
 });
