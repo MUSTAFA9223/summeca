@@ -45,9 +45,9 @@ export default function ForgotPasswordForm() {
         </div>
         <h2 className="text-xl font-700 text-foreground mb-2">Check your inbox</h2>
         <p className="text-sm text-muted-foreground leading-relaxed max-w-xs mx-auto">
-          We sent a secure password reset link to{' '}
-          <span className="font-600 text-foreground">{submittedEmail}</span>.
-          Check your spam folder if it doesn&apos;t arrive within 2 minutes.
+          If an account exists for{' '}
+          <span className="font-600 text-foreground">{submittedEmail}</span>, a secure password reset link will be sent.
+          Check your spam folder if you don&apos;t see it.
         </p>
       </div>
     );
@@ -65,7 +65,6 @@ export default function ForgotPasswordForm() {
         </p>
       </div>
 
-      {/* Root error */}
       {errors.root && (
         <div className="mb-4 px-4 py-3 rounded-xl bg-danger/5 border border-danger/20">
           <p className="text-xs text-danger font-500">{errors.root.message}</p>
