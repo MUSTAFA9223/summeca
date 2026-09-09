@@ -77,8 +77,13 @@ type CryptoSession = {
 
 const CRYPTO_METHODS = [
   { value: 'crypto_usdt_trc20', label: 'USDT · TRON (TRC20)' },
+  { value: 'crypto_trx', label: 'TRON (TRX) · Low minimum' },
   { value: 'crypto_usdt_erc20', label: 'USDT · Ethereum (ERC20)' },
 ];
+
+function cryptoAssetLabel(paymentMethodType: string) {
+  return paymentMethodType === 'crypto_trx' ? 'TRX' : 'USDT';
+}
 
 const categoryLabel: Record<string, string> = {
   ai_tool: 'AI Tool', api: 'API', plugin: 'Plugin', template: 'Template',
@@ -276,7 +281,7 @@ function CheckoutInner() {
       <Link href="/products" className="hover:text-foreground flex items-center gap-1"><ArrowLeft size={14} /> Products</Link><ChevronRight size={13} /><span className="text-foreground font-600">Checkout</span>
     </div>
     <div className="mb-8">
-      <div className="flex items-center gap-3"><div className="w-10 h-10 rounded-xl bg-gradient-teal flex items-center justify-center"><ShoppingCart size={18} className="text-white" /></div><div><h1 className="text-2xl font-800">Secure Checkout</h1><p className="text-sm text-muted-foreground">Choose Payoneer or USDT. Payment return pages never complete paid orders.</p></div></div>
+      <div className="flex items-center gap-3"><div className="w-10 h-10 rounded-xl bg-gradient-teal flex items-center justify-center"><ShoppingCart size={18} className="text-white" /></div><div><h1 className="text-2xl font-800">Secure Checkout</h1><p className="text-sm text-muted-foreground">Choose Payoneer, USDT or TRX. Payment return pages never complete paid orders.</p></div></div>
       <div className="flex items-center gap-2 mt-4 p-3 bg-success/5 border border-success/15 rounded-xl"><Shield size={14} className="text-success" /><p className="text-xs">SUMMECA recalculates pricing server-side and grants access only after trusted payment verification.</p></div>
     </div>
 
@@ -301,16 +306,16 @@ function CheckoutInner() {
             <Wallet size={20} className="text-primary" /><div className="flex-1"><div className="font-700 text-sm">Payoneer Checkout</div><p className="text-xs text-muted-foreground mt-1">Hosted Payoneer checkout.</p></div><span className="text-[10px]">{payoneerStatus === 'available' ? 'Available' : payoneerStatus === 'checking' ? 'Checking…' : 'Not configured'}</span>
           </button>
           <button type="button" onClick={() => { setCheckoutMethod('crypto'); setCryptoSession(null); }} className={`w-full text-left rounded-xl border p-4 flex gap-3 ${checkoutMethod === 'crypto' ? 'border-primary bg-primary/5' : 'border-border'}`}>
-            <Bitcoin size={20} className="text-primary" /><div className="flex-1"><div className="font-700 text-sm">USDT · NOWPayments</div><p className="text-xs text-muted-foreground mt-1">USDT only. Choose TRC20 or ERC20 network. The order amount is fixed to the USD price when supported by the provider.</p></div><span className="text-[10px]">{cryptoStatus === 'available' ? 'Available' : cryptoStatus === 'checking' ? 'Checking…' : 'Not configured'}</span>
+            <Bitcoin size={20} className="text-primary" /><div className="flex-1"><div className="font-700 text-sm">USDT / TRX · NOWPayments</div><p className="text-xs text-muted-foreground mt-1">USDT remains the primary option. TRX is available for lower-total orders when the USDT minimum is too high.</p></div><span className="text-[10px]">{cryptoStatus === 'available' ? 'Available' : cryptoStatus === 'checking' ? 'Checking…' : 'Not configured'}</span>
           </button>
           {checkoutMethod === 'crypto' && <select value={cryptoMethod} onChange={(e) => { setCryptoMethod(e.target.value); setCryptoSession(null); setPageError(''); }} className="w-full px-3 py-3 bg-background border border-border rounded-xl text-sm">{CRYPTO_METHODS.map((method) => <option key={method.value} value={method.value}>{method.label}</option>)}</select>}
         </div>}
 
         {cryptoSession && <div className="bg-card border border-primary/30 rounded-2xl p-5 space-y-4">
-          <div className="flex items-center gap-2"><CheckCircle2 size={18} className="text-success" /><h2 className="font-700">USDT payment created</h2></div>
-          <div><p className="text-xs text-muted-foreground mb-1">Amount to send</p><p className="font-800 text-lg">{cryptoSession.cryptoAmount} USDT</p></div>
+          <div className="flex items-center gap-2"><CheckCircle2 size={18} className="text-success" /><h2 className="font-700">{cryptoAssetLabel(cryptoSession.paymentMethodType)} payment created</h2></div>
+          <div><p className="text-xs text-muted-foreground mb-1">Amount to send</p><p className="font-800 text-lg">{cryptoSession.cryptoAmount} {cryptoAssetLabel(cryptoSession.paymentMethodType)}</p></div>
           <div><p className="text-xs text-muted-foreground mb-1">Payment address</p><div className="flex gap-2"><code className="flex-1 text-xs break-all p-3 bg-secondary rounded-xl">{cryptoSession.paymentAddress}</code><button type="button" onClick={() => void navigator.clipboard.writeText(cryptoSession.paymentAddress)} className="px-3 rounded-xl border border-border" aria-label="Copy payment address"><Copy size={14} /></button></div></div>
-          <div className="p-3 rounded-xl bg-warning/5 border border-warning/20 text-xs">Send only USDT on the selected network. Sending another asset or the wrong network can result in permanent loss. SUMMECA waits for the verified provider webhook before granting access.</div>
+          <div className="p-3 rounded-xl bg-warning/5 border border-warning/20 text-xs">Send only {cryptoAssetLabel(cryptoSession.paymentMethodType)} on the selected network. Sending another asset or the wrong network can result in permanent loss. SUMMECA waits for the verified provider webhook before granting access.</div>
           <p className="text-xs text-muted-foreground">Order: {cryptoSession.orderId}</p>
         </div>}
 
@@ -328,7 +333,7 @@ function CheckoutInner() {
         {!user && !authLoading && <div className="mt-4 p-3 bg-warning/5 border border-warning/20 rounded-xl text-xs">Sign in to continue.</div>}
         {pageError && <div className="mt-4 p-3 bg-danger/5 border border-danger/20 rounded-xl text-xs text-danger">{pageError}</div>}
         <button onClick={() => void handleCheckout()} disabled={authLoading || checkoutSubmitting || (!isFreeOrder && !selectedProviderAvailable) || Boolean(cryptoSession)} className="mt-4 w-full py-3.5 bg-gradient-teal text-white font-700 text-sm rounded-xl disabled:opacity-50 flex items-center justify-center gap-2">
-          {checkoutSubmitting ? <><Loader2 size={16} className="animate-spin" /> Processing…</> : !user ? 'Sign In to Continue' : isFreeOrder ? <><CheckCircle2 size={15} /> Get Free Access</> : checkoutMethod === 'crypto' ? <><Bitcoin size={15} /> Create USDT Payment</> : <><ExternalLink size={14} /> Pay with Payoneer</>}
+          {checkoutSubmitting ? <><Loader2 size={16} className="animate-spin" /> Processing…</> : !user ? 'Sign In to Continue' : isFreeOrder ? <><CheckCircle2 size={15} /> Get Free Access</> : checkoutMethod === 'crypto' ? <><Bitcoin size={15} /> Create {cryptoMethod === 'crypto_trx' ? 'TRX' : 'USDT'} Payment</> : <><ExternalLink size={14} /> Pay with Payoneer</>}
         </button>
         <p className="text-center text-xs text-muted-foreground mt-3 flex items-center justify-center gap-1"><Lock size={11} /> {isFreeOrder ? 'No payment information required' : 'Secrets and wallet keys are never exposed to the browser'}</p>
         <div className="mt-5 pt-4 border-t border-border text-center"><Link href={`/products/${cartItem.product.slug}`} className="text-xs text-muted-foreground">← Back to product</Link></div>
