@@ -12,7 +12,7 @@
  *   EMAIL_INTERNAL_SECRET  — Optional: extra server-to-server auth header secret
  */
 
-import { createClient, createServiceClient } from '@/lib/supabase/server';
+import { createServiceClient } from '@/lib/supabase/server';
 
 export type EmailType =
   | 'order_confirmation' |'payment_receipt' |'download_link' |'password_reset' |'renewal_reminder' |'refund_confirmation' |'refund_requested' |'refund_approved' |'refund_rejected' |'refund_completed'
@@ -218,7 +218,7 @@ type EmailPayload =
  */
 export async function sendEmail(payload: EmailPayload): Promise<{ success: boolean; error?: string }> {
   try {
-    const supabase = await createClient();
+    const supabase = createServiceClient();
 
     const { data, error } = await supabase.functions.invoke('send-email', {
       body: payload,

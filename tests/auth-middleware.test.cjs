@@ -138,3 +138,16 @@ test('all signed-in password forms require server-side current-password verifica
     assert.doesNotMatch(source, /auth\.updateUser\(\{ password:/);
   }
 });
+
+
+test('transactional email function only accepts exact server credentials', () => {
+  const callerSource = fs.readFileSync('src/lib/email/sendEmail.ts', 'utf8');
+  const functionSource = fs.readFileSync('supabase/functions/send-email/index.ts', 'utf8');
+
+  assert.match(callerSource, /const supabase = createServiceClient\(\)/);
+  assert.doesNotMatch(callerSource, /const supabase = await createClient\(\)/);
+  assert.match(functionSource, /SUPABASE_SERVICE_ROLE_KEY/);
+  assert.match(functionSource, /constantTimeEqual\(bearerToken, SERVICE_ROLE_KEY\)/);
+  assert.doesNotMatch(functionSource, /authHeader && authHeader\.startsWith\(["']Bearer ["']\)/);
+  assert.doesNotMatch(functionSource, /Access-Control-Allow-Origin["']:\s*["']\*["']/);
+});
