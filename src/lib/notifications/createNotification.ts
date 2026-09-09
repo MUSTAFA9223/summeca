@@ -1,13 +1,14 @@
 /**
- * Server-side notification helper for SUMMECA V33.
+ * Server-side notification helper for SUMMECA.
  * Use this to create in-app notifications for users.
  * Never call from client components.
  */
 
 import { createClient } from '@/lib/supabase/server';
+import { sanitizeInternalActionUrl } from '@/lib/notifications/actionUrl';
 
 export type NotificationType =
-  | 'order' |'payment' |'subscription' |'refund' |'wishlist' |'recommendation' |'announcement';
+  | 'order' | 'payment' | 'subscription' | 'refund' | 'wishlist' | 'recommendation' | 'announcement';
 
 export interface CreateNotificationInput {
   userId: string;
@@ -17,10 +18,6 @@ export interface CreateNotificationInput {
   actionUrl?: string;
 }
 
-/**
- * Create a single in-app notification for a user.
- * Delivered in real-time via Supabase Realtime.
- */
 export async function createNotification(input: CreateNotificationInput): Promise<void> {
   try {
     const supabase = await createClient();
@@ -29,7 +26,7 @@ export async function createNotification(input: CreateNotificationInput): Promis
       type: input.type,
       title: input.title,
       message: input.message,
-      action_url: input.actionUrl ?? null,
+      action_url: sanitizeInternalActionUrl(input.actionUrl) ?? null,
       read: false,
     });
     if (error) {
@@ -41,10 +38,6 @@ export async function createNotification(input: CreateNotificationInput): Promis
   }
 }
 
-/**
- * Check if user has opted in to a specific email notification type.
- * Returns true if no preferences set (defaults to opted-in).
- */
 export async function checkEmailPreference(
   userId: string,
   prefKey: 'email_orders' | 'email_marketing' | 'email_product_updates' | 'email_subscription'
@@ -57,9 +50,9 @@ export async function checkEmailPreference(
       .eq('user_id', userId)
       .single();
 
-    if (!data) return true; // Default: opted in
+    if (!data) return true;
     return (data as Record<string, boolean>)[prefKey] ?? true;
   } catch {
-    return true; // Default: opted in on error
+    return true;
   }
 }
