@@ -1,5 +1,6 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
 import React, { useState, useEffect, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { Search, Filter, ChevronLeft, ChevronRight, Eye, X, RotateCcw, AlertTriangle } from 'lucide-react';
@@ -43,6 +44,7 @@ function RefundModal({
   onClose: () => void;
   onSuccess: (orderId: string) => void;
 }) {
+  const router = useRouter();
   const [reason, setReason] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -56,12 +58,13 @@ function RefundModal({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ orderId: order.id, reason }),
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         setError(data.error ?? 'Refund failed. Please try again.');
       } else {
         onSuccess(order.id);
         onClose();
+        router.push('/admin/refunds');
       }
     } catch {
       setError('Network error. Please try again.');
@@ -84,7 +87,7 @@ function RefundModal({
             <div className="w-8 h-8 rounded-lg bg-danger/10 flex items-center justify-center">
               <RotateCcw size={15} className="text-danger" />
             </div>
-            <h2 className="text-base font-700 text-foreground">Process Refund</h2>
+            <h2 className="text-base font-700 text-foreground">Request Refund Review</h2>
           </div>
           <button
             onClick={onClose}
@@ -99,8 +102,7 @@ function RefundModal({
           <div className="flex gap-3 p-3 rounded-xl bg-warning/5 border border-warning/20">
             <AlertTriangle size={16} className="text-warning mt-0.5 shrink-0" />
             <p className="text-xs text-warning leading-relaxed">
-              This will mark the order as <strong>refunded</strong>, trigger the Payoneer refund
-              flow, and send a confirmation email to the customer. This action cannot be undone.
+              This creates or opens a refund review request. No money is returned and the order remains unchanged until the refund workflow confirms completion.
             </p>
           </div>
 
@@ -170,7 +172,7 @@ function RefundModal({
             ) : (
               <>
                 <RotateCcw size={14} />
-                Confirm Refund
+                Create Review Request
               </>
             )}
           </button>
@@ -340,10 +342,8 @@ export default function AdminOrdersPage() {
     fetchOrders();
   }, [fetchOrders]);
 
-  function handleRefundSuccess(orderId: string) {
-    setOrders((prev) =>
-      prev.map((o) => (o.id === orderId ? { ...o, status: 'refunded' } : o))
-    );
+  function handleRefundSuccess(_orderId: string) {
+    // Opening review is not a completed refund; keep the order status unchanged.
   }
 
   const filtered = search

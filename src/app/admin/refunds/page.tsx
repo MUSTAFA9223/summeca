@@ -39,6 +39,7 @@ interface RefundRow {
   orders: {
     id: string;
     provider_payment_ref: string;
+    metadata: Record<string, unknown> | null;
     products: { name: string } | null;
     product_plans: { name: string } | null;
   } | null;
@@ -150,7 +151,9 @@ function DetailModal({ refund, onClose, onAction, actionLoading }: DetailModalPr
     'Mark Failed': 'failed',
   };
 
-  const actions = allowedActions[refund.status] ?? [];
+  const provider = String(refund.orders?.metadata?.provider ?? 'manual');
+  const awaitingProvider = provider !== 'manual' && ['approved', 'processing', 'failed'].includes(refund.status);
+  const actions = awaitingProvider ? [] : (allowedActions[refund.status] ?? []);
 
   const handleAction = async (label: string) => {
     const action = actionMap[label];
@@ -257,6 +260,9 @@ function DetailModal({ refund, onClose, onAction, actionLoading }: DetailModalPr
           )}
 
           {/* Admin Note */}
+          {awaitingProvider && (
+            <p className="text-xs text-muted-foreground">Provider reconciliation is required. Do not submit another refund while the result is uncertain.</p>
+          )}
           {actions.length > 0 && (
             <section>
               <h3 className="text-xs font-700 text-muted-foreground uppercase tracking-wider mb-2">Admin Note</h3>
@@ -355,7 +361,7 @@ export default function AdminRefundsPage() {
           id, order_id, user_id, amount, currency, reason, customer_note, admin_note,
           status, provider_refund_id, requested_at, reviewed_at, completed_at, created_at,
           orders (
-            id, provider_payment_ref,
+            id, provider_payment_ref, metadata,
             products ( name ),
             product_plans ( name )
           ),
