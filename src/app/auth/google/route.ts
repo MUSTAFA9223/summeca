@@ -23,6 +23,38 @@ function getSafeNext(value: string | null) {
   return value;
 }
 
+function getAuthCookiePrefix(): string | null {
+  try {
+    const projectRef = new URL(process.env.NEXT_PUBLIC_SUPABASE_URL!).hostname.split('.')[0];
+    return projectRef ? `sb-${projectRef}-auth-token` : null;
+  } catch {
+    return null;
+  }
+}
+
+function clearStaleAuthCookies(request: NextRequest, response: NextResponse) {
+  const prefix = getAuthCookiePrefix();
+  if (!prefix) return;
+
+  for (const cookie of request.cookies.getAll()) {
+    if (!cookie.name.startsWith(prefix)) continue;
+    response.cookies.set(cookie.name, '', {
+      path: '/',
+      expires: new Date(0),
+      maxAge: 0,
+      sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production',
+      httpOnly: false,
+    });
+  }
+}
+
+function disableCaching(response: NextResponse) {
+  response.headers.set('Cache-Control', 'private, no-store, max-age=0');
+  response.headers.set('Pragma', 'no-cache');
+  response.headers.set('Expires', '0');
+}
+
 export async function GET(request: NextRequest) {
   const canonicalOrigin = getCanonicalOrigin();
   const requestUrl = new URL(request.url);
@@ -47,8 +79,10 @@ export async function GET(request: NextRequest) {
         },
       },
       cookies: {
+        // A new OAuth flow does not need an old auth session. Starting from a clean
+        // cookie view avoids stale Chrome chunk data poisoning the PKCE flow.
         getAll() {
-          return request.cookies.getAll();
+          return [];
         },
         setAll(cookiesToSet) {
           cookiesToSet.forEach(({ name, value, options }) => {
@@ -75,19 +109,21 @@ export async function GET(request: NextRequest) {
     const loginUrl = new URL('/sign-up-login-screen', canonicalOrigin);
     loginUrl.searchParams.set('oauth_error', 'google_start_failed');
     const response = NextResponse.redirect(loginUrl);
-    response.headers.set('Cache-Control', 'private, no-store');
+    disableCaching(response);
     return response;
   }
 
   const response = NextResponse.redirect(data.url);
+  clearStaleAuthCookies(request, response);
   pendingCookies.forEach(({ name, value, options }) => {
     response.cookies.set(name, value, {
       ...options,
+      path: options?.path || '/',
       sameSite: 'lax',
       secure: process.env.NODE_ENV === 'production',
       httpOnly: false,
     });
   });
-  response.headers.set('Cache-Control', 'private, no-store');
+  disableCaching(response);
   return response;
 }
