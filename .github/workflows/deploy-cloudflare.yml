@@ -56,8 +56,8 @@ jobs:
       - name: Type check
         run: npm run type-check
 
-      - name: Auth security regression tests
-        run: node --test tests/auth-middleware.test.cjs
+      - name: Security regression tests
+        run: node --test tests/*.test.cjs
 
       - name: Build Cloudflare Worker
         run: npm run build
@@ -65,13 +65,16 @@ jobs:
       - name: Deploy to Cloudflare production
         run: npx wrangler deploy --keep-vars
 
-      - name: Production public-route smoke test
+      - name: Production public and security smoke test
         shell: bash
         run: |
           node <<'NODE'
           const checks = [
             ['https://summeca.com/', 'text/html'],
             ['https://summeca.com/products', 'text/html'],
+            ['https://summeca.com/pricing', 'text/html'],
+            ['https://summeca.com/faq', 'text/html'],
+            ['https://summeca.com/sign-up-login-screen', 'text/html'],
             ['https://summeca.com/robots.txt', 'text/plain'],
             ['https://summeca.com/sitemap.xml', 'application/xml'],
           ];
@@ -83,6 +86,55 @@ jobs:
             if (!response.ok) process.exit(31);
             if (!type.includes(expectedType)) process.exit(32);
           }
+
+          const home = await fetch('https://summeca.com/', { redirect: 'follow' });
+          const requiredHeaders = {
+            'strict-transport-security': 'max-age=',
+            'x-content-type-options': 'nosniff',
+            'x-frame-options': 'DENY',
+            'referrer-policy': 'strict-origin-when-cross-origin',
+          };
+          for (const [name, expected] of Object.entries(requiredHeaders)) {
+            const value = home.headers.get(name) || '';
+            console.log(`${name}: ${value}`);
+            if (!value.toLowerCase().includes(expected.toLowerCase())) process.exit(33);
+          }
+
+          const dashboard = await fetch('https://summeca.com/user-dashboard', { redirect: 'manual' });
+          const dashboardLocation = dashboard.headers.get('location') || '';
+          console.log(`/user-dashboard -> ${dashboard.status} ${dashboardLocation}`);
+          if (![301, 302, 303, 307, 308].includes(dashboard.status) || !dashboardLocation.includes('/sign-up-login-screen')) process.exit(34);
+
+          const adminApi = await fetch('https://summeca.com/api/admin/products', { redirect: 'manual' });
+          console.log(`/api/admin/products -> ${adminApi.status}`);
+          if (adminApi.status !== 401) process.exit(35);
+          NODE
+
+      - name: Production payment readiness smoke test
+        shell: bash
+        run: |
+          node <<'NODE'
+          const endpoints = [
+            ['payoneer', 'https://summeca.com/api/payment/payoneer-status'],
+            ['crypto', 'https://summeca.com/api/payment/crypto-status'],
+            ['fastspring', 'https://summeca.com/api/payment/fastspring-status'],
+          ];
+
+          const readiness = {};
+          for (const [name, url] of endpoints) {
+            const response = await fetch(url, { redirect: 'follow' });
+            const text = await response.text();
+            if (!response.ok) {
+              console.error(`${name} readiness endpoint failed with ${response.status}`);
+              process.exit(36);
+            }
+            let data;
+            try { data = JSON.parse(text); } catch { process.exit(37); }
+            if (typeof data?.available !== 'boolean') process.exit(38);
+            readiness[name] = data.available;
+            console.log(`${name}: available=${data.available}${typeof data.live === 'boolean' ? ` live=${data.live}` : ''}${typeof data.testMode === 'boolean' ? ` testMode=${data.testMode}` : ''}`);
+          }
+          console.log(`Payment readiness summary: ${JSON.stringify(readiness)}`);
           NODE
 
       - name: Production sales AI smoke test
@@ -103,27 +155,13 @@ jobs:
 
           const body = await response.text();
           console.log(`Sales AI HTTP status: ${response.status}`);
-
           if (!response.ok) {
-            console.error('Sales AI returned a non-success response:');
             console.error(body.slice(0, 1000));
             process.exit(41);
           }
 
           let data;
-          try {
-            data = JSON.parse(body);
-          } catch {
-            console.error('Sales AI returned a non-JSON response:');
-            console.error(body.slice(0, 1000));
-            process.exit(42);
-          }
-
-          if (data?.success !== true || typeof data?.reply !== 'string' || !data.reply.trim()) {
-            console.error('Sales AI JSON response did not contain a usable reply:');
-            console.error(JSON.stringify(data).slice(0, 1000));
-            process.exit(43);
-          }
-
+          try { data = JSON.parse(body); } catch { process.exit(42); }
+          if (data?.success !== true || typeof data?.reply !== 'string' || !data.reply.trim()) process.exit(43);
           console.log(`Sales AI smoke test passed; reply length=${data.reply.length}`);
           NODE
