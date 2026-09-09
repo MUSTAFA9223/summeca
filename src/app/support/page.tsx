@@ -62,7 +62,7 @@ const helpTopics = [
     icon: MessageCircleQuestion,
     title: 'Something Else',
     description: 'Can’t find what you need? Contact the SUMMECA support team directly.',
-    href: 'mailto:hello@summeca.com?subject=SUMMECA%20Support%20Request',
+    href: 'mailto:support@summeca.com?subject=SUMMECA%20Support%20Request',
     action: 'Contact support',
   },
 ];
@@ -82,7 +82,7 @@ const faqs = [
   },
   {
     q: 'Can I get help with a product before buying?',
-    a: 'Yes. Contact support with the product name and your question, and we’ll help you understand the product, plan, or access type before purchase.',
+    a: 'Yes. For product selection, plan, and pricing questions before purchase, email sales@summeca.com.',
   },
   {
     q: 'What information should I include in a support request?',
@@ -197,7 +197,7 @@ export default function SupportPage() {
                 </p>
 
                 <a
-                  href="mailto:hello@summeca.com?subject=SUMMECA%20Support%20Request"
+                  href="mailto:support@summeca.com?subject=SUMMECA%20Support%20Request"
                   className="btn-primary mt-6 inline-flex w-full items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold"
                 >
                   Email Support
@@ -211,7 +211,15 @@ export default function SupportPage() {
                   </div>
                   <div className="flex items-start gap-2">
                     <Mail size={14} className="mt-0.5 shrink-0 text-primary" />
-                    <span>Support email: hello@summeca.com</span>
+                    <span>Customer support: <a className="font-semibold text-primary hover:underline" href="mailto:support@summeca.com">support@summeca.com</a></span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <PackageCheck size={14} className="mt-0.5 shrink-0 text-primary" />
+                    <span>Order & delivery help: <a className="font-semibold text-primary hover:underline" href="mailto:orders@summeca.com">orders@summeca.com</a></span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <CreditCard size={14} className="mt-0.5 shrink-0 text-primary" />
+                    <span>Billing & payment help: <a className="font-semibold text-primary hover:underline" href="mailto:billing@summeca.com">billing@summeca.com</a></span>
                   </div>
                 </div>
               </div>
