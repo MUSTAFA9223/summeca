@@ -70,6 +70,16 @@ export async function POST(request: NextRequest) {
     return noStoreJson({ error: 'Plan not found or unavailable.' }, { status: 404 });
   }
 
+  // Until recurring FastSpring rebill webhooks are wired to extend local
+  // subscription periods, never expose a live recurring checkout that could
+  // charge a customer without keeping SUMMECA access in sync.
+  if (readiness.live && (plan.billing_period === 'monthly' || plan.billing_period === 'yearly')) {
+    return noStoreJson(
+      { error: 'FastSpring recurring subscriptions are not enabled for live checkout yet. Use another payment method for this plan.' },
+      { status: 503 },
+    );
+  }
+
   const { data: product, error: productError } = await supabase
     .from('products')
     .select('id, name, slug, status')
@@ -123,6 +133,11 @@ export async function POST(request: NextRequest) {
     return noStoreJson({ error: 'Order was created with invalid payment details.' }, { status: 500 });
   }
 
+  const configuredTestPath = process.env.FASTSPRING_TEST_PRODUCT_PATH?.trim();
+  const providerProductPath = !readiness.live && configuredTestPath
+    ? configuredTestPath
+    : product.slug;
+
   const provider = getProvider('fastspring');
   const sessionResult = await provider.createSession({
     orderId,
@@ -134,7 +149,7 @@ export async function POST(request: NextRequest) {
     planName: plan.name,
     userId: user.id,
     customerEmail: user.email,
-    providerProductPath: product.slug,
+    providerProductPath,
     billingPeriod: plan.billing_period,
   });
 
@@ -165,7 +180,7 @@ export async function POST(request: NextRequest) {
         provider: 'fastspring',
         payment_method_type: 'card',
         fastspring_session_id: sessionResult.providerPaymentRef,
-        fastspring_product_path: product.slug,
+        fastspring_product_path: providerProductPath,
         fastspring_live: readiness.live,
       },
       updated_at: new Date().toISOString(),
