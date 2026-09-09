@@ -1,64 +1,51 @@
-import React from 'react';
 import Link from 'next/link';
-import { ArrowRight, Sparkles, CheckCircle2 } from 'lucide-react';
+import { ArrowRight, CheckCircle2, Sparkles } from 'lucide-react';
 
 const steps = [
   {
     num: '01',
-    title: 'Choose your tools',
-    desc: 'Browse our catalog of AI tools, SaaS apps, and digital products. Filter by category, use case, or budget.',
+    title: 'Choose a published product',
+    desc: 'Browse products that have passed SUMMECA publishing checks and have an active production offer.',
     cta: { label: 'Browse products', href: '/products' },
   },
   {
     num: '02',
-    title: 'Instant access',
-    desc: 'Purchase or subscribe in seconds. Your tools are available immediately — no waiting, no setup complexity.',
-    cta: { label: 'See pricing', href: '/pricing' },
+    title: 'Complete verified checkout',
+    desc: 'Choose an available payment method. Paid orders remain pending until the provider confirms the transaction; free offers use the protected free-order flow.',
+    cta: { label: 'View published pricing', href: '/pricing' },
   },
   {
     num: '03',
-    title: 'Scale with AI',
-    desc: 'Use the built-in AI Marketing Engine to generate content, optimize SEO, and run campaigns automatically.',
-    cta: { label: 'Explore AI', href: '/ai' },
+    title: 'Use your account access',
+    desc: 'Open your dashboard to see completed orders, eligible downloads, plan access, notifications, and customer support in one place.',
+    cta: { label: 'Open account', href: '/user-dashboard' },
   },
 ];
 
 export default function HowItWorks() {
   return (
-    <section className="py-24 bg-white">
-      <div className="max-w-screen-xl mx-auto px-6 lg:px-8">
-        <div className="text-center mb-14">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/8 border border-primary/15 mb-4">
+    <section className="bg-white py-24">
+      <div className="mx-auto max-w-screen-xl px-6 lg:px-8">
+        <div className="mb-14 text-center">
+          <div className="mb-4 inline-flex items-center gap-1.5 rounded-full border border-primary/15 bg-primary/8 px-3 py-1">
             <Sparkles size={11} className="text-primary" />
-            <span className="text-xs font-600 text-primary uppercase tracking-wider">How It Works</span>
+            <span className="text-xs font-semibold uppercase tracking-wider text-primary">How It Works</span>
           </div>
-          <h2 className="text-3xl font-800 text-foreground mb-3">
-            From zero to operational in minutes
-          </h2>
-          <p className="text-secondary-foreground text-sm max-w-md mx-auto">
-            SUMMECA is designed for speed. Get your business tools running before your next meeting.
-          </p>
+          <h2 className="text-3xl font-extrabold text-foreground">A checkout flow built around verification</h2>
+          <p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-secondary-foreground">The storefront does not grant paid access from a browser redirect alone. The server verifies the order state first.</p>
         </div>
 
-        {/* Horizontal step cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 relative">
-          {/* Connector line */}
-          <div className="hidden md:block absolute top-12 left-[calc(33.33%+24px)] right-[calc(33.33%+24px)] h-px bg-gradient-to-r from-primary/30 via-primary/60 to-primary/30" />
-
-          {steps?.map((step, idx) => (
-            <div key={step?.num} className={`relative rounded-2xl border border-border bg-white p-7 card-hover fade-in stagger-${idx + 1}`}>
-              {/* Step number */}
-              <div className="flex items-center gap-3 mb-5">
-                <div className="w-10 h-10 rounded-xl bg-gradient-teal flex items-center justify-center flex-shrink-0 shadow-sm">
-                  <span className="text-xs font-800 text-white">{step?.num}</span>
-                </div>
+        <div className="relative grid grid-cols-1 gap-6 md:grid-cols-3">
+          <div className="absolute left-[calc(33.33%+24px)] right-[calc(33.33%+24px)] top-12 hidden h-px bg-gradient-to-r from-primary/30 via-primary/60 to-primary/30 md:block" />
+          {steps.map((step, index) => (
+            <div key={step.num} className={`relative rounded-2xl border border-border bg-white p-7 card-hover fade-in stagger-${index + 1}`}>
+              <div className="mb-5 flex items-center gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-teal shadow-sm"><span className="text-xs font-extrabold text-white">{step.num}</span></div>
                 <CheckCircle2 size={16} className="text-primary/40" />
               </div>
-              <h3 className="text-base font-700 text-foreground mb-2">{step?.title}</h3>
-              <p className="text-sm text-secondary-foreground leading-relaxed mb-5">{step?.desc}</p>
-              <Link href={step?.cta?.href} className="flex items-center gap-1.5 text-sm font-600 text-primary hover:gap-2.5 transition-all duration-200">
-                {step?.cta?.label} <ArrowRight size={13} />
-              </Link>
+              <h3 className="text-base font-bold text-foreground">{step.title}</h3>
+              <p className="mb-5 mt-2 text-sm leading-relaxed text-secondary-foreground">{step.desc}</p>
+              <Link href={step.cta.href} className="flex items-center gap-1.5 text-sm font-semibold text-primary hover:gap-2.5 transition-all">{step.cta.label} <ArrowRight size={13} /></Link>
             </div>
           ))}
         </div>
