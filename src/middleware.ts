@@ -1,6 +1,51 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
+function getAuthCookiePrefix(): string | null {
+  try {
+    const projectRef = new URL(process.env.NEXT_PUBLIC_SUPABASE_URL!).hostname.split('.')[0];
+    return projectRef ? `sb-${projectRef}-auth-token` : null;
+  } catch {
+    return null;
+  }
+}
+
+function decodeCookieValue(value: string) {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
+}
+
+function getCookiesForSupabase(request: NextRequest) {
+  const cookies = request.cookies.getAll();
+  const prefix = getAuthCookiePrefix();
+  const rawCookieHeader = request.headers.get('cookie');
+
+  if (!prefix || !rawCookieHeader) return cookies;
+
+  // Chrome can send both an older Domain-scoped cookie and a newer host-only
+  // cookie with the same Supabase chunk name. Preserve the last occurrence from
+  // the raw Cookie header so one stale duplicate cannot shadow the fresh login.
+  const authByName = new Map<string, { name: string; value: string }>();
+  for (const part of rawCookieHeader.split(';')) {
+    const trimmed = part.trim();
+    const separator = trimmed.indexOf('=');
+    if (separator <= 0) continue;
+    const name = trimmed.slice(0, separator).trim();
+    if (!name.startsWith(prefix)) continue;
+    authByName.set(name, {
+      name,
+      value: decodeCookieValue(trimmed.slice(separator + 1)),
+    });
+  }
+
+  if (authByName.size === 0) return cookies;
+  const nonAuthCookies = cookies.filter((cookie) => !cookie.name.startsWith(prefix));
+  return [...nonAuthCookies, ...authByName.values()];
+}
+
 export async function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname;
 
@@ -18,8 +63,7 @@ export async function middleware(request: NextRequest) {
 
   // Public storefront/auth pages and ordinary APIs do not need a Supabase
   // network request in middleware. Keeping the sign-in page outside auth
-  // middleware is important on Cloudflare's tight Worker CPU budget: the page
-  // can be served as a static asset and login/session work remains client-side.
+  // middleware is important on Cloudflare's tight Worker CPU budget.
   if (!isUserDashboard && !isAdminPage && !isAdminApi) {
     return NextResponse.next();
   }
@@ -31,7 +75,7 @@ export async function middleware(request: NextRequest) {
     {
       cookies: {
         getAll() {
-          return request.cookies.getAll();
+          return getCookiesForSupabase(request);
         },
         setAll(cookiesToSet) {
           cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
@@ -93,8 +137,6 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  // Keep public/auth pages out of middleware so Cloudflare can serve their
-  // pre-rendered assets without paying the Worker SSR/auth CPU cost.
   matcher: [
     '/user-dashboard/:path*',
     '/admin/:path*',
