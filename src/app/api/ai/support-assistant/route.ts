@@ -46,7 +46,7 @@ function validateMessages(value: unknown): SafeMessage[] | null {
 }
 
 export async function POST(request: NextRequest) {
-  const rate = checkRateLimit(`support-assistant:${getRequestIdentity(request)}`, {
+  const rate = await checkRateLimit(`support-assistant:${getRequestIdentity(request)}`, {
     limit: 6,
     windowMs: 60_000,
   });
@@ -98,3 +98,4 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'AI service error' }, { status: 502 });
   }
 }
+

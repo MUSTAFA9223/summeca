@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
   const sessionClient = await createClient();
   const { data: { user } } = await sessionClient.auth.getUser();
 
-  const rate = checkRateLimit(`recommendations:${getRequestIdentity(request, user?.id)}`, {
+  const rate = await checkRateLimit(`recommendations:${getRequestIdentity(request, user?.id)}`, {
     limit: 10,
     windowMs: 60_000,
   });
@@ -165,3 +165,4 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ recommendations: fallback });
   }
 }
+

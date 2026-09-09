@@ -212,3 +212,38 @@ test('dashboard never sums unlike currencies and password email status reflects 
   assert.match(password, /emailNotificationSent = emailResult\.success/);
   assert.doesNotMatch(password, /await sendEmail\([\s\S]{0,800}emailNotificationSent = true/);
 });
+
+test('rate limits are counted atomically across Cloudflare workers', () => {
+  const limiter = fs.readFileSync('src/lib/security/rateLimit.ts', 'utf8');
+  const migration = fs.readFileSync(
+    'supabase/migrations/20260909225902_distributed_api_rate_limits.sql',
+    'utf8'
+  );
+  const routes = [
+    'src/app/api/ai/chat-completion/route.ts',
+    'src/app/api/ai/generate/route.ts',
+    'src/app/api/ai/recommendations/route.ts',
+    'src/app/api/ai/semantic-search/route.ts',
+    'src/app/api/ai/store-assistant/route.ts',
+    'src/app/api/ai/support-assistant/route.ts',
+    'src/app/api/refunds/request/route.ts',
+    'src/app/api/security/change-password/route.ts',
+    'src/app/api/security/logout-all/route.ts',
+    'src/app/api/security/logs/route.ts',
+    'src/app/api/security/settings/route.ts',
+  ];
+
+  assert.match(limiter, /export async function checkRateLimit/);
+  assert.match(limiter, /createHmac\('sha256', serviceSecret\)/);
+  assert.match(limiter, /\.rpc\('consume_api_rate_limit'/);
+  assert.match(migration, /ALTER TABLE public\.api_rate_limits ENABLE ROW LEVEL SECURITY/);
+  assert.match(migration, /ON CONFLICT \(key_hash\) DO UPDATE/);
+  assert.match(migration, /FOR UPDATE SKIP LOCKED/);
+  assert.match(migration, /REVOKE ALL ON FUNCTION[\s\S]*FROM PUBLIC, anon, authenticated/);
+  assert.match(migration, /GRANT EXECUTE ON FUNCTION[\s\S]*TO service_role/);
+  for (const file of routes) {
+    const source = fs.readFileSync(file, 'utf8');
+    assert.match(source, /await checkRateLimit\(/, file);
+    assert.doesNotMatch(source, /=\s*checkRateLimit\(/, file);
+  }
+});

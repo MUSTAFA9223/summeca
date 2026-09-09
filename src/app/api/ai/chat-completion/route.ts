@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
     const user = await requireAdmin(supabase);
     if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-    const limit = checkRateLimit(`ai-chat:${getRequestIdentity(request, user.id)}`, {
+    const limit = await checkRateLimit(`ai-chat:${getRequestIdentity(request, user.id)}`, {
       limit: 20,
       windowMs: 60_000,
     });
@@ -140,3 +140,4 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'AI provider request failed' }, { status: 502 });
   }
 }
+

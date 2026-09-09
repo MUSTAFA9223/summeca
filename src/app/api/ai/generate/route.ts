@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
   const isAdmin = profile?.is_admin === true;
   const userRole: keyof typeof MONTHLY_LIMITS = isAdmin ? 'admin' : 'user';
 
-  const burst = checkRateLimit(`ai-generate:${getRequestIdentity(request, user.id)}`, {
+  const burst = await checkRateLimit(`ai-generate:${getRequestIdentity(request, user.id)}`, {
     limit: isAdmin ? 30 : 10,
     windowMs: 60_000,
   });
@@ -176,3 +176,4 @@ export async function POST(request: NextRequest) {
     usage: { used: used + 1, limit },
   }, { headers: { 'Cache-Control': 'no-store' } });
 }
+

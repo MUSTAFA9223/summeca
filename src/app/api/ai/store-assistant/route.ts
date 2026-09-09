@@ -30,7 +30,7 @@ type PlanRow = {
 
 export async function POST(request: NextRequest) {
   try {
-    const rate = checkRateLimit(`store-assistant:${getRequestIdentity(request)}`, {
+    const rate = await checkRateLimit(`store-assistant:${getRequestIdentity(request)}`, {
       limit: 8,
       windowMs: 60_000,
     });
@@ -169,3 +169,4 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
