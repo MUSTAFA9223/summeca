@@ -4,39 +4,46 @@ import AdminDashboardClient from './components/AdminDashboardClient';
 
 export const metadata = { title: 'Admin Dashboard — SUMMECA' };
 
+type RevenueTotal = { currency: string; amount: number };
+type ProductOrderRow = {
+  product_id: string;
+  products: { name?: string | null } | { name?: string | null }[] | null;
+};
+
+function normalizeCurrency(value: string | null | undefined) {
+  const currency = (value || 'USD').trim().toUpperCase();
+  return /^[A-Z]{3}$/.test(currency) ? currency : 'USD';
+}
+
 async function getStats(supabase: Awaited<ReturnType<typeof createClient>>) {
   const results = await Promise.all([
     supabase.from('orders').select('*', { count: 'exact', head: true }),
     supabase.from('orders').select('*', { count: 'exact', head: true }).eq('status', 'completed'),
     supabase.from('user_profiles').select('*', { count: 'exact', head: true }),
-    supabase.from('subscriptions').select('*', { count: 'exact', head: true }).eq('status', 'active'),
     supabase.from('products').select('*', { count: 'exact', head: true }),
     supabase.from('downloads').select('*', { count: 'exact', head: true }),
-    supabase.from('orders').select('amount').eq('status', 'completed'),
-    supabase.from('orders').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
+    supabase.from('orders').select('amount, currency').eq('status', 'completed'),
+    supabase.from('orders').select('*', { count: 'exact', head: true }).eq('status', 'pending_payment'),
   ]);
 
-  const totalOrders = results[0].count;
-  const completedOrders = results[1].count;
-  const totalCustomers = results[2].count;
-  const activeSubscriptions = results[3].count;
-  const totalProducts = results[4].count;
-  const totalDownloads = results[5].count;
-  const revenueData = results[6].data;
-  const pendingData = results[7].count;
+  const revenueByCurrency = new Map<string, number>();
+  for (const order of results[5].data ?? []) {
+    const currency = normalizeCurrency(order.currency);
+    revenueByCurrency.set(currency, (revenueByCurrency.get(currency) ?? 0) + Number(order.amount || 0));
+  }
 
-  const totalRevenue = revenueData?.reduce((sum, o) => sum + Number(o.amount), 0) ?? 0;
-  const pendingPayments = pendingData ?? 0;
+  const revenueTotals: RevenueTotal[] = [...revenueByCurrency.entries()]
+    .map(([currency, amount]) => ({ currency, amount }))
+    .sort((a, b) => a.currency.localeCompare(b.currency));
 
   return {
-    totalRevenue,
-    totalOrders: totalOrders ?? 0,
-    completedOrders: completedOrders ?? 0,
-    pendingPayments: typeof pendingPayments === 'number' ? pendingPayments : 0,
-    totalCustomers: totalCustomers ?? 0,
-    activeSubscriptions: activeSubscriptions ?? 0,
-    totalProducts: totalProducts ?? 0,
-    totalDownloads: totalDownloads ?? 0,
+    revenueTotals,
+    totalOrders: results[0].count ?? 0,
+    completedOrders: results[1].count ?? 0,
+    pendingPayments: results[6].count ?? 0,
+    totalCustomers: results[2].count ?? 0,
+    totalProducts: results[3].count ?? 0,
+    totalDownloads: results[4].count ?? 0,
   };
 }
 
@@ -46,43 +53,39 @@ async function getChartData(supabase: Awaited<ReturnType<typeof createClient>>, 
 
   const { data: orders } = await supabase
     .from('orders')
-    .select('created_at, amount, status')
+    .select('created_at, status')
     .gte('created_at', since.toISOString())
     .order('created_at', { ascending: true });
 
-  // Group by day
-  const byDay: Record<string, { revenue: number; orders: number; completed: number; pending: number }> = {};
-  (orders ?? []).forEach((o) => {
-    const day = o.created_at.slice(0, 10);
-    if (!byDay[day]) byDay[day] = { revenue: 0, orders: 0, completed: 0, pending: 0 };
-    byDay[day].orders++;
-    if (o.status === 'completed') {
-      byDay[day].revenue += Number(o.amount);
-      byDay[day].completed++;
-    } else if (o.status === 'pending') {
-      byDay[day].pending++;
-    }
-  });
+  const byDay: Record<string, { orders: number; completed: number; pending: number }> = {};
+  for (const order of orders ?? []) {
+    const day = order.created_at.slice(0, 10);
+    if (!byDay[day]) byDay[day] = { orders: 0, completed: 0, pending: 0 };
+    byDay[day].orders += 1;
+    if (order.status === 'completed') byDay[day].completed += 1;
+    if (order.status === 'pending_payment') byDay[day].pending += 1;
+  }
 
-  return Object.entries(byDay).map(([date, v]) => ({ date, ...v }));
+  return Object.entries(byDay).map(([date, values]) => ({ date, ...values }));
 }
 
 async function getTopProducts(supabase: Awaited<ReturnType<typeof createClient>>) {
   const { data } = await supabase
     .from('orders')
-    .select('product_id, amount, products(name)')
+    .select('product_id, products(name)')
     .eq('status', 'completed');
 
-  const byProduct: Record<string, { name: string; revenue: number; count: number }> = {};
-  (data ?? []).forEach((o: any) => {
-    const pid = o.product_id;
-    if (!byProduct[pid]) byProduct[pid] = { name: o.products?.name ?? 'Unknown', revenue: 0, count: 0 };
-    byProduct[pid].revenue += Number(o.amount);
-    byProduct[pid].count++;
-  });
+  const byProduct: Record<string, { name: string; count: number }> = {};
+  for (const row of (data ?? []) as ProductOrderRow[]) {
+    const product = Array.isArray(row.products) ? row.products[0] : row.products;
+    if (!byProduct[row.product_id]) {
+      byProduct[row.product_id] = { name: product?.name ?? 'Unknown', count: 0 };
+    }
+    byProduct[row.product_id].count += 1;
+  }
 
   return Object.values(byProduct)
-    .sort((a, b) => b.revenue - a.revenue)
+    .sort((a, b) => b.count - a.count)
     .slice(0, 5);
 }
 
@@ -94,11 +97,5 @@ export default async function AdminDashboardPage() {
     getTopProducts(supabase),
   ]);
 
-  return (
-    <AdminDashboardClient
-      stats={stats}
-      initialChartData={chartData}
-      topProducts={topProducts}
-    />
-  );
+  return <AdminDashboardClient stats={stats} initialChartData={chartData} topProducts={topProducts} />;
 }
