@@ -5,7 +5,7 @@ import { Plus_Jakarta_Sans } from 'next/font/google';
 import '../styles/tailwind.css';
 import { Toaster } from 'sonner';
 import { AuthProvider } from '@/contexts/AuthContext';
-import StoreAssistant from '@/components/StoreAssistant';
+import DeferredStoreAssistant from '@/components/DeferredStoreAssistant';
 import GoogleAnalytics from '@/components/GoogleAnalytics';
 
 const plusJakartaSans = Plus_Jakarta_Sans({
@@ -70,7 +70,7 @@ export default function RootLayout({
           <GoogleAnalytics />
         </Suspense>
         <AuthProvider>{children}</AuthProvider>
-        <StoreAssistant />
+        <DeferredStoreAssistant />
         <Toaster position="bottom-right" richColors closeButton />
       </body>
     </html>
