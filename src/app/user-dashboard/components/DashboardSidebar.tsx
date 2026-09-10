@@ -51,6 +51,14 @@ const navGroups = [
     ],
   },
   {
+    id: 'apps',
+    label: 'SUMMECA Apps',
+    items: [
+      { id: 'invoiceflow', label: 'InvoiceFlow', icon: FileText, href: '/user-dashboard/invoiceflow' },
+      { id: 'leadfollow', label: 'LeadFollow AI', icon: Activity, href: '/user-dashboard/leadfollow' },
+    ],
+  },
+  {
     id: 'billing',
     label: 'Billing & Usage',
     items: [
