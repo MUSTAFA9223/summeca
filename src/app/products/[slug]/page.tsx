@@ -21,13 +21,6 @@ import { getEffectivePrice } from '@/lib/pricing';
 
 type BillingPeriod = 'one_time' | 'monthly' | 'yearly' | 'lifetime';
 
-type ProductMetadata = {
-  digital_product?: boolean;
-  saas_product?: boolean;
-  download_file_name?: string;
-  app_path?: string;
-};
-
 type ProviderAvailability = {
   crypto: boolean | null;
   payoneer: boolean | null;
@@ -60,7 +53,6 @@ interface Product {
   category: string;
   thumbnail_url: string | null;
   tags: string[] | null;
-  metadata: ProductMetadata | null;
 }
 
 interface Review {
@@ -116,6 +108,14 @@ function suffix(period: BillingPeriod) {
   return '';
 }
 
+function isSaasProduct(product: Product) {
+  return product.slug === 'summeca-invoiceflow' || product.slug === 'summeca-leadfollow-ai';
+}
+
+function isDigitalProduct(product: Product) {
+  return product.category === 'template' || product.category === 'dataset';
+}
+
 function productCtaLabel(product: Product, plan: Plan, finalPrice: number) {
   if (finalPrice === 0) return 'Continue with free offer';
   if (product.slug === 'summeca-invoiceflow') return 'Get InvoiceFlow';
@@ -149,7 +149,7 @@ export default function ProductDetailPage() {
     async function load() {
       const { data: productData, error: productError } = await supabase
         .from('products')
-        .select('id, name, slug, description, short_desc, category, thumbnail_url, tags, metadata')
+        .select('id, name, slug, description, short_desc, category, thumbnail_url, tags')
         .eq('slug', slug)
         .eq('status', 'active')
         .maybeSingle();
@@ -253,8 +253,8 @@ export default function ProductDetailPage() {
     : 0;
   const selectedPlan = plans.find((plan) => plan.id === selectedPlanId) ?? plans[0] ?? null;
   const selectedPricing = selectedPlan ? pricingFor(selectedPlan) : null;
-  const isSaas = product.metadata?.saas_product === true;
-  const isDigital = product.metadata?.digital_product === true;
+  const isSaas = isSaasProduct(product);
+  const isDigital = isDigitalProduct(product);
   const availableProviders = [
     providerAvailability.crypto === true ? 'Crypto' : null,
     providerAvailability.payoneer === true ? 'Payoneer' : null,
@@ -349,12 +349,9 @@ export default function ProductDetailPage() {
                   const pricing = pricingFor(plan);
                   const selected = selectedPlan?.id === plan.id;
                   return (
-                    <button
+                    <article
                       key={plan.id}
-                      type="button"
-                      aria-pressed={selected}
-                      onClick={() => setSelectedPlanId(plan.id)}
-                      className={`flex h-full flex-col rounded-2xl border p-6 text-left shadow-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 ${
+                      className={`flex h-full flex-col rounded-2xl border p-6 text-left shadow-sm transition ${
                         selected
                           ? 'border-primary bg-primary/5 shadow-md'
                           : 'border-border bg-card hover:border-primary/30 hover:shadow-md'
@@ -390,7 +387,19 @@ export default function ProductDetailPage() {
                           ))}
                         </ul>
                       )}
-                    </button>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedPlanId(plan.id)}
+                        aria-pressed={selected}
+                        className={`mt-auto rounded-xl border px-4 py-3 text-sm font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 ${
+                          selected
+                            ? 'border-primary bg-primary text-white'
+                            : 'border-border bg-background text-foreground hover:border-primary/40 hover:text-primary'
+                        }`}
+                      >
+                        {selected ? 'Selected plan' : `Select ${plan.name}`}
+                      </button>
+                    </article>
                   );
                 })}
               </div>
@@ -407,7 +416,7 @@ export default function ProductDetailPage() {
                       {isSaas
                         ? 'After verified payment, access is unlocked in your SUMMECA account. This SaaS product does not require a downloadable ZIP package.'
                         : isDigital
-                          ? `After verified payment, the purchase appears in your SUMMECA account and the protected digital package becomes available${product.metadata?.download_file_name ? ` as ${product.metadata.download_file_name}` : ''}.`
+                          ? 'After verified payment, the purchase appears in your SUMMECA account and the protected ZIP package becomes available through the configured download entitlement.'
                           : 'After the protected checkout completes, the product is delivered according to its configured account entitlement.'}
                     </p>
                     <div className="mt-4 flex flex-wrap gap-3 text-xs font-semibold text-muted-foreground">
