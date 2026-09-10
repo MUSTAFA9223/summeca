@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { Search, ChevronLeft, ChevronRight, Eye, X } from 'lucide-react';
 
@@ -11,17 +11,47 @@ interface Customer {
   plan_tier: string;
   created_at: string;
   order_count?: number;
-  total_spent?: number;
-  subscription_count?: number;
+  spend_by_currency?: Record<string, number>;
+  active_access_count?: number;
   download_count?: number;
 }
 
 const PAGE_SIZE = 20;
 
+function normalizeCurrency(value: string | null | undefined) {
+  const currency = (value || 'USD').trim().toUpperCase();
+  return /^[A-Z]{3}$/.test(currency) ? currency : 'USD';
+}
+
+function formatCurrency(amount: number, currency: string) {
+  try {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency,
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(amount);
+  } catch {
+    return `${currency} ${amount.toFixed(2)}`;
+  }
+}
+
+function SpendTotals({ totals }: { totals?: Record<string, number> }) {
+  const entries = Object.entries(totals ?? {}).sort(([a], [b]) => a.localeCompare(b));
+  if (entries.length === 0) return <span>—</span>;
+  return (
+    <span className="inline-flex flex-col gap-0.5">
+      {entries.map(([currency, amount]) => (
+        <span key={currency}>{formatCurrency(amount, currency)}</span>
+      ))}
+    </span>
+  );
+}
+
 function CustomerModal({ customer, onClose }: { customer: Customer; onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center modal-overlay p-4" onClick={onClose}>
-      <div className="bg-card rounded-2xl border border-border w-full max-w-md" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-card rounded-2xl border border-border w-full max-w-md" onClick={(event) => event.stopPropagation()}>
         <div className="flex items-center justify-between p-5 border-b border-border">
           <h2 className="text-base font-700 text-foreground">Customer Details</h2>
           <button onClick={onClose} className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary transition-all"><X size={16} /></button>
@@ -42,12 +72,12 @@ function CustomerModal({ customer, onClose }: { customer: Customer; onClose: () 
               <p className="text-xs text-muted-foreground">Orders</p>
             </div>
             <div className="rounded-xl bg-secondary/50 p-3 text-center">
-              <p className="text-lg font-800 text-success">${(customer.total_spent ?? 0).toFixed(2)}</p>
-              <p className="text-xs text-muted-foreground">Total Spent</p>
+              <p className="text-sm font-800 text-success"><SpendTotals totals={customer.spend_by_currency} /></p>
+              <p className="text-xs text-muted-foreground">Completed spend</p>
             </div>
             <div className="rounded-xl bg-secondary/50 p-3 text-center">
-              <p className="text-lg font-800 text-foreground">{customer.subscription_count ?? 0}</p>
-              <p className="text-xs text-muted-foreground">Subscriptions</p>
+              <p className="text-lg font-800 text-foreground">{customer.active_access_count ?? 0}</p>
+              <p className="text-xs text-muted-foreground">Active access</p>
             </div>
             <div className="rounded-xl bg-secondary/50 p-3 text-center">
               <p className="text-lg font-800 text-foreground">{customer.download_count ?? 0}</p>
@@ -69,7 +99,7 @@ export default function AdminCustomersPage() {
   const [page, setPage] = useState(0);
   const [total, setTotal] = useState(0);
   const [selected, setSelected] = useState<Customer | null>(null);
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
 
   const fetchCustomers = useCallback(async () => {
     setLoading(true);
@@ -80,33 +110,46 @@ export default function AdminCustomersPage() {
       .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
 
     if (data) {
-      // Fetch aggregated stats for each customer
       const enriched = await Promise.all(
-        data.map(async (c) => {
-          const [ordersCountResult, ordersDataResult, subsCountResult, dlCountResult] = await Promise.all([
-            supabase.from('orders').select('*', { count: 'exact', head: true }).eq('user_id', c.id),
-            supabase.from('orders').select('amount').eq('user_id', c.id).eq('status', 'completed'),
-            supabase.from('subscriptions').select('*', { count: 'exact', head: true }).eq('user_id', c.id).eq('status', 'active'),
-            supabase.from('downloads').select('*', { count: 'exact', head: true }).eq('user_id', c.id),
+        data.map(async (customer) => {
+          const [ordersCountResult, ordersDataResult, accessCountResult, downloadCountResult] = await Promise.all([
+            supabase.from('orders').select('*', { count: 'exact', head: true }).eq('user_id', customer.id),
+            supabase.from('orders').select('amount, currency').eq('user_id', customer.id).eq('status', 'completed'),
+            supabase.from('subscriptions').select('*', { count: 'exact', head: true }).eq('user_id', customer.id).eq('status', 'active'),
+            supabase.from('downloads').select('*', { count: 'exact', head: true }).eq('user_id', customer.id),
           ]);
-          const orderCount = ordersCountResult.count;
-          const orders = ordersDataResult.data;
-          const subCount = subsCountResult.count;
-          const dlCount = dlCountResult.count;
-          const totalSpent = (orders ?? []).reduce((s, o) => s + Number(o.amount), 0);
-          return { ...c, order_count: orderCount ?? 0, total_spent: totalSpent, subscription_count: subCount ?? 0, download_count: dlCount ?? 0 };
-        })
+
+          const spendByCurrency: Record<string, number> = {};
+          for (const order of ordersDataResult.data ?? []) {
+            const currency = normalizeCurrency(order.currency);
+            spendByCurrency[currency] = (spendByCurrency[currency] ?? 0) + Number(order.amount || 0);
+          }
+
+          return {
+            ...customer,
+            order_count: ordersCountResult.count ?? 0,
+            spend_by_currency: spendByCurrency,
+            active_access_count: accessCountResult.count ?? 0,
+            download_count: downloadCountResult.count ?? 0,
+          };
+        }),
       );
       setCustomers(enriched);
       setTotal(count ?? 0);
     }
     setLoading(false);
-  }, [page]);
+  }, [page, supabase]);
 
-  useEffect(() => { fetchCustomers(); }, [fetchCustomers]);
+  useEffect(() => {
+    void fetchCustomers();
+  }, [fetchCustomers]);
 
-  const filtered = search
-    ? customers.filter((c) => c.email.toLowerCase().includes(search.toLowerCase()) || c.full_name.toLowerCase().includes(search.toLowerCase()))
+  const normalizedSearch = search.trim().toLowerCase();
+  const filtered = normalizedSearch
+    ? customers.filter((customer) =>
+        customer.email.toLowerCase().includes(normalizedSearch) ||
+        (customer.full_name || '').toLowerCase().includes(normalizedSearch),
+      )
     : customers;
 
   const totalPages = Math.ceil(total / PAGE_SIZE);
@@ -120,7 +163,7 @@ export default function AdminCustomersPage() {
 
       <div className="relative">
         <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-        <input type="text" placeholder="Search by name or email..." value={search} onChange={(e) => setSearch(e.target.value)} className="w-full max-w-sm pl-9 pr-4 py-2.5 text-sm bg-card border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary" />
+        <input type="text" placeholder="Search by name or email..." value={search} onChange={(event) => setSearch(event.target.value)} className="w-full max-w-sm pl-9 pr-4 py-2.5 text-sm bg-card border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary" />
       </div>
 
       <div className="rounded-2xl border border-border bg-card overflow-hidden">
@@ -131,42 +174,42 @@ export default function AdminCustomersPage() {
                 <th className="text-left px-4 py-3 text-xs font-700 text-muted-foreground uppercase tracking-wide">Customer</th>
                 <th className="text-left px-4 py-3 text-xs font-700 text-muted-foreground uppercase tracking-wide">Plan</th>
                 <th className="text-left px-4 py-3 text-xs font-700 text-muted-foreground uppercase tracking-wide">Orders</th>
-                <th className="text-left px-4 py-3 text-xs font-700 text-muted-foreground uppercase tracking-wide">Spent</th>
-                <th className="text-left px-4 py-3 text-xs font-700 text-muted-foreground uppercase tracking-wide">Subs</th>
+                <th className="text-left px-4 py-3 text-xs font-700 text-muted-foreground uppercase tracking-wide">Completed spend</th>
+                <th className="text-left px-4 py-3 text-xs font-700 text-muted-foreground uppercase tracking-wide">Active access</th>
                 <th className="text-left px-4 py-3 text-xs font-700 text-muted-foreground uppercase tracking-wide">Joined</th>
                 <th className="px-4 py-3"></th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                Array.from({ length: 5 }).map((_, i) => (
-                  <tr key={i} className="border-b border-border">
-                    {Array.from({ length: 7 }).map((_, j) => <td key={j} className="px-4 py-3"><div className="h-4 rounded shimmer w-20" /></td>)}
+                Array.from({ length: 5 }).map((_, index) => (
+                  <tr key={index} className="border-b border-border">
+                    {Array.from({ length: 7 }).map((__, cell) => <td key={cell} className="px-4 py-3"><div className="h-4 rounded shimmer w-20" /></td>)}
                   </tr>
                 ))
               ) : filtered.length === 0 ? (
                 <tr><td colSpan={7} className="px-4 py-12 text-center text-sm text-muted-foreground">No customers found</td></tr>
               ) : (
-                filtered.map((c) => (
-                  <tr key={c.id} className="border-b border-border hover:bg-secondary/30 transition-colors">
+                filtered.map((customer) => (
+                  <tr key={customer.id} className="border-b border-border hover:bg-secondary/30 transition-colors">
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2.5">
                         <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                          <span className="text-xs font-700 text-primary">{(c.full_name || c.email).charAt(0).toUpperCase()}</span>
+                          <span className="text-xs font-700 text-primary">{(customer.full_name || customer.email).charAt(0).toUpperCase()}</span>
                         </div>
                         <div>
-                          <div className="font-600 text-foreground text-xs">{c.full_name || '—'}</div>
-                          <div className="text-xs text-muted-foreground">{c.email}</div>
+                          <div className="font-600 text-foreground text-xs">{customer.full_name || '—'}</div>
+                          <div className="text-xs text-muted-foreground">{customer.email}</div>
                         </div>
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-xs font-600 text-foreground capitalize">{c.plan_tier || 'free'}</td>
-                    <td className="px-4 py-3 text-xs font-700 text-foreground tabular-nums">{c.order_count}</td>
-                    <td className="px-4 py-3 text-xs font-700 text-success tabular-nums">${(c.total_spent ?? 0).toFixed(2)}</td>
-                    <td className="px-4 py-3 text-xs font-700 text-foreground tabular-nums">{c.subscription_count}</td>
-                    <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">{new Date(c.created_at).toLocaleDateString()}</td>
+                    <td className="px-4 py-3 text-xs font-600 text-foreground capitalize">{customer.plan_tier || 'free'}</td>
+                    <td className="px-4 py-3 text-xs font-700 text-foreground tabular-nums">{customer.order_count}</td>
+                    <td className="px-4 py-3 text-xs font-700 text-success tabular-nums"><SpendTotals totals={customer.spend_by_currency} /></td>
+                    <td className="px-4 py-3 text-xs font-700 text-foreground tabular-nums">{customer.active_access_count}</td>
+                    <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">{new Date(customer.created_at).toLocaleDateString()}</td>
                     <td className="px-4 py-3">
-                      <button onClick={() => setSelected(c)} className="w-7 h-7 rounded-lg flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 transition-all"><Eye size={14} /></button>
+                      <button onClick={() => setSelected(customer)} className="w-7 h-7 rounded-lg flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 transition-all"><Eye size={14} /></button>
                     </td>
                   </tr>
                 ))
@@ -178,8 +221,8 @@ export default function AdminCustomersPage() {
           <div className="flex items-center justify-between px-4 py-3 border-t border-border">
             <span className="text-xs text-muted-foreground">Page {page + 1} of {totalPages}</span>
             <div className="flex gap-2">
-              <button onClick={() => setPage((p) => Math.max(0, p - 1))} disabled={page === 0} className="w-8 h-8 rounded-lg flex items-center justify-center border border-border text-muted-foreground hover:text-foreground hover:bg-secondary disabled:opacity-40 transition-all"><ChevronLeft size={14} /></button>
-              <button onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))} disabled={page >= totalPages - 1} className="w-8 h-8 rounded-lg flex items-center justify-center border border-border text-muted-foreground hover:text-foreground hover:bg-secondary disabled:opacity-40 transition-all"><ChevronRight size={14} /></button>
+              <button onClick={() => setPage((current) => Math.max(0, current - 1))} disabled={page === 0} className="w-8 h-8 rounded-lg flex items-center justify-center border border-border text-muted-foreground hover:text-foreground hover:bg-secondary disabled:opacity-40 transition-all"><ChevronLeft size={14} /></button>
+              <button onClick={() => setPage((current) => Math.min(totalPages - 1, current + 1))} disabled={page >= totalPages - 1} className="w-8 h-8 rounded-lg flex items-center justify-center border border-border text-muted-foreground hover:text-foreground hover:bg-secondary disabled:opacity-40 transition-all"><ChevronRight size={14} /></button>
             </div>
           </div>
         )}
