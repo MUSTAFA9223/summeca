@@ -73,9 +73,9 @@ export default function PublicNav() {
   return (
     <header className={`fixed left-0 right-0 top-0 z-50 transition-all duration-300 ${scrolled ? 'border-b border-primary/8 bg-white/95 shadow-sm shadow-primary/5 backdrop-blur-xl' : 'bg-transparent'}`}>
       <div className="mx-auto max-w-screen-xl px-6 lg:px-8">
-        <div className="flex h-[68px] items-center justify-between">
+        <div className="flex h-[76px] items-center justify-between">
           <Link href="/" className="group flex shrink-0 items-center" aria-label="SUMMECA home">
-            <AppLogo variant="wordmark" size={46} className="transition-transform duration-200 group-hover:scale-[1.02]" />
+            <AppLogo variant="wordmark" size={50} className="transition-transform duration-200 group-hover:scale-[1.035]" />
           </Link>
 
           <nav className="hidden items-center gap-0.5 lg:flex">
@@ -169,7 +169,7 @@ export default function PublicNav() {
                   </div>
                   <Link href="/user-dashboard" className="btn-primary flex items-center justify-center gap-1.5 text-center text-sm" onClick={() => setMobileOpen(false)}><LayoutDashboard size={13} />Dashboard</Link>
                   <Link href="/user-dashboard/settings" className="btn-secondary flex items-center justify-center gap-1.5 text-center text-sm" onClick={() => setMobileOpen(false)}><Settings size={13} />Account settings</Link>
-                  <button type="button" className="rounded-xl px-3 py-2.5 text-sm font-medium text-muted-foreground transition hover:bg-secondary hover:text-foreground" onClick={() => void handleSignOut()}><LogOut size={13} className="mr-1.5 inline" />Sign out</button>
+                  <button type="button" className="btn-secondary flex items-center justify-center gap-1.5 text-center text-sm" onClick={() => void handleSignOut()}><LogOut size={13} />Sign out</button>
                 </>
               ) : (
                 <>
