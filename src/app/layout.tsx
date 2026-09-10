@@ -26,7 +26,7 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   metadataBase: new URL('https://summeca.com'),
   title: {
-    default: 'SUMMECA — AI & SaaS for Modern Work',
+    default: 'SUMMECA — Digital Tools for Modern Work',
     template: '%s | SUMMECA',
   },
   description: siteDescription,
@@ -34,7 +34,7 @@ export const metadata: Metadata = {
     type: 'website',
     url: 'https://summeca.com',
     siteName: 'SUMMECA',
-    title: 'SUMMECA — AI & SaaS for Modern Work',
+    title: 'SUMMECA — Digital Tools for Modern Work',
     description: siteDescription,
     images: [
       {
@@ -49,13 +49,13 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     site: '@summeca_',
     creator: '@summeca_',
-    title: 'SUMMECA — AI & SaaS for Modern Work',
+    title: 'SUMMECA — Digital Tools for Modern Work',
     description: siteDescription,
     images: ['/assets/images/summeca-logo.png'],
   },
   icons: {
-    icon: [{ url: '/assets/images/summeca-mark.png', type: 'image/png' }],
-    shortcut: ['/favicon.ico'],
+    icon: [{ url: '/assets/images/summeca-mark.png?v=20260910', type: 'image/png' }],
+    shortcut: ['/assets/images/summeca-mark.png?v=20260910'],
     apple: [{ url: '/assets/images/app_logo.png', sizes: '512x512', type: 'image/png' }],
   },
 };
