@@ -21,7 +21,6 @@ import {
   sendDownloadLink,
   sendPaymentFailed,
   sendPaymentReceipt,
-  sendSubscriptionActivated,
 } from '@/lib/email/sendEmail';
 
 type ServiceClient = ReturnType<typeof createServiceClient>;
@@ -446,7 +445,7 @@ async function handleCompletion(
 
   // Only the first successfully audited completion sends transactional emails.
   if (eventResult === 'inserted') {
-    await sendCompletionEmails(supabase, order, plan, providerName, providerPaymentRef, entitlementResult.periodEnd);
+    await sendCompletionEmails(supabase, order, plan, providerName, providerPaymentRef);
   }
 
   console.info(`[payment/webhook] Order ${order.id} completed via ${providerName}; first=${firstCompletion}.`);
@@ -542,8 +541,7 @@ async function sendCompletionEmails(
   order: OrderRecord,
   plan: PlanRecord,
   providerName: PaymentProvider,
-  providerPaymentRef: string,
-  periodEnd: string | null
+  providerPaymentRef: string
 ) {
   try {
     const { data: authUser } = await supabase.auth.admin.getUserById(order.user_id);
@@ -576,19 +574,9 @@ async function sendCompletionEmails(
       paidAt: now.toISOString(),
     });
 
-    if (plan.billing_period === 'monthly' || plan.billing_period === 'yearly' || plan.billing_period === 'lifetime') {
-      await sendSubscriptionActivated(userEmail, {
-        customerName: profile?.full_name ?? '',
-        productName,
-        planName: plan.name,
-        billingPeriod: plan.billing_period,
-        amount: plan.price,
-        currency: plan.currency,
-        renewalDate: periodEnd ?? now.toISOString(),
-        subscriptionId: order.id,
-      });
-    }
-
+    // Monthly/yearly values currently represent paid access periods, not a
+    // provider-confirmed automatic renewal contract. Do not send renewal or
+    // subscription-activation messaging that could imply recurring billing.
     if (plan.billing_period === 'one_time' || plan.billing_period === 'lifetime') {
       const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL ?? 'https://summeca.com').replace(/\/$/, '');
       await sendDownloadLink(userEmail, {
