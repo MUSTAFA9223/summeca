@@ -11,8 +11,9 @@ const hero = read('src/app/components/HeroSection.tsx');
 const layout = read('src/app/layout.tsx');
 const deferredAssistant = read('src/components/DeferredStoreAssistant.tsx');
 
-test('Spline hero uses the previously working viewer path and loads immediately', () => {
+test('Spline hero uses the viewer with a self-hosted scene and loads immediately', () => {
   assert.match(robot, /@splinetool\/viewer@1\.9\.82/);
+  assert.match(robot, /SCENE_URL = '\/assets\/spline\/summeca-robot\.splinecode'/);
   assert.match(robot, /events-target', 'global'/);
   assert.match(robot, /loading', 'eager'/);
   assert.match(robot, /pointerEvents: 'auto'/);
