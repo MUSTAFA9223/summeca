@@ -6,8 +6,6 @@ const siteUrl = 'https://summeca.com';
 const publicRoutes = [
   { path: '/', priority: 1, changeFrequency: 'daily' as const },
   { path: '/products', priority: 0.9, changeFrequency: 'daily' as const },
-  { path: '/services', priority: 0.9, changeFrequency: 'weekly' as const },
-  { path: '/services/conversion-rescue', priority: 0.9, changeFrequency: 'weekly' as const },
   { path: '/ai', priority: 0.8, changeFrequency: 'weekly' as const },
   { path: '/saas', priority: 0.8, changeFrequency: 'weekly' as const },
   { path: '/digital', priority: 0.8, changeFrequency: 'weekly' as const },
