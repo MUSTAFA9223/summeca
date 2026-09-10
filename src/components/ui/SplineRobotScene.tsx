@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 
 const SCENE_URL = 'https://prod.spline.design/H69K35LVSzZ9WcEG/scene.splinecode';
 const RUNTIME_URL = 'https://unpkg.com/@splinetool/runtime@2.0.42/build/runtime.js';
+const FALLBACK_IMAGE = '/assets/images/summeca-robot.webp';
 
 type SplineApplication = {
   load: (url: string) => Promise<void>;
@@ -39,10 +40,14 @@ function loadSplineRuntime() {
     const handleReady = () => {
       cleanup();
       if (win.__summecaSplineApplication) resolve(win.__summecaSplineApplication);
-      else reject(new Error('Spline runtime loaded without Application'));
+      else {
+        win.__summecaSplineRuntimePromise = undefined;
+        reject(new Error('Spline runtime loaded without Application'));
+      }
     };
     const handleError = () => {
       cleanup();
+      win.__summecaSplineRuntimePromise = undefined;
       reject(new Error('Spline runtime failed to load'));
     };
 
@@ -137,6 +142,12 @@ export default function SplineRobotScene({ zoomScale = 1 }: SplineRobotSceneProp
 
   return (
     <div className="relative h-full w-full overflow-hidden bg-transparent">
+      <img
+        src={FALLBACK_IMAGE}
+        alt=""
+        aria-hidden="true"
+        className={`pointer-events-none absolute inset-0 z-[1] h-full w-full select-none object-contain object-center transition-opacity duration-500 ${ready ? 'opacity-0' : 'opacity-100'}`}
+      />
       <div className={`pointer-events-none absolute inset-0 transition-opacity duration-500 ${ready ? 'opacity-100' : 'opacity-70'}`} aria-hidden="true">
         <div className="absolute left-1/2 top-[45%] h-[62%] w-[62%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#08c5d1]/12 blur-[68px]" />
         <div className="absolute left-1/2 top-[58%] h-[36%] w-[36%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#0aaebd]/10 blur-[48px]" />
