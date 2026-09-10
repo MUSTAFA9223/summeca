@@ -159,8 +159,6 @@ export async function GET(request: NextRequest) {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        // Prefer the newest duplicate of each auth/PKCE cookie name when Chrome
-        // still carries a legacy Domain-scoped generation alongside host-only data.
         getAll() {
           return getCookiesForSupabase(request);
         },
@@ -192,8 +190,21 @@ export async function GET(request: NextRequest) {
     return response;
   }
 
+  const service = createServiceClient();
+
+  const { error: logError } = await service.from('user_security_logs').insert({
+    user_id: data.user.id,
+    event_type: 'login',
+    device_info: {
+      user_agent: request.headers.get('user-agent')?.slice(0, 500) ?? null,
+      source: 'server',
+      method: 'google_oauth',
+    },
+    ip_hash: null,
+  });
+  if (logError) console.warn('[google-oauth] Security log write failed:', logError.code || 'db_error');
+
   if (referralCode) {
-    const service = createServiceClient();
     const { error: referralError } = await service.rpc('claim_referral_code_for_user', {
       code: referralCode,
       user_id: data.user.id,
