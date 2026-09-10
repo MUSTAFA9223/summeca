@@ -93,7 +93,7 @@ function SidebarContent({
     <>
       {/* Logo */}
       <div className={`flex items-center h-14 border-b border-border px-4 flex-shrink-0 ${collapsed ? 'justify-center' : 'gap-2.5'}`}>
-        <AppLogo variant={collapsed ? 'mark' : 'wordmark'} size={collapsed ? 28 : 25} />
+        <AppLogo variant={collapsed ? 'mark' : 'wordmark'} size={collapsed ? 32 : 30} />
         {!collapsed && (
           <span className="text-xs text-primary font-600 flex items-center gap-1">
             <Shield size={9} />Admin
@@ -163,7 +163,7 @@ export default function AdminSidebar({ collapsed, onToggleCollapse, mobileOpen, 
       <aside className={`fixed left-0 top-0 bottom-0 z-40 lg:hidden flex flex-col bg-card border-r border-border w-64 transition-transform duration-300 ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="flex items-center justify-between h-14 border-b border-border px-4">
           <div className="flex items-center gap-2">
-            <AppLogo variant="wordmark" size={25} />
+            <AppLogo variant="wordmark" size={30} />
             <span className="text-xs font-600 text-primary">Admin</span>
           </div>
           <button onClick={onCloseMobile} className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary transition-all">✕</button>
