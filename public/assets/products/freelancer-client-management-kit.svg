@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="900" viewBox="0 0 1200 900" role="img" aria-labelledby="title desc">
+  <title id="title">SUMMECA Freelancer Client Management Kit</title>
+  <desc id="desc">Premium digital product cover for the freelancer client management toolkit.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#07141c"/><stop offset="1" stop-color="#213129"/></linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#32e6d5"/><stop offset="1" stop-color="#9ad66f"/></linearGradient>
+    <filter id="glow"><feGaussianBlur stdDeviation="22"/></filter>
+  </defs>
+  <rect width="1200" height="900" rx="42" fill="url(#bg)"/>
+  <circle cx="980" cy="160" r="220" fill="#88cf69" opacity=".10" filter="url(#glow)"/>
+  <circle cx="930" cy="730" r="250" fill="#25dacb" opacity=".09" filter="url(#glow)"/>
+  <text x="86" y="100" font-family="Arial, Helvetica, sans-serif" font-size="30" font-weight="700" fill="#6df2e5" letter-spacing="6">SUMMECA</text>
+  <text x="86" y="208" font-family="Arial, Helvetica, sans-serif" font-size="68" font-weight="800" fill="#f7fbfc">Freelancer Client</text>
+  <text x="86" y="286" font-family="Arial, Helvetica, sans-serif" font-size="68" font-weight="800" fill="#f7fbfc">Management Kit</text>
+  <text x="90" y="352" font-family="Arial, Helvetica, sans-serif" font-size="28" fill="#a9c0b7">Templates and trackers for a cleaner client workflow from inquiry to closeout.</text>
+  <g transform="translate(88 420)">
+    <rect width="640" height="288" rx="28" fill="#13221f" stroke="#35584f"/>
+    <rect x="30" y="30" width="250" height="38" rx="19" fill="url(#accent)"/>
+    <text x="50" y="57" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="700" fill="#07141c">INSTANT DIGITAL DOWNLOAD</text>
+    <g font-family="Arial, Helvetica, sans-serif" font-size="25" fill="#dcebe6">
+      <text x="34" y="120">✓ Proposal, intake + project brief</text>
+      <text x="34" y="166">✓ Scope, revision + email templates</text>
+      <text x="34" y="212">✓ 100 AI client-workflow prompts</text>
+      <text x="34" y="258">✓ Client, project + invoice trackers</text>
+    </g>
+  </g>
+  <g transform="translate(810 430)">
+    <rect width="275" height="278" rx="34" fill="#f7fbfc"/>
+    <text x="36" y="64" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700" fill="#284138">ONE-TIME ACCESS</text>
+    <text x="35" y="160" font-family="Arial, Helvetica, sans-serif" font-size="88" font-weight="800" fill="#07141c">$49</text>
+    <text x="37" y="205" font-family="Arial, Helvetica, sans-serif" font-size="20" fill="#5a7068">Reusable toolkit</text>
+    <rect x="35" y="230" width="205" height="5" rx="3" fill="url(#accent)"/>
+  </g>
+  <text x="88" y="824" font-family="Arial, Helvetica, sans-serif" font-size="20" fill="#7f9990">Digital tools for modern work · summeca.com</text>
+</svg>
