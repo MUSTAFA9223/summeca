@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type MouseEvent as ReactMouseEvent } from 'react';
 import Link from 'next/link';
 import { ArrowRight, FileText, LayoutDashboard, Package, Search, Star, Zap } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
@@ -113,6 +113,166 @@ function billingSuffix(period: BillingPeriod) {
 
 function isFeatured(product: Product) {
   return Boolean(product.metadata?.featured || product.metadata?.is_featured);
+}
+
+function InteractiveProductCard({ product }: { product: Product }) {
+  const [tilt, setTilt] = useState({ x: 0, y: 0 });
+  const [glow, setGlow] = useState({ x: 50, y: 50 });
+  const [active, setActive] = useState(false);
+  const plan = lowestPlan(product.plans);
+  const price = plan ? pricingFor(plan) : null;
+  const type = kindForCategory(product.category);
+  const Icon = type === 'ai' ? Zap : type === 'digital' ? FileText : LayoutDashboard;
+
+  function handleMove(event: ReactMouseEvent<HTMLAnchorElement>) {
+    if (typeof window !== 'undefined') {
+      const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const touchPointer = window.matchMedia('(hover: none)').matches;
+      if (reducedMotion || touchPointer) return;
+    }
+
+    const rect = event.currentTarget.getBoundingClientRect();
+    const x = Math.min(1, Math.max(0, (event.clientX - rect.left) / rect.width));
+    const y = Math.min(1, Math.max(0, (event.clientY - rect.top) / rect.height));
+    setTilt({ x: (0.5 - y) * 10, y: (x - 0.5) * 12 });
+    setGlow({ x: x * 100, y: y * 100 });
+    setActive(true);
+  }
+
+  function resetTilt() {
+    setTilt({ x: 0, y: 0 });
+    setGlow({ x: 50, y: 50 });
+    setActive(false);
+  }
+
+  return (
+    <Link
+      href={`/products/${product.slug}`}
+      onMouseMove={handleMove}
+      onMouseLeave={resetTilt}
+      onBlur={resetTilt}
+      className="group relative block h-full rounded-[28px] outline-none transition-[filter] duration-300 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+      style={{
+        transform: `perspective(1200px) rotateX(${tilt.x}deg) rotateY(${tilt.y}deg) ${active ? 'translateY(-5px) scale(1.012)' : 'translateY(0) scale(1)'}`,
+        transformStyle: 'preserve-3d',
+        transition: active ? 'transform 90ms linear, filter 220ms ease' : 'transform 420ms cubic-bezier(.2,.8,.2,1), filter 220ms ease',
+        willChange: 'transform',
+        filter: active ? 'drop-shadow(0 24px 34px rgba(15, 23, 42, 0.16))' : 'drop-shadow(0 12px 22px rgba(15, 23, 42, 0.08))',
+      }}
+    >
+      <article
+        className="relative flex h-full min-h-[430px] flex-col overflow-hidden rounded-[28px] border border-border/80 bg-card/95 p-4 backdrop-blur-xl transition-colors duration-300 group-hover:border-primary/40"
+        style={{ transformStyle: 'preserve-3d' }}
+      >
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 opacity-70 transition-opacity duration-300"
+          style={{
+            background: `radial-gradient(circle at ${glow.x}% ${glow.y}%, rgba(20, 184, 166, 0.20), transparent 34%), linear-gradient(135deg, rgba(255,255,255,0.06), transparent 42%)`,
+          }}
+        />
+        <div aria-hidden="true" className="pointer-events-none absolute -right-16 -top-20 h-48 w-48 rounded-full bg-primary/10 blur-3xl" />
+        <div aria-hidden="true" className="pointer-events-none absolute -bottom-20 -left-16 h-52 w-52 rounded-full bg-primary/5 blur-3xl" />
+
+        <div
+          className="relative h-56 overflow-hidden rounded-[22px] border border-border/70 bg-gradient-to-br from-primary/10 via-background to-secondary/50"
+          style={{ transform: 'translateZ(34px)', transformStyle: 'preserve-3d' }}
+        >
+          <div
+            aria-hidden="true"
+            className="absolute inset-0 opacity-30"
+            style={{
+              backgroundImage: 'linear-gradient(rgba(148,163,184,.18) 1px, transparent 1px), linear-gradient(90deg, rgba(148,163,184,.18) 1px, transparent 1px)',
+              backgroundSize: '28px 28px',
+              transform: 'perspective(420px) rotateX(62deg) scale(1.5) translateY(18%)',
+              transformOrigin: 'center bottom',
+            }}
+          />
+
+          <span
+            className="absolute left-4 top-4 z-20 rounded-full border border-white/40 bg-background/80 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.16em] text-primary shadow-sm backdrop-blur"
+            style={{ transform: 'translateZ(72px)' }}
+          >
+            {CATEGORY_LABELS[product.category] ?? 'Product'}
+          </span>
+          <span
+            className="absolute right-4 top-4 z-20 rounded-full border border-border/70 bg-card/80 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground shadow-sm backdrop-blur"
+            style={{ transform: 'translateZ(60px)' }}
+          >
+            Interactive view
+          </span>
+
+          <div
+            className="absolute inset-5 flex items-center justify-center"
+            style={{ transform: `translateZ(${active ? 92 : 70}px) translateY(${active ? '-4px' : '0'})`, transition: 'transform 260ms ease' }}
+          >
+            {product.thumbnail_url ? (
+              <img
+                src={product.thumbnail_url}
+                alt={product.name}
+                className="max-h-[175px] w-full object-contain drop-shadow-[0_24px_22px_rgba(15,23,42,0.22)] transition-transform duration-300 group-hover:scale-[1.035]"
+              />
+            ) : (
+              <div className="flex h-28 w-28 items-center justify-center rounded-[28px] border border-primary/20 bg-background/80 shadow-2xl backdrop-blur">
+                <Icon size={42} className="text-primary" />
+              </div>
+            )}
+          </div>
+
+          <div
+            aria-hidden="true"
+            className="absolute bottom-4 left-1/2 h-5 w-2/3 -translate-x-1/2 rounded-full bg-slate-900/15 blur-xl"
+            style={{ transform: 'translateX(-50%) translateZ(16px)' }}
+          />
+        </div>
+
+        <div className="relative flex flex-1 flex-col px-2 pb-1 pt-5" style={{ transform: 'translateZ(26px)' }}>
+          <div className="flex items-start justify-between gap-3">
+            <h2 className="text-lg font-black leading-6 tracking-tight text-foreground transition-colors group-hover:text-primary">
+              {product.name}
+            </h2>
+            {isFeatured(product) && (
+              <span className="shrink-0 rounded-full bg-primary/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-primary">Featured</span>
+            )}
+          </div>
+
+          <p className="mt-2 line-clamp-3 min-h-[60px] text-sm leading-5 text-muted-foreground">
+            {product.short_desc || product.description || 'Product details are available on the product page.'}
+          </p>
+
+          {(product.avg_rating ?? 0) > 0 && (
+            <div className="mt-3 flex items-center gap-1.5 text-xs text-muted-foreground">
+              <Star size={12} className="fill-current text-amber-500" />
+              <span className="font-semibold text-foreground">{product.avg_rating?.toFixed(1)}</span>
+              <span>({product.review_count})</span>
+            </div>
+          )}
+
+          <div className="mt-auto flex items-end justify-between gap-3 border-t border-border/80 pt-4" style={{ transform: 'translateZ(18px)' }}>
+            <div>
+              <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Starting at</p>
+              {!plan || !price ? (
+                <span className="text-sm font-semibold text-muted-foreground">No active offer</span>
+              ) : price.finalPrice === 0 ? (
+                <span className="text-lg font-black text-success">Free</span>
+              ) : (
+                <div className="flex flex-wrap items-baseline gap-1.5">
+                  {price.onSale && <span className="text-[11px] text-muted-foreground line-through">{money(price.regularPrice, plan.currency)}</span>}
+                  <span className="text-xl font-black tracking-tight text-foreground">
+                    {money(price.finalPrice, plan.currency)}
+                    <span className="ml-0.5 text-xs font-normal text-muted-foreground">{billingSuffix(plan.billing_period)}</span>
+                  </span>
+                </div>
+              )}
+            </div>
+            <span className="inline-flex h-10 items-center gap-1.5 rounded-full bg-primary px-4 text-xs font-bold text-white shadow-lg shadow-primary/20 transition-all duration-300 group-hover:gap-2.5 group-hover:shadow-xl group-hover:shadow-primary/25">
+              Explore <ArrowRight size={13} />
+            </span>
+          </div>
+        </div>
+      </article>
+    </Link>
+  );
 }
 
 export default function CatalogClient({
@@ -266,8 +426,8 @@ export default function CatalogClient({
         </div>
 
         {loading ? (
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {[0, 1, 2].map((item) => <div key={item} className="h-64 animate-pulse rounded-2xl border border-border bg-secondary/30" />)}
+          <div className="grid gap-7 sm:grid-cols-2 lg:grid-cols-3">
+            {[0, 1, 2].map((item) => <div key={item} className="h-[430px] animate-pulse rounded-[28px] border border-border bg-secondary/30" />)}
           </div>
         ) : error ? (
           <div className="rounded-2xl border border-destructive/20 bg-destructive/5 p-8 text-center text-sm text-destructive">{error}</div>
@@ -280,60 +440,8 @@ export default function CatalogClient({
             </p>
           </div>
         ) : (
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {visible.map((product) => {
-              const plan = lowestPlan(product.plans);
-              const price = plan ? pricingFor(plan) : null;
-              const type = kindForCategory(product.category);
-              const Icon = type === 'ai' ? Zap : type === 'digital' ? FileText : LayoutDashboard;
-
-              return (
-                <Link key={product.id} href={`/products/${product.slug}`} className="group rounded-2xl border border-border bg-card p-5 transition hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-lg">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-xl bg-primary/8">
-                      {product.thumbnail_url
-                        ? <img src={product.thumbnail_url} alt="" className="h-full w-full object-cover" />
-                        : <Icon size={20} className="text-primary" />}
-                    </div>
-                    <span className="rounded-full bg-secondary px-2.5 py-1 text-[11px] font-semibold text-secondary-foreground">
-                      {CATEGORY_LABELS[product.category] ?? 'Product'}
-                    </span>
-                  </div>
-
-                  <h2 className="mt-4 text-base font-bold text-foreground group-hover:text-primary">{product.name}</h2>
-                  <p className="mt-2 line-clamp-3 min-h-[60px] text-sm leading-5 text-muted-foreground">
-                    {product.short_desc || product.description || 'Product details are available on the product page.'}
-                  </p>
-
-                  {(product.avg_rating ?? 0) > 0 && (
-                    <div className="mt-3 flex items-center gap-1.5 text-xs text-muted-foreground">
-                      <Star size={12} className="fill-current text-amber-500" />
-                      <span className="font-semibold text-foreground">{product.avg_rating?.toFixed(1)}</span>
-                      <span>({product.review_count})</span>
-                    </div>
-                  )}
-
-                  <div className="mt-5 flex items-end justify-between gap-3 border-t border-border pt-4">
-                    <div>
-                      {!plan || !price ? (
-                        <span className="text-sm font-semibold text-muted-foreground">No active offer</span>
-                      ) : price.finalPrice === 0 ? (
-                        <span className="text-sm font-bold text-success">Free</span>
-                      ) : (
-                        <div className="flex flex-wrap items-baseline gap-1.5">
-                          {price.onSale && <span className="text-[11px] text-muted-foreground line-through">{money(price.regularPrice, plan.currency)}</span>}
-                          <span className="text-sm font-bold text-foreground">
-                            {money(price.finalPrice, plan.currency)}
-                            <span className="text-xs font-normal text-muted-foreground">{billingSuffix(plan.billing_period)}</span>
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                    <span className="inline-flex items-center gap-1 text-xs font-semibold text-primary">View <ArrowRight size={11} /></span>
-                  </div>
-                </Link>
-              );
-            })}
+          <div className="grid gap-7 sm:grid-cols-2 lg:grid-cols-3 [perspective:1600px]">
+            {visible.map((product) => <InteractiveProductCard key={product.id} product={product} />)}
           </div>
         )}
       </section>
