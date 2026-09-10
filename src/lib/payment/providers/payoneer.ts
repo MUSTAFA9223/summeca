@@ -27,6 +27,32 @@ interface PayoneerConfig {
   defaultCountry: string;
 }
 
+export type PayoneerReadiness = {
+  configured: boolean;
+  environment: 'sandbox' | 'live';
+  merchantCode: boolean;
+  paymentToken: boolean;
+  webhookSecret: boolean;
+  divisionCode: boolean;
+};
+
+export function getPayoneerReadiness(): PayoneerReadiness {
+  const merchantCode = Boolean(process.env.PAYONEER_MERCHANT_CODE?.trim());
+  const paymentToken = Boolean(process.env.PAYONEER_PAYMENT_TOKEN?.trim());
+  const webhookSecret = Boolean(process.env.PAYONEER_WEBHOOK_SECRET?.trim());
+  const explicitDivision = Boolean(process.env.PAYONEER_DIVISION_CODE?.trim());
+  const divisionCode = explicitDivision || merchantCode;
+  const environment = process.env.PAYONEER_ENVIRONMENT === 'live' ? 'live' : 'sandbox';
+  return {
+    configured: merchantCode && paymentToken && webhookSecret && divisionCode,
+    environment,
+    merchantCode,
+    paymentToken,
+    webhookSecret,
+    divisionCode,
+  };
+}
+
 function getConfig(): PayoneerConfig | null {
   const merchantCode = process.env.PAYONEER_MERCHANT_CODE?.trim();
   const paymentToken = process.env.PAYONEER_PAYMENT_TOKEN?.trim();
@@ -69,8 +95,6 @@ function mapPayoneerStatus(interactionCode: string, resultCode?: string): Payone
     return 'failed';
   }
 
-  // Unknown or in-progress signed states never grant entitlement and never
-  // convert an order to failed automatically.
   return 'pending';
 }
 
@@ -79,27 +103,10 @@ interface PayoneerListRequest {
   country: string;
   currency: string;
   division: string;
-  payment: {
-    amount: number;
-    currency: string;
-    reference: string;
-  };
-  customer: {
-    number: string;
-    email?: string;
-  };
-  products?: Array<{
-    code: string;
-    name: string;
-    amount: number;
-    currency: string;
-    quantity: number;
-  }>;
-  callback: {
-    returnUrl: string;
-    cancelUrl: string;
-    notificationUrl: string;
-  };
+  payment: { amount: number; currency: string; reference: string };
+  customer: { number: string; email?: string };
+  products?: Array<{ code: string; name: string; amount: number; currency: string; quantity: number }>;
+  callback: { returnUrl: string; cancelUrl: string; notificationUrl: string };
   style?: { hostedVersion: string };
 }
 
@@ -107,6 +114,7 @@ interface PayoneerListResponse {
   resultInfo?: string;
   interaction?: { code: string; reason?: string };
   links?: { self?: string; redirect?: string; lang?: string };
+  redirect?: { url?: string; method?: string };
   identification?: { longId?: string; shortId?: string; transactionId?: string };
   payment?: { amount?: number; currency?: string; reference?: string };
 }
@@ -124,10 +132,7 @@ interface PayoneerWebhookPayload {
 
 function parseSignature(value: string): Buffer | null {
   const signature = value.trim().replace(/^sha256=/i, '');
-  if (/^[a-f0-9]{64}$/i.test(signature)) {
-    return Buffer.from(signature, 'hex');
-  }
-
+  if (/^[a-f0-9]{64}$/i.test(signature)) return Buffer.from(signature, 'hex');
   try {
     const decoded = Buffer.from(signature, 'base64');
     return decoded.length === 32 ? decoded : null;
@@ -136,10 +141,14 @@ function parseSignature(value: string): Buffer | null {
   }
 }
 
-function isSafeHostedUrl(value: string): boolean {
+export function isSafePayoneerHostedUrl(value: string, environment: 'sandbox' | 'live'): boolean {
   try {
     const url = new URL(value);
-    return url.protocol === 'https:';
+    if (url.protocol !== 'https:' || url.username || url.password) return false;
+    const expectedHost = environment === 'live'
+      ? 'resources.live.oscato.com'
+      : 'resources.sandbox.oscato.com';
+    return url.hostname.toLowerCase() === expectedHost;
   } catch {
     return false;
   }
@@ -177,23 +186,9 @@ export class PayoneerProvider implements IPaymentProvider {
       country: config.defaultCountry,
       currency,
       division: config.divisionCode,
-      payment: {
-        amount,
-        currency,
-        reference: input.orderId,
-      },
-      customer: {
-        number: input.userId,
-      },
-      products: [
-        {
-          code: input.orderId,
-          name: `${input.productName} — ${input.planName}`.slice(0, 240),
-          amount,
-          currency,
-          quantity: 1,
-        },
-      ],
+      payment: { amount, currency, reference: input.orderId },
+      customer: { number: input.userId },
+      products: [{ code: input.orderId, name: `${input.productName} — ${input.planName}`.slice(0, 240), amount, currency, quantity: 1 }],
       callback: {
         returnUrl: input.successUrl ?? `${siteUrl}/checkout/success?order_id=${encodeURIComponent(input.orderId)}`,
         cancelUrl: input.cancelUrl ?? `${siteUrl}/checkout/cancel?order_id=${encodeURIComponent(input.orderId)}`,
@@ -214,36 +209,38 @@ export class PayoneerProvider implements IPaymentProvider {
         body: JSON.stringify(requestBody),
         signal: AbortSignal.timeout(15_000),
       });
-    } catch (err) {
-      console.error('[PayoneerProvider] createSession network error:', err);
+    } catch (error) {
+      console.error('[PayoneerProvider] createSession network failure:', error instanceof Error ? error.name : 'unknown');
       return { success: false, error: 'Unable to connect to payment provider. Please try again.' };
     }
 
     let data: PayoneerListResponse;
     try {
-      data = (await response.json()) as PayoneerListResponse;
+      data = await response.json() as PayoneerListResponse;
     } catch {
-      console.error('[PayoneerProvider] invalid JSON response, status:', response.status);
+      console.error('[PayoneerProvider] invalid provider JSON status=' + response.status);
       return { success: false, error: 'Payment provider returned an unexpected response.' };
     }
 
     if (!response.ok) {
-      console.error('[PayoneerProvider] createSession failed:', response.status, data?.resultInfo ?? 'unknown');
+      console.error('[PayoneerProvider] createSession rejected status=' + response.status);
       if (response.status === 401 || response.status === 403) {
         return { success: false, error: 'Payment provider authentication failed. Please contact support.' };
       }
       return { success: false, error: 'Payment provider is temporarily unavailable. Please try again later.' };
     }
 
-    const redirectUrl = data?.links?.redirect;
+    // Current hosted-list examples use redirect.url. Keep links.redirect as a
+    // compatibility fallback for environments that still return the older shape.
+    const redirectUrl = data.redirect?.url ?? data.links?.redirect;
     const providerPaymentRef =
-      data?.identification?.longId ??
-      data?.identification?.shortId ??
-      data?.identification?.transactionId;
+      data.identification?.longId ??
+      data.identification?.shortId ??
+      data.identification?.transactionId;
 
-    if (!redirectUrl || !isSafeHostedUrl(redirectUrl)) {
-      console.error('[PayoneerProvider] invalid or missing hosted checkout URL');
-      return { success: false, error: 'Payment provider did not return a valid checkout URL.' };
+    if (!redirectUrl || !isSafePayoneerHostedUrl(redirectUrl, config.environment)) {
+      console.error('[PayoneerProvider] rejected unexpected hosted checkout URL');
+      return { success: false, error: 'Payment provider did not return an approved checkout URL.' };
     }
 
     if (!providerPaymentRef) {
@@ -251,76 +248,47 @@ export class PayoneerProvider implements IPaymentProvider {
       return { success: false, error: 'Payment provider did not return a payment reference.' };
     }
 
-    return {
-      success: true,
-      providerPaymentRef,
-      redirectUrl,
-    };
+    return { success: true, providerPaymentRef, redirectUrl };
   }
 
   async verifyWebhook(input: WebhookVerificationInput): Promise<WebhookVerificationResult> {
     const config = getConfig();
-    if (!config) {
-      return { verified: false, error: 'Payoneer is not configured.' };
-    }
+    if (!config) return { verified: false, error: 'Payoneer is not configured.' };
 
     const signatureValue =
       input.headers['x-optile-signature'] ??
       input.headers['x-payoneer-signature'] ??
       input.signature;
-
     if (!signatureValue) {
       console.warn('[PayoneerProvider] missing webhook signature');
       return { verified: false, error: 'Missing webhook signature.' };
     }
 
     const received = parseSignature(signatureValue);
-    const expected = createHmac('sha256', config.webhookSecret)
-      .update(input.rawBody, 'utf8')
-      .digest();
-
+    const expected = createHmac('sha256', config.webhookSecret).update(input.rawBody, 'utf8').digest();
     if (!received || received.length !== expected.length || !timingSafeEqual(received, expected)) {
       console.warn('[PayoneerProvider] webhook signature mismatch');
       return { verified: false, error: 'Webhook signature verification failed.' };
     }
 
     let payload: PayoneerWebhookPayload;
-    try {
-      payload = JSON.parse(input.rawBody) as PayoneerWebhookPayload;
-    } catch {
-      return { verified: false, error: 'Invalid webhook JSON.' };
-    }
+    try { payload = JSON.parse(input.rawBody) as PayoneerWebhookPayload; }
+    catch { return { verified: false, error: 'Invalid webhook JSON.' }; }
 
-    const orderId =
-      payload.transactionId ??
-      payload.identification?.transactionId ??
-      payload.payment?.reference;
-
-    if (!orderId || typeof orderId !== 'string') {
-      return { verified: false, error: 'Webhook payload missing order reference.' };
-    }
+    const orderId = payload.transactionId ?? payload.identification?.transactionId ?? payload.payment?.reference;
+    if (!orderId || typeof orderId !== 'string') return { verified: false, error: 'Webhook payload missing order reference.' };
 
     const providerPaymentRef =
-      payload.identification?.longId ??
-      payload.identification?.shortId ??
-      payload.longId ??
-      payload.shortId;
-
+      payload.identification?.longId ?? payload.identification?.shortId ?? payload.longId ?? payload.shortId;
     if (!providerPaymentRef || typeof providerPaymentRef !== 'string') {
       return { verified: false, error: 'Webhook payload missing provider payment reference.' };
     }
 
-    const status = mapPayoneerStatus(
-      payload.interaction?.code ?? '',
-      payload.resultInfo ?? ''
-    );
-
+    const status = mapPayoneerStatus(payload.interaction?.code ?? '', payload.resultInfo ?? '');
     const amount = typeof payload.payment?.amount === 'number' && Number.isFinite(payload.payment.amount)
-      ? payload.payment.amount
-      : undefined;
+      ? payload.payment.amount : undefined;
     const currency = typeof payload.payment?.currency === 'string'
-      ? payload.payment.currency.trim().toUpperCase()
-      : undefined;
+      ? payload.payment.currency.trim().toUpperCase() : undefined;
 
     return {
       verified: true,

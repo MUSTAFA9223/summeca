@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 
 const SCENE_URL = 'https://prod.spline.design/H69K35LVSzZ9WcEG/scene.splinecode';
-const RUNTIME_URL = 'https://unpkg.com/@splinetool/runtime@1.9.82/build/runtime.js';
+const RUNTIME_URL = 'https://unpkg.com/@splinetool/runtime@2.0.42/build/runtime.js';
 
 type SplineApplication = {
   load: (url: string) => Promise<void>;
@@ -68,16 +68,8 @@ function loadSplineRuntime() {
 
 function safelyDisposeSpline(app: SplineApplication | undefined) {
   if (!app) return;
-  try {
-    app.stop?.();
-  } catch {
-    // Never let a third-party WebGL runtime break route transitions.
-  }
-  try {
-    app.dispose?.();
-  } catch {
-    // Cleanup is best-effort; the page must remain usable if Spline fails.
-  }
+  try { app.stop?.(); } catch { /* decorative runtime cleanup */ }
+  try { app.dispose?.(); } catch { /* decorative runtime cleanup */ }
 }
 
 export default function SplineRobotScene({ zoomScale = 1 }: SplineRobotSceneProps) {
@@ -86,7 +78,6 @@ export default function SplineRobotScene({ zoomScale = 1 }: SplineRobotSceneProp
 
   useEffect(() => {
     if (!hostRef.current) return;
-
     const host = hostRef.current;
     let cancelled = false;
     let app: SplineApplication | undefined;
@@ -94,15 +85,10 @@ export default function SplineRobotScene({ zoomScale = 1 }: SplineRobotSceneProp
     const canvas = document.createElement('canvas');
     canvas.setAttribute('aria-hidden', 'true');
     Object.assign(canvas.style, {
-      display: 'block',
-      width: '100%',
-      height: '100%',
-      background: 'transparent',
-      pointerEvents: 'auto',
-      touchAction: 'pan-y',
+      display: 'block', width: '100%', height: '100%', background: 'transparent',
+      pointerEvents: 'auto', touchAction: 'pan-y',
       filter: 'saturate(1.5) contrast(1.09) brightness(1.02)',
-      opacity: '0',
-      transition: 'opacity 420ms ease',
+      opacity: '0', transition: 'opacity 420ms ease',
     });
     host.replaceChildren(canvas);
 
@@ -110,29 +96,19 @@ export default function SplineRobotScene({ zoomScale = 1 }: SplineRobotSceneProp
       try {
         const Application = await loadSplineRuntime();
         if (cancelled) return;
-
         app = new Application(canvas);
-
-        // Spline's setZoom is an initial camera framing control.
         const width = window.innerWidth;
         const baseZoom = width < 640 ? 0.24 : width < 1024 ? 0.28 : width < 1440 ? 0.3 : 0.32;
         const zoom = baseZoom * zoomScale;
         app.setZoom(zoom);
-
         await app.load(SCENE_URL);
-        if (cancelled) {
-          safelyDisposeSpline(app);
-          return;
-        }
-
+        if (cancelled) { safelyDisposeSpline(app); return; }
         app.setBackgroundColor('rgba(0, 0, 0, 0)');
         app.setGlobalEvents?.(true);
         app.setZoom(zoom);
-
         canvas.style.opacity = '1';
         setReady(true);
       } catch {
-        // Spline is decorative. Any runtime/WebGL/network failure must degrade silently.
         safelyDisposeSpline(app);
         app = undefined;
         if (!cancelled) setReady(false);
@@ -143,14 +119,11 @@ export default function SplineRobotScene({ zoomScale = 1 }: SplineRobotSceneProp
     if (typeof IntersectionObserver === 'undefined') {
       void mount();
     } else {
-      observer = new IntersectionObserver(
-        ([entry]) => {
-          if (!entry.isIntersecting) return;
-          observer?.disconnect();
-          void mount();
-        },
-        { rootMargin: '260px', threshold: 0.01 },
-      );
+      observer = new IntersectionObserver(([entry]) => {
+        if (!entry.isIntersecting) return;
+        observer?.disconnect();
+        void mount();
+      }, { rootMargin: '260px', threshold: 0.01 });
       observer.observe(host);
     }
 
@@ -158,22 +131,13 @@ export default function SplineRobotScene({ zoomScale = 1 }: SplineRobotSceneProp
       cancelled = true;
       observer?.disconnect();
       safelyDisposeSpline(app);
-      try {
-        host.replaceChildren();
-      } catch {
-        // The host may already have been detached by React during navigation.
-      }
+      try { host.replaceChildren(); } catch { /* host may already be detached */ }
     };
   }, [zoomScale]);
 
   return (
     <div className="relative h-full w-full overflow-hidden bg-transparent">
-      <div
-        className={`pointer-events-none absolute inset-0 transition-opacity duration-500 ${
-          ready ? 'opacity-100' : 'opacity-70'
-        }`}
-        aria-hidden="true"
-      >
+      <div className={`pointer-events-none absolute inset-0 transition-opacity duration-500 ${ready ? 'opacity-100' : 'opacity-70'}`} aria-hidden="true">
         <div className="absolute left-1/2 top-[45%] h-[62%] w-[62%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#08c5d1]/12 blur-[68px]" />
         <div className="absolute left-1/2 top-[58%] h-[36%] w-[36%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#0aaebd]/10 blur-[48px]" />
         <div className="absolute bottom-[2%] left-1/2 h-12 w-[44%] -translate-x-1/2 rounded-[50%] bg-black/20 blur-2xl" />
