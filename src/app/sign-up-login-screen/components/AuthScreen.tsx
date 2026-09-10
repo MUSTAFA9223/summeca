@@ -41,8 +41,7 @@ export default function AuthScreen() {
 
       <header className="absolute inset-x-0 top-0 z-30 flex items-center justify-between px-5 py-5 sm:px-8 lg:px-12">
         <Link href="/" className="group flex items-center gap-2.5" aria-label="SUMMECA home">
-          <AppLogo size={34} />
-          <span className="text-lg font-extrabold tracking-[0.14em] text-white">SUMMECA</span>
+          <AppLogo variant="wordmark" tone="light" size={38} />
         </Link>
         <Link href="/" className="flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-xs font-semibold text-white/70 backdrop-blur-xl transition hover:border-teal-300/30 hover:text-white">
           <ArrowLeft size={14} />

@@ -4,24 +4,38 @@ import React, { memo, useMemo } from 'react';
 import AppIcon from './AppIcon';
 import AppImage from './AppImage';
 
+type LogoVariant = 'mark' | 'wordmark';
+type LogoTone = 'default' | 'light';
+
 interface AppLogoProps {
-  src?: string; // Image source (optional)
-  iconName?: string; // Icon name when no image
-  size?: number; // Size for icon/image
-  className?: string; // Additional classes
-  onClick?: () => void; // Click handler
+  src?: string;
+  iconName?: string;
+  size?: number;
+  variant?: LogoVariant;
+  tone?: LogoTone;
+  className?: string;
+  onClick?: () => void;
 }
 
 const AppLogo = memo(function AppLogo({
-  src = '/assets/images/summeca-mark.svg',
+  src,
   iconName = 'SparklesIcon',
   size = 64,
+  variant = 'mark',
+  tone = 'default',
   className = '',
   onClick,
 }: AppLogoProps) {
-  // Memoize className calculation
+  const resolvedSrc = src ?? (
+    variant === 'wordmark'
+      ? '/assets/images/summeca-logo.png'
+      : '/assets/images/summeca-mark.png'
+  );
+  const isWordmark = !src && variant === 'wordmark';
+  const width = isWordmark ? Math.round(size * 3) : size;
+
   const containerClassName = useMemo(() => {
-    const classes = ['flex items-center'];
+    const classes = ['inline-flex items-center shrink-0'];
     if (onClick) classes.push('cursor-pointer hover:opacity-80 transition-opacity');
     if (className) classes.push(className);
     return classes.join(' ');
@@ -29,16 +43,16 @@ const AppLogo = memo(function AppLogo({
 
   return (
     <div className={containerClassName} onClick={onClick}>
-      {/* Show image if src provided, otherwise show icon */}
-      {src ? (
+      {resolvedSrc ? (
         <AppImage
-          src={src}
-          alt="SUMMECA logo"
-          width={size}
+          src={resolvedSrc}
+          alt={variant === 'wordmark' ? 'SUMMECA' : 'SUMMECA logo'}
+          width={width}
           height={size}
-          className="flex-shrink-0"
-          priority={true}
-          unoptimized={src.endsWith('.svg')}
+          sizes={`${width}px`}
+          className={`flex-shrink-0 object-contain ${tone === 'light' ? 'brightness-0 invert' : ''}`}
+          priority
+          unoptimized={resolvedSrc.endsWith('.svg')}
         />
       ) : (
         <AppIcon name={iconName} size={size} className="flex-shrink-0" />
