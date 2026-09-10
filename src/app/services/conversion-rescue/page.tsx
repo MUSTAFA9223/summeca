@@ -12,9 +12,9 @@ import PublicNav from '@/components/PublicNav';
 import PublicFooter from '@/components/PublicFooter';
 
 export const metadata: Metadata = {
-  title: '24-Hour Conversion Rescue | SUMMECA',
+  title: 'Conversion Rescue | SUMMECA',
   description:
-    'A focused landing-page conversion rescue for service businesses and online stores. Get clearer messaging, stronger CTAs, and a private preview before payment.',
+    'Choose a self-serve SUMMECA Conversion Rescue Kit from $29 or request a focused done-for-you landing-page conversion service.',
 };
 
 const readyToImplement = [
@@ -33,6 +33,48 @@ const implementation = [
   'Implementation on a supported existing platform',
   'Final QA before publish or handoff',
   'Private preview before payment',
+];
+
+const digitalKits = [
+  {
+    tier: 'Starter',
+    price: '$29',
+    href: '/products/conversion-rescue-kit-starter',
+    badge: 'Start here',
+    description: 'A focused self-serve kit for auditing one landing page and identifying the highest-priority conversion fixes.',
+    features: [
+      '30-point Conversion Audit Checklist',
+      '20 AI optimization prompts',
+      'Interactive Conversion Rescue Workspace',
+      'Start Here implementation guide',
+    ],
+  },
+  {
+    tier: 'Pro',
+    price: '$49',
+    href: '/products/conversion-rescue-kit-pro',
+    badge: 'Most popular',
+    description: 'The complete working toolkit for auditing, rewriting, scoring, and improving a landing page with reusable assets.',
+    features: [
+      'Everything in Starter',
+      'Editable Landing Page Template (DOCX)',
+      '80-option CTA Library + follow-up scripts',
+      'Interactive Conversion Scorecard (XLSX)',
+    ],
+  },
+  {
+    tier: 'Ultimate',
+    price: '$79',
+    href: '/products/conversion-rescue-kit-ultimate',
+    badge: 'Full toolkit',
+    description: 'The full reusable system with implementation-ready examples and a responsive HTML landing-page template.',
+    features: [
+      'Everything in Pro',
+      '6 before / after training examples',
+      'Ready-to-edit responsive HTML landing page',
+      'Full reusable optimization system',
+    ],
+  },
 ];
 
 const requestBody = `Hi SUMMECA Sales,
@@ -79,7 +121,7 @@ const faqs = [
   {
     question: 'Do I pay before seeing anything?',
     answer:
-      'No. The service is structured around a private preview first. Payment is requested after you approve the direction and before the final editable handoff or publish.',
+      'For the done-for-you service, no. The service is structured around a private preview first. Payment is requested after you approve the direction and before the final editable handoff or publish. Digital kits are standard one-time purchases delivered through your SUMMECA account after confirmed payment.',
   },
   {
     question: 'Is this a full website redesign?',
@@ -99,9 +141,76 @@ const faqs = [
   {
     question: 'Is AI used?',
     answer:
-      'AI may be used to accelerate analysis and drafting, but the final work is reviewed and refined by a human. We do not invent testimonials, statistics, guarantees, certifications, or business facts.',
+      'AI may be used to accelerate analysis and drafting, but the final service work is reviewed and refined by a human. The digital kits also include structured AI prompts. We do not invent testimonials, statistics, guarantees, certifications, or business facts.',
   },
 ];
+
+function DigitalKitCard({
+  tier,
+  price,
+  href,
+  badge,
+  description,
+  features,
+  featured = false,
+}: {
+  tier: string;
+  price: string;
+  href: string;
+  badge: string;
+  description: string;
+  features: string[];
+  featured?: boolean;
+}) {
+  return (
+    <div
+      className={`relative flex h-full flex-col rounded-3xl border p-6 shadow-sm transition hover:-translate-y-1 hover:shadow-xl ${
+        featured ? 'border-primary/50 bg-primary/[0.04] ring-1 ring-primary/10' : 'border-border bg-card'
+      }`}
+    >
+      {featured ? (
+        <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-primary px-3 py-1 text-xs font-bold text-primary-foreground shadow-sm">
+          Most popular
+        </div>
+      ) : null}
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-[0.16em] text-primary">Digital product</p>
+          <h3 className="mt-2 text-2xl font-black text-foreground">{tier}</h3>
+        </div>
+        {!featured ? (
+          <span className="rounded-full border border-primary/20 bg-primary/5 px-2.5 py-1 text-[11px] font-bold text-primary">{badge}</span>
+        ) : null}
+      </div>
+      <div className="mt-4 flex items-end gap-2">
+        <span className="text-4xl font-black tracking-tight text-foreground">{price}</span>
+        <span className="pb-1 text-sm text-muted-foreground">one-time</span>
+      </div>
+      <p className="mt-3 text-sm leading-6 text-muted-foreground">{description}</p>
+      <div className="mt-6 space-y-3">
+        {features.map((feature) => (
+          <div key={feature} className="flex gap-3 text-sm leading-6 text-foreground">
+            <Check size={17} className="mt-1 shrink-0 text-primary" />
+            <span>{feature}</span>
+          </div>
+        ))}
+      </div>
+      <Link
+        href={href}
+        className={`mt-7 flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-bold transition ${
+          featured
+            ? 'btn-primary'
+            : 'border border-primary/30 bg-primary/5 text-primary hover:bg-primary/10'
+        }`}
+      >
+        Get {tier} — {price} <ArrowRight size={15} />
+      </Link>
+      <p className="mt-3 text-center text-[11px] leading-5 text-muted-foreground">
+        Secure account delivery after confirmed payment.
+      </p>
+    </div>
+  );
+}
 
 function PackageCard({
   title,
@@ -127,7 +236,8 @@ function PackageCard({
           Implementation included
         </div>
       ) : null}
-      <p className="text-sm font-bold text-primary">{title}</p>
+      <p className="text-xs font-bold uppercase tracking-[0.16em] text-muted-foreground">Done-for-you service</p>
+      <p className="mt-2 text-sm font-bold text-primary">{title}</p>
       <div className="mt-3 flex items-end gap-2">
         <span className="text-4xl font-black tracking-tight text-foreground">{price}</span>
         <span className="pb-1 text-sm text-muted-foreground">one-time</span>
@@ -165,75 +275,99 @@ export default function ConversionRescuePage() {
           <div className="relative mx-auto max-w-6xl px-6 py-20 lg:px-8 lg:py-28">
             <div className="mx-auto max-w-4xl text-center">
               <div className="mx-auto flex w-fit items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-3.5 py-1.5 text-xs font-bold text-primary">
-                <Sparkles size={14} /> SUMMECA Conversion Services
+                <Sparkles size={14} /> SUMMECA Conversion Rescue
               </div>
               <h1 className="mt-6 text-4xl font-black tracking-tight sm:text-5xl lg:text-6xl">
-                Make one important page clearer, stronger, and easier to act on — in 24 hours.
+                Improve one important page with a self-serve toolkit or hands-on expert help.
               </h1>
               <p className="mx-auto mt-6 max-w-3xl text-base leading-7 text-muted-foreground sm:text-lg">
-                The 24-Hour Conversion Rescue is a focused service for businesses that already have traffic but need sharper messaging, stronger CTAs, and a cleaner conversion path — without a full redesign.
+                Buy a reusable Conversion Rescue Kit from $29 and work at your own pace, or choose the 24-Hour Conversion Rescue service when you want SUMMECA to prepare the work for you.
               </p>
 
               <div className="mt-8 flex flex-wrap items-center justify-center gap-3 text-sm text-muted-foreground">
                 <span className="flex items-center gap-2 rounded-full border border-border bg-card px-3.5 py-2">
-                  <Clock size={15} className="text-primary" /> 24-hour target turnaround
+                  <Sparkles size={15} className="text-primary" /> Digital kits from $29
                 </span>
                 <span className="flex items-center gap-2 rounded-full border border-border bg-card px-3.5 py-2">
-                  <ShieldCheck size={15} className="text-primary" /> Private preview before payment
+                  <Clock size={15} className="text-primary" /> 24-hour service option
                 </span>
                 <span className="flex items-center gap-2 rounded-full border border-border bg-card px-3.5 py-2">
-                  <Sparkles size={15} className="text-primary" /> AI-assisted, human-reviewed
+                  <ShieldCheck size={15} className="text-primary" /> Secure delivery after confirmed payment
                 </span>
               </div>
 
               <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
-                <a href={requestHref} className="btn-primary flex items-center gap-2 rounded-xl px-6 py-3.5 text-sm font-bold">
-                  Request a private preview <ArrowRight size={16} />
-                </a>
-                <Link
-                  href="#packages"
+                <Link href="#digital-kits" className="btn-primary flex items-center gap-2 rounded-xl px-6 py-3.5 text-sm font-bold">
+                  Shop digital kits from $29 <ArrowRight size={16} />
+                </Link>
+                <a
+                  href={requestHref}
                   className="rounded-xl border border-border bg-card px-6 py-3.5 text-sm font-bold text-foreground transition hover:border-primary/40 hover:bg-primary/5"
                 >
-                  See packages
-                </Link>
+                  Request done-for-you service
+                </a>
               </div>
               <p className="mt-4 text-xs text-muted-foreground">
-                No guaranteed sales claims. The service guarantees only the agreed scope and deliverables.
+                Digital products and done-for-you services are separate offers. No guaranteed sales or conversion-rate claims.
               </p>
             </div>
           </div>
         </section>
 
-        <section id="packages" className="mx-auto max-w-6xl px-6 py-16 lg:px-8 lg:py-20">
+        <section id="digital-kits" className="mx-auto max-w-6xl px-6 py-16 lg:px-8 lg:py-20">
           <div className="mx-auto max-w-3xl text-center">
-            <p className="text-sm font-bold text-primary">Simple pricing</p>
-            <h2 className="mt-2 text-3xl font-black tracking-tight sm:text-4xl">Choose the level of help you need</h2>
+            <p className="text-sm font-bold text-primary">Self-serve digital products</p>
+            <h2 className="mt-2 text-3xl font-black tracking-tight sm:text-4xl">Buy once. Use the kit on your own page.</h2>
             <p className="mt-4 text-muted-foreground">
-              Start with the focused strategy pack or add implementation when the current platform can be handled safely.
+              Choose the toolkit depth you need. Each kit is a one-time purchase and is delivered through your SUMMECA account after the payment provider confirms the transaction.
             </p>
           </div>
 
-          <div className="mt-10 grid gap-6 lg:grid-cols-2">
-            <PackageCard
-              title="Ready-to-Implement Pack"
-              price="$250"
-              description="Best when you or your developer can make the changes. You receive a focused conversion plan and polished copy ready to use."
-              features={readyToImplement}
-            />
-            <PackageCard
-              title="Implementation Pack"
-              price="$500"
-              description="Best when you want SUMMECA to prepare the conversion work and implement the approved changes on a supported existing platform."
-              features={implementation}
-              featured
-            />
+          <div className="mt-10 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {digitalKits.map((kit) => (
+              <DigitalKitCard key={kit.tier} {...kit} featured={kit.tier === 'Pro'} />
+            ))}
+          </div>
+
+          <div className="mt-8 text-center">
+            <Link href="/products" className="inline-flex items-center gap-2 text-sm font-bold text-primary hover:underline">
+              Browse all SUMMECA products <ArrowRight size={14} />
+            </Link>
           </div>
         </section>
 
-        <section className="border-y border-border bg-secondary/25">
+        <section id="packages" className="border-y border-border bg-secondary/20">
+          <div className="mx-auto max-w-6xl px-6 py-16 lg:px-8 lg:py-20">
+            <div className="mx-auto max-w-3xl text-center">
+              <p className="text-sm font-bold text-primary">Done-for-you service pricing</p>
+              <h2 className="mt-2 text-3xl font-black tracking-tight sm:text-4xl">Want SUMMECA to work on the page for you?</h2>
+              <p className="mt-4 text-muted-foreground">
+                These are service packages, not downloadable products. Choose them when you want a tailored page review, rewritten conversion copy, or implementation support.
+              </p>
+            </div>
+
+            <div className="mt-10 grid gap-6 lg:grid-cols-2">
+              <PackageCard
+                title="Ready-to-Implement Pack"
+                price="$250"
+                description="Best when you or your developer can make the changes. You receive a focused conversion plan and polished copy ready to use."
+                features={readyToImplement}
+              />
+              <PackageCard
+                title="Implementation Pack"
+                price="$500"
+                description="Best when you want SUMMECA to prepare the conversion work and implement the approved changes on a supported existing platform."
+                features={implementation}
+                featured
+              />
+            </div>
+          </div>
+        </section>
+
+        <section className="border-b border-border bg-background">
           <div className="mx-auto max-w-6xl px-6 py-16 lg:px-8">
             <div className="mx-auto max-w-3xl text-center">
-              <p className="text-sm font-bold text-primary">How it works</p>
+              <p className="text-sm font-bold text-primary">How the service works</p>
               <h2 className="mt-2 text-3xl font-black tracking-tight">Preview first. Pay after approval.</h2>
             </div>
             <div className="mt-10 grid gap-5 md:grid-cols-2 lg:grid-cols-4">
@@ -250,10 +384,10 @@ export default function ConversionRescuePage() {
 
         <section className="mx-auto grid max-w-6xl gap-10 px-6 py-16 lg:grid-cols-[0.9fr_1.1fr] lg:px-8 lg:py-20">
           <div>
-            <p className="text-sm font-bold text-primary">Best fit</p>
+            <p className="text-sm font-bold text-primary">Best fit for the service</p>
             <h2 className="mt-2 text-3xl font-black tracking-tight">Built for businesses that need speed, not a months-long redesign</h2>
             <p className="mt-4 text-sm leading-7 text-muted-foreground">
-              This service works best when you already have a live page and a real offer, but the message, CTA, or page flow is too vague or difficult to act on.
+              The done-for-you service works best when you already have a live page and a real offer, but the message, CTA, or page flow is too vague or difficult to act on.
             </p>
             <div className="mt-6 space-y-3 text-sm">
               {[
@@ -296,7 +430,7 @@ export default function ConversionRescuePage() {
           <div className="mx-auto max-w-4xl px-6 py-16 lg:px-8 lg:py-20">
             <div className="text-center">
               <p className="text-sm font-bold text-primary">FAQ</p>
-              <h2 className="mt-2 text-3xl font-black tracking-tight">Before you request a preview</h2>
+              <h2 className="mt-2 text-3xl font-black tracking-tight">Digital kits and service options</h2>
             </div>
             <div className="mt-9 space-y-4">
               {faqs.map((faq) => (
@@ -314,12 +448,12 @@ export default function ConversionRescuePage() {
             <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
               <Mail size={22} />
             </div>
-            <h2 className="mt-5 text-3xl font-black tracking-tight">Send the page. Get a private preview.</h2>
+            <h2 className="mt-5 text-3xl font-black tracking-tight">Need tailored help instead of a self-serve kit?</h2>
             <p className="mx-auto mt-3 max-w-2xl text-sm leading-7 text-muted-foreground">
-              Tell us what page matters most and what you want visitors to do. We will confirm the scope before any payment is requested.
+              Tell us what page matters most and what you want visitors to do. We will confirm the service scope before any payment is requested.
             </p>
             <a href={requestHref} className="btn-primary mx-auto mt-7 inline-flex items-center gap-2 rounded-xl px-6 py-3.5 text-sm font-bold">
-              Email sales@summeca.com <ArrowRight size={16} />
+              Request a private service preview <ArrowRight size={16} />
             </a>
           </div>
         </section>
