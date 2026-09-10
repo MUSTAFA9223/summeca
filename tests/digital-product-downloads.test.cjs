@@ -51,3 +51,50 @@ test('download entitlement trigger fills only blank file URLs from product metad
   assert.match(migration, /p\.metadata ->> 'download_file_name'/);
   assert.match(migration, /before insert on public\.downloads/i);
 });
+
+test('server-generated digital products remain allowlisted and entitlement-gated', () => {
+  const route = fs.readFileSync('src/app/api/downloads/[id]/route.ts', 'utf8');
+  const kits = fs.readFileSync('src/lib/digital-products/generatedKits.ts', 'utf8');
+
+  assert.match(route, /GENERATED_ASSET_PREFIX = 'generated:'/);
+  assert.match(route, /isGeneratedDigitalProductKey/);
+  assert.match(route, /buildGeneratedDigitalProductBundle/);
+  assert.match(route, /recordAccess\(service, download\.id, user\.id\)/);
+  assert.match(route, /Content-Type': 'application\/zip'/);
+  assert.match(route, /X-Content-Type-Options': 'nosniff'/);
+
+  assert.match(kits, /'ecommerce-product-page-conversion-kit'/);
+  assert.match(kits, /'ai-social-media-content-kit'/);
+  assert.match(kits, /'freelancer-client-management-kit'/);
+  assert.match(kits, /SUMMECA DIGITAL PRODUCT LICENSE/);
+});
+
+test('published generated products use one-time pricing and protected generated paths', () => {
+  const migration = fs.readFileSync(
+    'supabase/migrations/20260910211500_publish_generated_digital_products.sql',
+    'utf8',
+  );
+
+  assert.match(migration, /ecommerce-product-page-conversion-kit/);
+  assert.match(migration, /ai-social-media-content-kit/);
+  assert.match(migration, /freelancer-client-management-kit/);
+  assert.match(migration, /generated:ecommerce-product-page-conversion-kit/);
+  assert.match(migration, /generated:ai-social-media-content-kit/);
+  assert.match(migration, /generated:freelancer-client-management-kit/);
+  assert.match(migration, /29\.00/);
+  assert.match(migration, /39\.00/);
+  assert.match(migration, /49\.00/);
+  assert.match(migration, /billing_period = 'one_time'/);
+});
+
+test('download-ready notification trigger is server-controlled', () => {
+  const migration = fs.readFileSync(
+    'supabase/migrations/20260910135000_download_ready_notifications.sql',
+    'utf8',
+  );
+
+  assert.match(migration, /security definer/i);
+  assert.match(migration, /after insert on public\.downloads/i);
+  assert.match(migration, /revoke all on function public\.notify_download_ready\(\) from public/i);
+  assert.match(migration, /grant execute on function public\.notify_download_ready\(\) to postgres, service_role/i);
+});
