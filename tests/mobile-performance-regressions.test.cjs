@@ -11,14 +11,17 @@ const hero = read('src/app/components/HeroSection.tsx');
 const layout = read('src/app/layout.tsx');
 const deferredAssistant = read('src/components/DeferredStoreAssistant.tsx');
 
-test('Spline hero uses the viewer with a self-hosted scene and loads immediately', () => {
-  assert.match(robot, /@splinetool\/viewer@1\.9\.82/);
+test('Spline hero uses a current viewer with a runtime fallback and self-hosted scene', () => {
+  assert.match(robot, /@splinetool\/viewer@2\.0\.15/);
+  assert.match(robot, /@splinetool\/runtime@2\.0\.43/);
   assert.match(robot, /SCENE_URL = '\/assets\/spline\/summeca-robot\.splinecode'/);
   assert.match(robot, /events-target', 'global'/);
   assert.match(robot, /loading', 'eager'/);
   assert.match(robot, /pointerEvents: 'auto'/);
-  assert.match(robot, /void mountScene\(\)/);
-  assert.doesNotMatch(robot, /@splinetool\/runtime/);
+  assert.match(robot, /load-complete/);
+  assert.match(robot, /mountRuntime/);
+  assert.match(robot, /setGlobalEvents/);
+  assert.match(robot, /fallbackTimer = window\.setTimeout\(useRuntime, 10000\)/);
   assert.doesNotMatch(robot, /IntersectionObserver/);
   assert.doesNotMatch(robot, /useGLTF|MODEL_URL|summeca-robot\.glb/);
   assert.doesNotMatch(robot, /<img\b/i);
