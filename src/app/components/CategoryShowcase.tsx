@@ -15,7 +15,7 @@ const aiSolutions = [
   {
     icon: Brain,
     title: 'AI Content Engine',
-    desc: 'Generate product descriptions, marketing copy, SEO content, and campaign materials at scale using GPT-4.',
+    desc: "Generate product descriptions, marketing copy, SEO content, and campaign materials with SUMMECA's available AI tools.",
     href: '/admin/ai',
     tag: 'Marketing',
     color: 'from-[#F0FDFA] to-[#ECFEFF]',
