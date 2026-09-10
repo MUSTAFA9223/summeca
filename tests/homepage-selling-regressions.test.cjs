@@ -63,12 +63,11 @@ test('hero sends shoppers to public product and SaaS destinations', () => {
   assert.match(hero, /View SaaS Apps/);
 });
 
-test('homepage hero uses Spline-only 3D and respects reduced motion', () => {
+test('homepage hero uses Spline-only 3D without GLB or static image fallback', () => {
   assert.match(hero, /SplineRobotScene/);
   assert.match(hero, /motion-reduce:/);
-  assert.match(robot, /prefers-reduced-motion: reduce/);
-  assert.match(robot, /spline-viewer/);
   assert.match(robot, /SCENE_URL/);
+  assert.match(robot, /@splinetool\/runtime@1\.12\.97/);
   assert.doesNotMatch(robot, /LocalRobot3D/);
   assert.doesNotMatch(robot, /useGLTF|MODEL_URL|summeca-robot\.glb/);
   assert.doesNotMatch(robot, /<img\b/i);

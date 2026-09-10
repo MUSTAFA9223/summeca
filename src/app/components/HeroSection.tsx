@@ -16,14 +16,14 @@ const cyan3D =
 
 export default function HeroSection() {
   return (
-    <section className="relative isolate min-h-[760px] overflow-hidden bg-[#f7f9fa] pt-[68px] md:min-h-screen">
-      <div className="pointer-events-none absolute inset-0 hidden bg-[linear-gradient(108deg,#ffffff_0%,#f7f9fa_53%,#dce8ea_100%)] md:block" />
-      <div className="pointer-events-none absolute inset-y-0 right-0 hidden w-[49%] bg-[radial-gradient(circle_at_20%_43%,#25474e_0%,#183139_42%,#10232a_100%)] [clip-path:polygon(30%_0,100%_0,100%_100%,0_100%)] md:block" />
+    <section className="relative isolate min-h-[760px] overflow-hidden bg-[#f7f9fa] pt-[68px] lg:min-h-screen">
+      <div className="pointer-events-none absolute inset-0 hidden bg-[linear-gradient(108deg,#ffffff_0%,#f7f9fa_53%,#dce8ea_100%)] lg:block" />
+      <div className="pointer-events-none absolute inset-y-0 right-0 hidden w-[49%] bg-[radial-gradient(circle_at_20%_43%,#25474e_0%,#183139_42%,#10232a_100%)] [clip-path:polygon(30%_0,100%_0,100%_100%,0_100%)] lg:block" />
       <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-24 bg-gradient-to-b from-white via-white/90 to-transparent" />
       <div className="pointer-events-none absolute inset-0 opacity-35 [background-image:radial-gradient(circle_at_center,rgba(8,197,209,0.18)_1px,transparent_1px)] [background-size:28px_28px] [mask-image:linear-gradient(to_right,black,transparent_48%)]" />
 
-      <div className="relative z-10 mx-auto grid min-h-[692px] max-w-[1440px] grid-cols-1 items-center md:grid-cols-[45%_55%]">
-        <div className="px-6 pb-10 pt-14 sm:px-10 md:px-8 md:pb-16 md:pt-16 lg:px-12 lg:pb-20 lg:pt-20 xl:px-20">
+      <div className="relative z-10 mx-auto grid min-h-[692px] max-w-[1440px] grid-cols-1 items-center lg:grid-cols-[45%_55%]">
+        <div className="px-6 pb-10 pt-14 sm:px-10 lg:px-12 lg:pb-20 lg:pt-20 xl:px-20">
           <div className="mb-7 flex items-center gap-3 text-[11px] font-bold tracking-[0.24em] text-[#667783] sm:text-xs">
             <span className="h-2 w-2 rounded-full bg-[#08c5d1] shadow-[0_0_16px_rgba(8,197,209,0.75)]" />
             AI <span className="text-[#08c5d1]">•</span> SAAS <span className="text-[#08c5d1]">•</span> DIGITAL PRODUCTS
@@ -60,12 +60,12 @@ export default function HeroSection() {
           </p>
         </div>
 
-        <div className="relative min-h-[520px] self-stretch overflow-hidden bg-[radial-gradient(circle_at_50%_40%,#23434a_0%,#152b31_48%,#10232a_100%)] md:min-h-[692px] md:overflow-visible md:bg-none">
+        <div className="relative min-h-[520px] self-stretch overflow-hidden bg-[radial-gradient(circle_at_50%_40%,#23434a_0%,#152b31_48%,#10232a_100%)] lg:min-h-[692px] lg:overflow-visible lg:bg-none">
           <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_48%_45%,rgba(8,197,209,0.21),transparent_35%),linear-gradient(135deg,rgba(255,255,255,0.08),transparent_42%)]" />
-          <div className="relative h-full min-h-[520px] w-full touch-pan-y md:min-h-[692px]" aria-hidden="true">
+          <div className="relative h-full min-h-[520px] w-full touch-pan-y lg:min-h-[692px]" aria-hidden="true">
             <div className="absolute inset-[4%] rounded-[50%] border border-[#8eeef3]/10 blur-[0.2px]" />
-            <div className="absolute bottom-[-8%] left-[-8%] right-[-8%] top-[-6%] z-10 origin-center scale-[0.86] transform-gpu md:scale-[0.78] xl:scale-[0.74]">
-              <SplineRobotScene zoomScale={0.84} />
+            <div className="absolute inset-0 z-10 origin-center transform-gpu lg:bottom-[-8%] lg:left-[-8%] lg:right-[-8%] lg:top-[-6%] lg:scale-[0.78] xl:scale-[0.74]">
+              <SplineRobotScene zoomScale={0.9} />
             </div>
             <div className="pointer-events-none absolute left-1/2 top-[48%] z-0 h-56 w-56 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#08c5d1]/25 blur-[70px]" />
           </div>
