@@ -65,7 +65,7 @@ export default function HeroSection() {
           <div className="relative h-full min-h-[520px] w-full touch-pan-y lg:min-h-[692px]" aria-hidden="true">
             <div className="absolute inset-[4%] rounded-[50%] border border-[#8eeef3]/10 blur-[0.2px]" />
             <div className="absolute inset-0 z-10 origin-center transform-gpu lg:bottom-[-8%] lg:left-[-8%] lg:right-[-8%] lg:top-[-6%] lg:scale-[0.78] xl:scale-[0.74]">
-              <SplineRobotScene zoomScale={0.9} />
+              <SplineRobotScene />
             </div>
             <div className="pointer-events-none absolute left-1/2 top-[48%] z-0 h-56 w-56 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#08c5d1]/25 blur-[70px]" />
           </div>

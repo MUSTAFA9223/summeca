@@ -11,18 +11,13 @@ const hero = read('src/app/components/HeroSection.tsx');
 const layout = read('src/app/layout.tsx');
 const deferredAssistant = read('src/components/DeferredStoreAssistant.tsx');
 
-test('Spline hero loads immediately so the primary 3D robot is never deferred away', () => {
+test('Spline hero uses the restored working canvas runtime path', () => {
+  assert.match(robot, /@splinetool\/runtime@1\.9\.82/);
+  assert.match(robot, /IntersectionObserver/);
   assert.match(robot, /void mount\(\)/);
-  assert.doesNotMatch(robot, /IntersectionObserver/);
-  assert.doesNotMatch(robot, /requestIdleCallback/);
-  assert.doesNotMatch(robot, /loading', 'lazy'/);
-});
-
-test('Spline-only runtime uses a verified CDN version and keeps global pointer interaction', () => {
-  assert.match(robot, /@splinetool\/runtime@1\.12\.97/);
-  assert.match(robot, /nextApp\.setGlobalEvents\?\.\(true\)/);
-  assert.match(robot, /pointerEvents: 'auto'/);
-  assert.match(robot, /prefers-reduced-motion: reduce/);
+  assert.match(robot, /app\.setZoom\(compact \? 0\.7 : 0\.76\)/);
+  assert.match(robot, /pointerEvents = 'auto'/);
+  assert.doesNotMatch(robot, /@splinetool\/viewer/);
   assert.doesNotMatch(robot, /useGLTF|MODEL_URL|summeca-robot\.glb/);
   assert.doesNotMatch(robot, /<img\b/i);
 });
@@ -32,6 +27,7 @@ test('mobile hero gives the robot a full-width column before the large breakpoin
   assert.match(hero, /lg:grid-cols-\[45%_55%\]/);
   assert.doesNotMatch(hero, /md:grid-cols-\[45%_55%\]/);
   assert.match(hero, /absolute inset-0 z-10/);
+  assert.match(hero, /<SplineRobotScene \/>/);
 });
 
 test('sales assistant is deferred instead of hydrating with the critical page bundle', () => {
