@@ -8,13 +8,10 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import {
   LayoutDashboard,
-  Package,
   CreditCard,
   ShoppingBag,
   Download,
   FileText,
-  Activity,
-  Key,
   Settings,
   HelpCircle,
   ChevronLeft,
@@ -41,7 +38,6 @@ const navGroups = [
     label: 'Main',
     items: [
       { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, href: '/user-dashboard' },
-      { id: 'products', label: 'My Products', icon: Package, href: '/user-dashboard/products' },
       { id: 'subscriptions', label: 'Subscriptions', icon: CreditCard, href: '/user-dashboard/subscriptions' },
       { id: 'orders', label: 'Orders', icon: ShoppingBag, href: '/user-dashboard/orders' },
       { id: 'downloads', label: 'Downloads', icon: Download, href: '/user-dashboard/downloads' },
@@ -52,11 +48,9 @@ const navGroups = [
   },
   {
     id: 'billing',
-    label: 'Billing & Usage',
+    label: 'Billing',
     items: [
       { id: 'invoices', label: 'Invoices', icon: FileText, href: '/user-dashboard/invoices' },
-      { id: 'usage', label: 'AI Usage', icon: Activity, href: '/user-dashboard/usage' },
-      { id: 'api-keys', label: 'API Keys', icon: Key, href: '/user-dashboard/api-keys' },
     ],
   },
   {
