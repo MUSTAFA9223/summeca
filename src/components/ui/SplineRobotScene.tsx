@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 
-const SCENE_URL = 'https://prod.spline.design/H69K35LVSzZ9WcEG/scene.splinecode';
+const SCENE_URL = '/api/spline-scene';
 const VIEWER_SCRIPT = 'https://unpkg.com/@splinetool/viewer@1.9.82/build/spline-viewer.js';
 
 type WindowWithSplineViewer = Window & {
@@ -74,8 +74,10 @@ export default function SplineRobotScene() {
         if (cancelled) return;
 
         host.replaceChildren();
+        host.dataset.splineStatus = attempt === 0 ? 'loading' : 'retrying';
+
         const viewer = document.createElement('spline-viewer');
-        viewer.setAttribute('url', SCENE_URL);
+        viewer.setAttribute('url', new URL(SCENE_URL, window.location.origin).toString());
         viewer.setAttribute('events-target', 'global');
         viewer.setAttribute('loading', 'eager');
         viewer.setAttribute('loading-anim-type', 'spinner-small-light');
@@ -94,8 +96,13 @@ export default function SplineRobotScene() {
           touchAction: 'pan-y',
         });
 
+        viewer.addEventListener('load-complete', () => {
+          host.dataset.splineStatus = 'ready';
+        }, { once: true });
+
         viewer.addEventListener('context-loss', () => {
           if (cancelled) return;
+          host.dataset.splineStatus = 'context-lost';
           host.replaceChildren();
           if (attempt < 2) {
             retryTimer = window.setTimeout(() => void mountScene(attempt + 1), 900);
@@ -105,6 +112,7 @@ export default function SplineRobotScene() {
         host.appendChild(viewer);
       } catch {
         if (cancelled) return;
+        host.dataset.splineStatus = 'error';
         host.replaceChildren();
         if (attempt < 2) {
           retryTimer = window.setTimeout(() => void mountScene(attempt + 1), 900 * (attempt + 1));
