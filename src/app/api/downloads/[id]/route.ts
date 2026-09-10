@@ -124,7 +124,9 @@ export async function GET(
 
     let bytes: Uint8Array;
     try {
-      bytes = buildGeneratedDigitalProductBundle(generatedKey);
+      bytes = buildGeneratedDigitalProductBundle(
+        generatedKey as Parameters<typeof buildGeneratedDigitalProductBundle>[0]
+      );
     } catch (error) {
       console.error('[downloads] Failed to build generated digital product:', generatedKey, error);
       return NextResponse.json(
