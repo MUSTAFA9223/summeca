@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from 'react';
 
 const SCENE_URL = 'https://prod.spline.design/H69K35LVSzZ9WcEG/scene.splinecode';
 const RUNTIME_URL = 'https://unpkg.com/@splinetool/runtime@2.0.42/build/runtime.js';
-const FALLBACK_IMAGE = '/assets/images/summeca-robot.webp';
 
 type SplineApplication = {
   load: (url: string) => Promise<void>;
@@ -86,6 +85,7 @@ export default function SplineRobotScene({ zoomScale = 1 }: SplineRobotSceneProp
     const host = hostRef.current;
     let cancelled = false;
     let app: SplineApplication | undefined;
+    let retryTimer: number | undefined;
 
     const canvas = document.createElement('canvas');
     canvas.setAttribute('aria-hidden', 'true');
@@ -97,17 +97,24 @@ export default function SplineRobotScene({ zoomScale = 1 }: SplineRobotSceneProp
     });
     host.replaceChildren(canvas);
 
-    const mount = async () => {
+    const mount = async (attempt = 0) => {
       try {
         const Application = await loadSplineRuntime();
         if (cancelled) return;
+
+        safelyDisposeSpline(app);
         app = new Application(canvas);
         const width = window.innerWidth;
         const baseZoom = width < 640 ? 0.24 : width < 1024 ? 0.28 : width < 1440 ? 0.3 : 0.32;
         const zoom = baseZoom * zoomScale;
         app.setZoom(zoom);
         await app.load(SCENE_URL);
-        if (cancelled) { safelyDisposeSpline(app); return; }
+
+        if (cancelled) {
+          safelyDisposeSpline(app);
+          return;
+        }
+
         app.setBackgroundColor('rgba(0, 0, 0, 0)');
         app.setGlobalEvents?.(true);
         app.setZoom(zoom);
@@ -116,7 +123,16 @@ export default function SplineRobotScene({ zoomScale = 1 }: SplineRobotSceneProp
       } catch {
         safelyDisposeSpline(app);
         app = undefined;
-        if (!cancelled) setReady(false);
+        if (cancelled) return;
+
+        setReady(false);
+        canvas.style.opacity = '0';
+
+        if (attempt < 2) {
+          retryTimer = window.setTimeout(() => {
+            void mount(attempt + 1);
+          }, 900 * (attempt + 1));
+        }
       }
     };
 
@@ -135,6 +151,7 @@ export default function SplineRobotScene({ zoomScale = 1 }: SplineRobotSceneProp
     return () => {
       cancelled = true;
       observer?.disconnect();
+      if (retryTimer !== undefined) window.clearTimeout(retryTimer);
       safelyDisposeSpline(app);
       try { host.replaceChildren(); } catch { /* host may already be detached */ }
     };
@@ -142,12 +159,6 @@ export default function SplineRobotScene({ zoomScale = 1 }: SplineRobotSceneProp
 
   return (
     <div className="relative h-full w-full overflow-hidden bg-transparent">
-      <img
-        src={FALLBACK_IMAGE}
-        alt=""
-        aria-hidden="true"
-        className={`pointer-events-none absolute inset-0 z-[1] h-full w-full select-none object-contain object-center transition-opacity duration-500 ${ready ? 'opacity-0' : 'opacity-100'}`}
-      />
       <div className={`pointer-events-none absolute inset-0 transition-opacity duration-500 ${ready ? 'opacity-100' : 'opacity-70'}`} aria-hidden="true">
         <div className="absolute left-1/2 top-[45%] h-[62%] w-[62%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#08c5d1]/12 blur-[68px]" />
         <div className="absolute left-1/2 top-[58%] h-[36%] w-[36%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#0aaebd]/10 blur-[48px]" />
