@@ -78,6 +78,8 @@ type CryptoSession = {
 
 const CRYPTO_METHODS = [
   { value: 'crypto_usdt_trc20', label: 'USDT · TRON (TRC20)' },
+  { value: 'crypto_usdc_polygon', label: 'USDC · Polygon' },
+  { value: 'crypto_usdc', label: 'USDC · Provider default network' },
   { value: 'crypto_trx', label: 'TRON (TRX) · Low minimum' },
   { value: 'crypto_bnb', label: 'BNB · BNB Smart Chain (BSC) · Low fees' },
   { value: 'crypto_usdt_erc20', label: 'USDT · Ethereum (ERC20)' },
@@ -86,6 +88,7 @@ const CRYPTO_METHODS = [
 function cryptoAssetLabel(paymentMethodType: string) {
   if (paymentMethodType === 'crypto_trx') return 'TRX';
   if (paymentMethodType === 'crypto_bnb') return 'BNB';
+  if (paymentMethodType.startsWith('crypto_usdc')) return 'USDC';
   return 'USDT';
 }
 
@@ -94,7 +97,7 @@ const categoryLabel: Record<string, string> = {
   dataset: 'Dataset', course: 'Course', other: 'Other',
 };
 const billingPeriodLabel: Record<string, string> = {
-  one_time: 'One-time', monthly: 'Monthly', yearly: 'Yearly', lifetime: 'Lifetime',
+  one_time: 'One-time purchase', monthly: '1-month access', yearly: '1-year access', lifetime: 'Lifetime access',
 };
 
 function formatCurrency(amount: number, currency = 'USD') {
@@ -189,7 +192,7 @@ function CheckoutInner() {
   }, [checkoutMethod, cryptoStatus, fastspringStatus, payoneerStatus]);
 
   const loadCartItem = useCallback(async () => {
-    if (!productIdParam) { setPageError('No product selected.'); setPageLoading(false); return; }
+    if (!productIdParam) { setPageError('No product selected. Choose a product before starting checkout.'); setPageLoading(false); return; }
     setPageLoading(true); setPageError('');
     try {
       const { data: product, error: productError } = await supabase.from('products')
@@ -399,7 +402,7 @@ function CheckoutInner() {
     </div>
 
     {pageLoading && <CheckoutSkeleton />}
-    {!pageLoading && !cartItem && <div className="py-20 text-center"><AlertCircle className="mx-auto text-danger mb-3" /><p>{pageError || 'Checkout could not be loaded.'}</p></div>}
+    {!pageLoading && !cartItem && <div className="py-20 text-center"><AlertCircle className="mx-auto text-danger mb-3" /><p>{pageError || 'Checkout could not be loaded.'}</p><Link href="/products" className="btn-primary mt-5 inline-flex items-center gap-2 px-5 py-2.5"><ArrowLeft size={14} /> Back to products</Link></div>}
     {!pageLoading && cartItem && <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 items-start">
       <div className="lg:col-span-3 space-y-5">
         <div className="bg-card border border-border rounded-2xl overflow-hidden">
@@ -411,7 +414,7 @@ function CheckoutInner() {
           </div>
         </div>
 
-        {hasMonthly && hasYearly && <div className="bg-card border border-border rounded-2xl p-5"><h2 className="text-sm font-700 flex items-center gap-2 mb-3"><RefreshCw size={15} /> Billing Frequency</h2><div className="flex gap-2"><button onClick={() => handleBillingSwitch('monthly')} className={`flex-1 p-3 rounded-xl border ${billingFrequency === 'monthly' ? 'border-primary bg-primary/5' : 'border-border'}`}>Monthly</button><button onClick={() => handleBillingSwitch('yearly')} className={`flex-1 p-3 rounded-xl border ${billingFrequency === 'yearly' ? 'border-primary bg-primary/5' : 'border-border'}`}>Yearly</button></div></div>}
+        {hasMonthly && hasYearly && <div className="bg-card border border-border rounded-2xl p-5"><h2 className="text-sm font-700 flex items-center gap-2 mb-3"><RefreshCw size={15} /> Access Period</h2><div className="flex gap-2"><button onClick={() => handleBillingSwitch('monthly')} className={`flex-1 p-3 rounded-xl border ${billingFrequency === 'monthly' ? 'border-primary bg-primary/5' : 'border-border'}`}>1 Month</button><button onClick={() => handleBillingSwitch('yearly')} className={`flex-1 p-3 rounded-xl border ${billingFrequency === 'yearly' ? 'border-primary bg-primary/5' : 'border-border'}`}>1 Year</button></div><p className="mt-2 text-[11px] text-muted-foreground">These options describe the paid access period. They do not promise automatic renewal unless a payment provider explicitly presents a recurring agreement.</p></div>}
 
         {!isFreeOrder && <div className="bg-card border border-border rounded-2xl p-5 space-y-3">
           <h2 className="text-sm font-700 flex items-center gap-2"><Wallet size={15} /> Payment Method</h2>
@@ -422,7 +425,7 @@ function CheckoutInner() {
             <Wallet size={20} className="text-primary" /><div className="flex-1"><div className="font-700 text-sm">Payoneer Checkout</div><p className="text-xs text-muted-foreground mt-1">Hosted Payoneer checkout.</p></div><span className="text-[10px]">{payoneerStatus === 'available' ? 'Available' : payoneerStatus === 'checking' ? 'Checking…' : 'Not configured'}</span>
           </button>
           <button type="button" onClick={() => { setCheckoutMethod('crypto'); setCryptoSession(null); }} className={`w-full text-left rounded-xl border p-4 flex gap-3 ${checkoutMethod === 'crypto' ? 'border-primary bg-primary/5' : 'border-border'}`}>
-            <Bitcoin size={20} className="text-primary" /><div className="flex-1"><div className="font-700 text-sm">USDT / TRX / BNB · NOWPayments</div><p className="text-xs text-muted-foreground mt-1">USDT remains the primary option. TRX and BNB are alternatives; minimums are checked live by the provider.</p></div><span className="text-[10px]">{cryptoStatus === 'available' ? 'Available' : cryptoStatus === 'checking' ? 'Checking…' : 'Not configured'}</span>
+            <Bitcoin size={20} className="text-primary" /><div className="flex-1"><div className="font-700 text-sm">USDT / USDC / TRX / BNB · NOWPayments</div><p className="text-xs text-muted-foreground mt-1">Stablecoin and network options are shown explicitly; provider minimums are checked live before a payment is created.</p></div><span className="text-[10px]">{cryptoStatus === 'available' ? 'Available' : cryptoStatus === 'checking' ? 'Checking…' : 'Not configured'}</span>
           </button>
           {checkoutMethod === 'crypto' && <select value={cryptoMethod} onChange={(e) => { setCryptoMethod(e.target.value); setCryptoSession(null); setPageError(''); }} className="w-full px-3 py-3 bg-background border border-border rounded-xl text-sm">{CRYPTO_METHODS.map((method) => <option key={method.value} value={method.value}>{method.label}</option>)}</select>}
         </div>}
