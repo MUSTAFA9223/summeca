@@ -63,15 +63,15 @@ export default function AuthScreen() {
               <span className={headlineLine}>when you</span>
               <span className={headlineLine}>are.</span>
             </h1>
-            <p className="mt-5 max-w-sm text-sm leading-6 text-white/48 xl:text-base">
+            <p className="mt-6 max-w-[340px] bg-gradient-to-r from-white via-teal-100 to-teal-300 bg-clip-text pr-5 text-[15px] font-medium leading-7 text-transparent xl:text-[17px]">
               Sign in to access your SUMMECA tools, products and workspace from one secure place.
             </p>
           </div>
 
-          <div className="absolute inset-x-[-4%] bottom-[-4%] top-[22%] z-10">
+          <div className="absolute bottom-[-4%] left-[27%] right-[-10%] top-[20%] z-10">
             <SplineRobotScene />
           </div>
-          <div className="pointer-events-none absolute bottom-[7%] left-[13%] right-[13%] h-16 rounded-[50%] bg-teal-300/10 blur-3xl" />
+          <div className="pointer-events-none absolute bottom-[7%] left-[30%] right-[5%] h-16 rounded-[50%] bg-teal-300/10 blur-3xl" />
         </section>
 
         <section className="relative mx-auto flex w-full max-w-[510px] items-center justify-center py-6 lg:py-0">
