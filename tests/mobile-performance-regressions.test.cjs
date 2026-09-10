@@ -18,12 +18,14 @@ test('Spline hero loads immediately so the primary 3D robot is never deferred aw
   assert.doesNotMatch(robot, /loading', 'lazy'/);
 });
 
-test('touch and narrow viewports use the Spline runtime with camera zoom instead of hiding the robot', () => {
+test('touch and narrow viewports use the known Spline 2.0.42 runtime framing instead of hiding the robot', () => {
   assert.match(robot, /pointer: coarse/);
   assert.match(robot, /max-width: 900px/);
   assert.match(robot, /preferRuntimeCanvas/);
-  assert.match(robot, /loadSplineRuntime/);
-  assert.match(robot, /setZoom\(preferRuntimeCanvas \? 0\.66 : 0\.76\)/);
+  assert.match(robot, /@splinetool\/runtime@2\.0\.42/);
+  assert.match(robot, /const runtimeZoom = width < 640 \? 0\.24 : width < 1024 \? 0\.28 : width < 1440 \? 0\.3 : 0\.32/);
+  assert.match(robot, /nextApp\.setZoom\(runtimeZoom\)/);
+  assert.match(robot, /nextApp\.setGlobalEvents\?\.\(true\)/);
   assert.match(robot, /prefers-reduced-motion: reduce/);
   assert.match(robot, /pointerEvents: 'auto'/);
   assert.doesNotMatch(robot, /saveData/);
@@ -32,6 +34,7 @@ test('touch and narrow viewports use the Spline runtime with camera zoom instead
 });
 
 test('desktop Spline viewer keeps global pointer interaction and can fall back to Spline runtime', () => {
+  assert.match(robot, /@splinetool\/viewer@2\.0\.42/);
   assert.match(robot, /events-target', 'global'/);
   assert.match(robot, /mountViewer/);
   assert.match(robot, /void mountRuntime\(\)/);
