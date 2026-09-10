@@ -29,34 +29,22 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     let active = true;
 
-    const redirectRecoveryToResetPage = () => {
-      if (typeof window !== 'undefined' && window.location.pathname !== '/reset-password') {
-        const url = new URL('/reset-password', getSiteUrl());
-        const current = new URL(window.location.href);
-        current.searchParams.forEach((value, key) => url.searchParams.set(key, value));
-        url.hash = current.hash;
-        window.location.replace(url.toString());
-      }
-    };
-
     const hasRecoveryMarkerInUrl = () => {
       if (typeof window === 'undefined') return false;
-      const hash = new URLSearchParams(window.location.hash.replace(/^#/, ''));
       const search = new URLSearchParams(window.location.search);
-      return hash.get('type') === 'recovery' || search.get('type') === 'recovery' || Boolean(search.get('token_hash'));
+      return search.get('type') === 'recovery' || Boolean(search.get('token_hash'));
     };
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, nextSession) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, nextSession) => {
       if (!active) return;
       setSession(nextSession);
       setUser(nextSession?.user ?? null);
       setLoading(false);
-      if (event === 'PASSWORD_RECOVERY') redirectRecoveryToResetPage();
     });
 
-    // A recovery token must establish its own fresh session. Do not refresh a
-    // stale cookie in parallel with verifyOtp: that race can overwrite the new
-    // recovery session with "Refresh Token Not Found" on another browser.
+    // A recovery token-hash establishes its own isolated server-side verification
+    // path. Never refresh a stale browser session while /reset-password is holding
+    // that token, and never copy URL fragments containing access/refresh tokens.
     if (hasRecoveryMarkerInUrl()) {
       setLoading(false);
     } else {
@@ -104,12 +92,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const resetPassword = async (email: string) => {
     // Recovery must not rely on localStorage or the browser that requested it.
-    // The recovery email should carry a TokenHash to /reset-password, where the
-    // token is verified directly with Supabase and creates a fresh session.
+    // The hosted Supabase recovery template must carry TokenHash directly to
+    // /reset-password; verification and the password update happen server-side.
     const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${getSiteUrl()}/reset-password`,
     });
-    if (error) throw error;
+    if (error) {
+      console.warn('[auth] Password reset request failed:', error.code || 'request_failed');
+      throw new Error('Unable to request a password reset right now. Please try again.');
+    }
     return data;
   };
 
