@@ -1,9 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient, createServiceClient } from '@/lib/supabase/server';
+import {
+  buildGeneratedDigitalProductBundle,
+  isGeneratedDigitalProductKey,
+} from '@/lib/digital-products/generatedKits';
 
 const DOWNLOAD_BUCKET = 'downloads';
 const SIGNED_URL_SECONDS = 60;
 const DB_ASSET_PREFIX = 'dbasset:';
+const GENERATED_ASSET_PREFIX = 'generated:';
 
 function normalizeObjectPath(value: string): string | null {
   const raw = value.trim();
@@ -26,6 +31,13 @@ function normalizeAssetKey(value: string): string | null {
   return /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(key) ? key : null;
 }
 
+function normalizeGeneratedKey(value: string): string | null {
+  const raw = value.trim();
+  if (!raw.startsWith(GENERATED_ASSET_PREFIX)) return null;
+  const key = raw.slice(GENERATED_ASSET_PREFIX.length);
+  return isGeneratedDigitalProductKey(key) ? key : null;
+}
+
 function decodeBase64(value: string): Uint8Array {
   const binary = atob(value);
   const bytes = new Uint8Array(binary.length);
@@ -35,9 +47,33 @@ function decodeBase64(value: string): Uint8Array {
   return bytes;
 }
 
+function toArrayBuffer(bytes: Uint8Array) {
+  return bytes.buffer.slice(
+    bytes.byteOffset,
+    bytes.byteOffset + bytes.byteLength,
+  ) as ArrayBuffer;
+}
+
 function downloadDisposition(fileName: string) {
   const safe = fileName.replace(/[\r\n"]/g, '_').trim() || 'download.zip';
   return `attachment; filename="${safe}"; filename*=UTF-8''${encodeURIComponent(safe)}`;
+}
+
+async function recordAccess(
+  service: ReturnType<typeof createServiceClient>,
+  downloadId: string,
+  userId: string,
+) {
+  const { data: recorded, error: recordError } = await service.rpc('record_download_access', {
+    p_download_id: downloadId,
+    p_user_id: userId,
+  });
+
+  if (recordError || recorded !== true) {
+    console.error('[downloads] Failed to record download access:', recordError?.message);
+    return false;
+  }
+  return true;
 }
 
 export async function GET(
@@ -75,11 +111,53 @@ export async function GET(
   }
 
   const service = createServiceClient();
+  const directFileRequest = request.nextUrl.searchParams.get('file') === '1';
+  const generatedKey = normalizeGeneratedKey(download.file_url || '');
+
+  if (generatedKey) {
+    if (!directFileRequest) {
+      return NextResponse.json(
+        { url: `/api/downloads/${encodeURIComponent(download.id)}?file=1` },
+        { headers: { 'Cache-Control': 'no-store, private' } }
+      );
+    }
+
+    let bytes: Uint8Array;
+    try {
+      bytes = buildGeneratedDigitalProductBundle(
+        generatedKey as Parameters<typeof buildGeneratedDigitalProductBundle>[0]
+      );
+    } catch (error) {
+      console.error('[downloads] Failed to build generated digital product:', generatedKey, error);
+      return NextResponse.json(
+        { error: 'This digital product file is temporarily unavailable. Please contact support.' },
+        { status: 503 }
+      );
+    }
+
+    if (!(await recordAccess(service, download.id, user.id))) {
+      return NextResponse.json(
+        { error: 'Unable to validate this download. Please refresh and try again.' },
+        { status: 409 }
+      );
+    }
+
+    const fileName = download.file_name || `${generatedKey}.zip`;
+    return new NextResponse(toArrayBuffer(bytes), {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/zip',
+        'Content-Disposition': downloadDisposition(fileName),
+        'Content-Length': String(bytes.byteLength),
+        'Cache-Control': 'no-store, private',
+        'X-Content-Type-Options': 'nosniff',
+      },
+    });
+  }
+
   const assetKey = normalizeAssetKey(download.file_url || '');
 
   if (assetKey) {
-    const directFileRequest = request.nextUrl.searchParams.get('file') === '1';
-
     if (!directFileRequest) {
       const { data: assetState, error: stateError } = await service
         .from('digital_product_assets')
@@ -128,13 +206,7 @@ export async function GET(
       );
     }
 
-    const { data: recorded, error: recordError } = await service.rpc('record_download_access', {
-      p_download_id: download.id,
-      p_user_id: user.id,
-    });
-
-    if (recordError || recorded !== true) {
-      console.error('[downloads] Failed to record download access:', recordError?.message);
+    if (!(await recordAccess(service, download.id, user.id))) {
       return NextResponse.json(
         { error: 'Unable to validate this download. Please refresh and try again.' },
         { status: 409 }
@@ -142,12 +214,7 @@ export async function GET(
     }
 
     const fileName = download.file_name || asset.file_name || `${assetKey}.zip`;
-    const responseBody = bytes.buffer.slice(
-      bytes.byteOffset,
-      bytes.byteOffset + bytes.byteLength,
-    ) as ArrayBuffer;
-
-    return new NextResponse(responseBody, {
+    return new NextResponse(toArrayBuffer(bytes), {
       status: 200,
       headers: {
         'Content-Type': asset.mime_type || 'application/octet-stream',
@@ -182,13 +249,7 @@ export async function GET(
     );
   }
 
-  const { data: recorded, error: recordError } = await service.rpc('record_download_access', {
-    p_download_id: download.id,
-    p_user_id: user.id,
-  });
-
-  if (recordError || recorded !== true) {
-    console.error('[downloads] Failed to record download access:', recordError?.message);
+  if (!(await recordAccess(service, download.id, user.id))) {
     return NextResponse.json(
       { error: 'Unable to validate this download. Please refresh and try again.' },
       { status: 409 }
