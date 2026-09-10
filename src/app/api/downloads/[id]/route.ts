@@ -41,7 +41,7 @@ function downloadDisposition(fileName: string) {
 }
 
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
   const { id } = await context.params;
@@ -78,6 +78,30 @@ export async function GET(
   const assetKey = normalizeAssetKey(download.file_url || '');
 
   if (assetKey) {
+    const directFileRequest = request.nextUrl.searchParams.get('file') === '1';
+
+    if (!directFileRequest) {
+      const { data: assetState, error: stateError } = await service
+        .from('digital_product_assets')
+        .select('asset_key')
+        .eq('asset_key', assetKey)
+        .eq('is_active', true)
+        .maybeSingle();
+
+      if (stateError || !assetState) {
+        console.error('[downloads] Private digital asset is unavailable:', assetKey, stateError?.message);
+        return NextResponse.json(
+          { error: 'This digital product file is temporarily unavailable. Please contact support.' },
+          { status: 503 }
+        );
+      }
+
+      return NextResponse.json(
+        { url: `/api/downloads/${encodeURIComponent(download.id)}?file=1` },
+        { headers: { 'Cache-Control': 'no-store, private' } }
+      );
+    }
+
     const { data: asset, error: assetError } = await service
       .from('digital_product_assets')
       .select('asset_key, file_name, mime_type, content_base64, is_active')
