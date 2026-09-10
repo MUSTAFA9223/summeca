@@ -48,13 +48,15 @@ test('Google OAuth PKCE verifier is server-only and short-lived', () => {
   assert.match(callback, /exchangeCodeForSession\(/);
 });
 
-test('AuthContext does not propagate implicit recovery fragments or expose raw reset errors', () => {
+test('AuthContext does not propagate implicit recovery fragments and sanitizes user-facing auth errors', () => {
   const source = fs.readFileSync('src/contexts/AuthContext.tsx', 'utf8');
   assert.match(source, /search\.get\('type'\) === 'recovery'/);
   assert.match(source, /Boolean\(search\.get\('token_hash'\)\)/);
   assert.doesNotMatch(source, /window\.location\.hash/);
   assert.doesNotMatch(source, /url\.hash\s*=/);
   assert.doesNotMatch(source, /PASSWORD_RECOVERY/);
+  assert.match(source, /throw new Error\('Unable to create your account\. Please check your details and try again\.'\)/);
+  assert.match(source, /throw new Error\('Unable to sign in\. Check your email and password and try again\.'\)/);
   assert.match(source, /throw new Error\('Unable to request a password reset right now\. Please try again\.'\)/);
 });
 
