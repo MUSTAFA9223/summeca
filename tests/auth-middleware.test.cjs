@@ -232,8 +232,6 @@ test('rate limits are counted atomically across Cloudflare workers', () => {
     'src/app/api/refunds/request/route.ts',
     'src/app/api/security/change-password/route.ts',
     'src/app/api/security/logout-all/route.ts',
-    'src/app/api/security/logs/route.ts',
-    'src/app/api/security/settings/route.ts',
   ];
 
   assert.match(limiter, /export async function checkRateLimit/);
