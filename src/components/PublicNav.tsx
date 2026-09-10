@@ -73,12 +73,9 @@ export default function PublicNav() {
   return (
     <header className={`fixed left-0 right-0 top-0 z-50 transition-all duration-300 ${scrolled ? 'border-b border-primary/8 bg-white/95 shadow-sm shadow-primary/5 backdrop-blur-xl' : 'bg-transparent'}`}>
       <div className="mx-auto max-w-screen-xl px-6 lg:px-8">
-        <div className="flex h-[68px] items-center justify-between">
-          <Link href="/" className="group flex shrink-0 items-center gap-2.5" aria-label="SUMMECA home">
-            <AppLogo variant="mark" size={35} className="transition-transform duration-200 group-hover:scale-[1.03]" />
-            <span className="text-[20px] font-extrabold leading-none tracking-[-0.045em] text-foreground transition-transform duration-200 group-hover:scale-[1.01]">
-              SUM<span className="text-primary">MECA</span>
-            </span>
+        <div className="flex h-[76px] items-center justify-between">
+          <Link href="/" className="group flex shrink-0 items-center" aria-label="SUMMECA home">
+            <AppLogo variant="wordmark" size={50} className="transition-transform duration-200 group-hover:scale-[1.035]" />
           </Link>
 
           <nav className="hidden items-center gap-0.5 lg:flex">
