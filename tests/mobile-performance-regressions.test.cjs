@@ -12,19 +12,30 @@ const deferredAssistant = read('src/components/DeferredStoreAssistant.tsx');
 
 test('Spline hero loads immediately so the primary 3D robot is never deferred away', () => {
   assert.match(robot, /loading', 'eager'/);
-  assert.match(robot, /void mountSpline\(\)/);
+  assert.match(robot, /void mountPreferredScene\(\)/);
   assert.doesNotMatch(robot, /IntersectionObserver/);
   assert.doesNotMatch(robot, /requestIdleCallback/);
   assert.doesNotMatch(robot, /loading', 'lazy'/);
 });
 
-test('Spline hero stays visible on constrained devices while preserving reduced-motion handling', () => {
+test('touch and narrow viewports use the Spline runtime with camera zoom instead of hiding the robot', () => {
+  assert.match(robot, /pointer: coarse/);
+  assert.match(robot, /max-width: 900px/);
+  assert.match(robot, /preferRuntimeCanvas/);
+  assert.match(robot, /loadSplineRuntime/);
+  assert.match(robot, /setZoom\(preferRuntimeCanvas \? 0\.66 : 0\.76\)/);
   assert.match(robot, /prefers-reduced-motion: reduce/);
-  assert.match(robot, /events-target', 'global'/);
   assert.match(robot, /pointerEvents: 'auto'/);
   assert.doesNotMatch(robot, /saveData/);
   assert.doesNotMatch(robot, /slow-2g/);
   assert.doesNotMatch(robot, /effectiveType === '2g'/);
+});
+
+test('desktop Spline viewer keeps global pointer interaction and can fall back to Spline runtime', () => {
+  assert.match(robot, /events-target', 'global'/);
+  assert.match(robot, /mountViewer/);
+  assert.match(robot, /void mountRuntime\(\)/);
+  assert.doesNotMatch(robot, /useGLTF|MODEL_URL|summeca-robot\.glb/);
 });
 
 test('sales assistant is deferred instead of hydrating with the critical page bundle', () => {
