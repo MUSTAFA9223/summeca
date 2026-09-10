@@ -2,18 +2,12 @@
 
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
-import { ArrowRight, Boxes, Headphones, ShieldCheck, UserCheck } from 'lucide-react';
+import { ArrowRight, Boxes } from 'lucide-react';
 
 const SplineRobotScene = dynamic(() => import('@/components/ui/SplineRobotScene'), {
   ssr: false,
   loading: () => null,
 });
-
-const servicePoints = [
-  { icon: ShieldCheck, title: 'Verified Checkout', text: 'Paid access follows provider confirmation' },
-  { icon: UserCheck, title: 'Account Delivery', text: 'Orders and eligible access stay tied to your account' },
-  { icon: Headphones, title: 'Customer Support', text: 'Help for products, orders, and accounts' },
-];
 
 const dark3D =
   '[text-shadow:0_1px_0_#50616a,0_2px_0_#3d4b53,0_3px_0_#2d383f,0_4px_0_#202a30,0_7px_10px_rgba(7,19,25,0.28),-3px_0_10px_rgba(8,197,209,0.18)]';
@@ -32,37 +26,38 @@ export default function HeroSection() {
         <div className="px-6 pb-10 pt-14 sm:px-10 md:px-8 md:pb-16 md:pt-16 lg:px-12 lg:pb-20 lg:pt-20 xl:px-20">
           <div className="mb-7 flex items-center gap-3 text-[11px] font-bold tracking-[0.24em] text-[#667783] sm:text-xs">
             <span className="h-2 w-2 rounded-full bg-[#08c5d1] shadow-[0_0_16px_rgba(8,197,209,0.75)]" />
-            AI <span className="text-[#08c5d1]">•</span> SAAS <span className="text-[#08c5d1]">•</span> DIGITAL TOOLS
+            AI <span className="text-[#08c5d1]">•</span> SAAS <span className="text-[#08c5d1]">•</span> DIGITAL PRODUCTS
           </div>
 
-          <h1 className="max-w-[720px] uppercase font-black leading-[0.79] tracking-[-0.065em] [perspective:900px]">
-            <span className={`block text-[clamp(3.9rem,6.1vw,7rem)] text-[#101820] ${dark3D}`}>THE</span>
-            <span className={`mt-2 block text-[clamp(3.35rem,5.35vw,6.2rem)] text-[#101820] ${dark3D}`}>PLATFORM</span>
-            <span className={`mt-3 block text-[clamp(2.55rem,4.15vw,4.9rem)] text-[#101820] ${dark3D}`}>FOR SMARTER</span>
-            <span className={`mt-3 block bg-gradient-to-b from-[#37e9ef] via-[#08c5d1] to-[#0798a5] bg-clip-text pb-3 text-[clamp(2.7rem,4.45vw,5.2rem)] text-transparent ${cyan3D}`}>DIGITAL WORK</span>
+          <h1 className="max-w-[720px] uppercase font-black leading-[0.8] tracking-[-0.065em] [perspective:900px]">
+            <span className={`block text-[clamp(3.5rem,5.7vw,6.6rem)] text-[#101820] ${dark3D}`}>DIGITAL</span>
+            <span className={`mt-2 block text-[clamp(3.25rem,5.15vw,6rem)] text-[#101820] ${dark3D}`}>TOOLS BUILT</span>
+            <span className={`mt-3 block text-[clamp(2.65rem,4.15vw,4.9rem)] text-[#101820] ${dark3D}`}>FOR FASTER</span>
+            <span className={`mt-3 block bg-gradient-to-b from-[#37e9ef] via-[#08c5d1] to-[#0798a5] bg-clip-text pb-3 text-[clamp(2.7rem,4.4vw,5.1rem)] text-transparent ${cyan3D}`}>BUSINESS</span>
           </h1>
 
           <p className="mt-7 max-w-xl text-base leading-7 text-[#667783] sm:text-lg sm:leading-8">
-            Discover published AI tools, SaaS products, and digital resources with pricing and availability tied directly to production offers.
+            Practical SaaS apps, AI tools, and ready-to-use digital products designed to help modern businesses move faster through everyday workflows.
           </p>
 
           <div className="mt-9 flex flex-col gap-3 sm:flex-row sm:items-center">
-            <Link href="/products" className="group inline-flex min-h-12 items-center justify-center gap-3 rounded-full bg-[#101820] px-7 py-3.5 text-sm font-bold text-white shadow-[0_16px_40px_rgba(16,24,32,0.2)] transition duration-300 hover:-translate-y-0.5 hover:bg-[#08aeba] hover:shadow-[0_18px_45px_rgba(8,197,209,0.28)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#08c5d1]">
-              Explore Products <ArrowRight size={17} className="transition-transform duration-300 group-hover:translate-x-1" />
+            <Link
+              href="/products"
+              className="group inline-flex min-h-12 items-center justify-center gap-3 rounded-full bg-[#101820] px-7 py-3.5 text-sm font-bold text-white shadow-[0_16px_40px_rgba(16,24,32,0.2)] transition duration-300 hover:-translate-y-0.5 hover:bg-[#08aeba] hover:shadow-[0_18px_45px_rgba(8,197,209,0.28)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#08c5d1] motion-reduce:transform-none motion-reduce:transition-none"
+            >
+              Explore Products <ArrowRight size={17} className="transition-transform duration-300 group-hover:translate-x-1 motion-reduce:transform-none motion-reduce:transition-none" />
             </Link>
-            <Link href="/ai" className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full border border-[#cad5d8] bg-white/75 px-7 py-3.5 text-sm font-bold text-[#152129] backdrop-blur-md transition duration-300 hover:-translate-y-0.5 hover:border-[#08c5d1] hover:text-[#0799a5] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#08c5d1]">
-              <Boxes size={16} /> Browse AI Tools
+            <Link
+              href="/saas"
+              className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full border border-[#cad5d8] bg-white/75 px-7 py-3.5 text-sm font-bold text-[#152129] backdrop-blur-md transition duration-300 hover:-translate-y-0.5 hover:border-[#08c5d1] hover:text-[#0799a5] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#08c5d1] motion-reduce:transform-none motion-reduce:transition-none"
+            >
+              <Boxes size={16} /> View SaaS Apps
             </Link>
           </div>
 
-          <div className="mt-11 grid max-w-[680px] grid-cols-1 gap-4 border-t border-[#dfe7e9] pt-7 sm:grid-cols-3">
-            {servicePoints.map(({ icon: Icon, title, text }) => (
-              <div key={title} className="flex items-start gap-3">
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#e8fbfc] text-[#08aebb]"><Icon size={17} /></span>
-                <span><span className="block text-xs font-bold text-[#152129]">{title}</span><span className="mt-1 block text-[11px] leading-4 text-[#71818b]">{text}</span></span>
-              </div>
-            ))}
-          </div>
+          <p className="mt-7 max-w-xl text-xs font-semibold uppercase tracking-[0.16em] text-[#7b8a92]">
+            SaaS apps <span className="px-2 text-[#08aeba]">•</span> AI tools <span className="px-2 text-[#08aeba]">•</span> Digital kits
+          </p>
         </div>
 
         <div className="relative min-h-[520px] self-stretch overflow-hidden bg-[radial-gradient(circle_at_50%_40%,#23434a_0%,#152b31_48%,#10232a_100%)] md:min-h-[692px] md:overflow-visible md:bg-none">
