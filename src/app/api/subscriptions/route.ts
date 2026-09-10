@@ -11,12 +11,17 @@ import { createClient } from '@/lib/supabase/server';
 export async function GET() {
   const supabase = await createClient();
 
-  const { data: { user }, error: authError } = await supabase?.auth?.getUser();
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
   if (authError || !user) {
-    return NextResponse?.json({ error: 'Authentication required.' }, { status: 401 });
+    return NextResponse.json({ error: 'Authentication required.' }, { status: 401 });
   }
 
-  const { data, error } = await supabase?.from('subscriptions')?.select(`
+  const { data, error } = await supabase
+    .from('subscriptions')
+    .select(`
       id,
       status,
       payment_provider,
@@ -34,12 +39,14 @@ export async function GET() {
       order_id,
       products ( id, name, slug, category, thumbnail_url ),
       product_plans ( id, name, billing_period, price, currency, features )
-    `)?.eq('user_id', user?.id)?.order('created_at', { ascending: false });
+    `)
+    .eq('user_id', user.id)
+    .order('created_at', { ascending: false });
 
   if (error) {
-    console.error('[GET /api/subscriptions] Error:', error?.message);
-    return NextResponse?.json({ error: 'Failed to fetch subscriptions.' }, { status: 500 });
+    console.error('[GET /api/subscriptions] Error:', error.message);
+    return NextResponse.json({ error: 'Failed to fetch subscriptions.' }, { status: 500 });
   }
 
-  return NextResponse?.json({ subscriptions: data ?? [] });
+  return NextResponse.json({ subscriptions: data ?? [] });
 }
