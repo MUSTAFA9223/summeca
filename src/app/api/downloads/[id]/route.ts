@@ -118,7 +118,12 @@ export async function GET(
     }
 
     const fileName = download.file_name || asset.file_name || `${assetKey}.zip`;
-    return new NextResponse(bytes, {
+    const responseBody = bytes.buffer.slice(
+      bytes.byteOffset,
+      bytes.byteOffset + bytes.byteLength,
+    ) as ArrayBuffer;
+
+    return new NextResponse(responseBody, {
       status: 200,
       headers: {
         'Content-Type': asset.mime_type || 'application/octet-stream',
