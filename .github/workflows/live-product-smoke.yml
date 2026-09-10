@@ -1,0 +1,113 @@
+name: Live Product Smoke
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: summeca-live-products
+  cancel-in-progress: true
+
+jobs:
+  verify-products:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      SUPABASE_URL: https://encrvihpdkvubxyvphlt.supabase.co
+      SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+    steps:
+      - name: Verify public product routes, catalog and download protection
+        shell: bash
+        run: |
+          node <<'NODE'
+          const expected = [
+            {
+              slug: 'ecommerce-product-page-conversion-kit',
+              title: 'Ecommerce Product Page Conversion Kit',
+              price: 29,
+              asset: 'https://summeca.com/assets/products/ecommerce-product-page-conversion-kit.svg',
+            },
+            {
+              slug: 'ai-social-media-content-kit',
+              title: 'AI Social Media Content Kit',
+              price: 39,
+              asset: 'https://summeca.com/assets/products/ai-social-media-content-kit.svg',
+            },
+            {
+              slug: 'freelancer-client-management-kit',
+              title: 'Freelancer Client Management Kit',
+              price: 49,
+              asset: 'https://summeca.com/assets/products/freelancer-client-management-kit.svg',
+            },
+          ];
+
+          for (const product of expected) {
+            const pageUrl = `https://summeca.com/products/${product.slug}`;
+            const page = await fetch(pageUrl, { redirect: 'follow' });
+            const pageType = page.headers.get('content-type') || '';
+            const html = await page.text();
+            console.log(`${product.slug}: page=${page.status} type=${pageType}`);
+            if (!page.ok || !pageType.includes('text/html')) process.exit(61);
+            if (!html.includes(product.title)) process.exit(62);
+
+            const asset = await fetch(product.asset, { redirect: 'follow' });
+            const assetType = asset.headers.get('content-type') || '';
+            console.log(`${product.slug}: asset=${asset.status} type=${assetType}`);
+            if (!asset.ok || !assetType.includes('image/svg+xml')) process.exit(63);
+          }
+
+          const unauthDownload = await fetch(
+            'https://summeca.com/api/downloads/00000000-0000-0000-0000-000000000000',
+            { redirect: 'manual' },
+          );
+          console.log(`unauthenticated download probe: ${unauthDownload.status}`);
+          if (unauthDownload.status !== 401) process.exit(64);
+
+          const anonKey = process.env.SUPABASE_ANON_KEY || '';
+          const supabaseUrl = process.env.SUPABASE_URL || '';
+          if (!anonKey || !supabaseUrl) process.exit(65);
+
+          const productQuery = new URL('/rest/v1/products', supabaseUrl);
+          productQuery.searchParams.set('select', 'id,slug,status');
+          productQuery.searchParams.set('status', 'eq.active');
+          productQuery.searchParams.set('slug', `in.(${expected.map((item) => item.slug).join(',')})`);
+          const headers = {
+            apikey: anonKey,
+            authorization: `Bearer ${anonKey}`,
+          };
+          const productsResponse = await fetch(productQuery, { headers });
+          if (!productsResponse.ok) process.exit(66);
+          const products = await productsResponse.json();
+          if (!Array.isArray(products) || products.length !== expected.length) process.exit(67);
+
+          const idBySlug = new Map(products.map((product) => [product.slug, product.id]));
+          const ids = expected.map((item) => idBySlug.get(item.slug));
+          if (ids.some((id) => typeof id !== 'string' || !id)) process.exit(68);
+
+          const plansQuery = new URL('/rest/v1/product_plans', supabaseUrl);
+          plansQuery.searchParams.set('select', 'product_id,name,price,currency,billing_period,is_active');
+          plansQuery.searchParams.set('is_active', 'eq.true');
+          plansQuery.searchParams.set('product_id', `in.(${ids.join(',')})`);
+          const plansResponse = await fetch(plansQuery, { headers });
+          if (!plansResponse.ok) process.exit(69);
+          const plans = await plansResponse.json();
+          if (!Array.isArray(plans) || plans.length !== expected.length) process.exit(70);
+
+          for (const product of expected) {
+            const productId = idBySlug.get(product.slug);
+            const matches = plans.filter((plan) => plan.product_id === productId);
+            if (matches.length !== 1) process.exit(71);
+            const [plan] = matches;
+            const price = Number(plan.price);
+            console.log(`${product.slug}: ${plan.name} ${price} ${plan.currency} ${plan.billing_period}`);
+            if (plan.name !== 'Complete Kit') process.exit(72);
+            if (price !== product.price || plan.currency !== 'USD' || plan.billing_period !== 'one_time') process.exit(73);
+          }
+
+          console.log('Live digital-product smoke test passed.');
+          NODE
