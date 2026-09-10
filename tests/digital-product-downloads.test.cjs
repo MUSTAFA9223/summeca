@@ -29,6 +29,17 @@ test('download route requires owned entitlement before serving database-backed f
   assert.match(route, /Cache-Control': 'no-store, private'/);
 });
 
+test('database-backed downloads preserve the dashboard JSON-to-download handshake', () => {
+  const route = fs.readFileSync('src/app/api/downloads/[id]/route.ts', 'utf8');
+  const dashboard = fs.readFileSync('src/app/user-dashboard/downloads/page.tsx', 'utf8');
+
+  assert.match(dashboard, /await response\.json\(\)/);
+  assert.match(dashboard, /window\.location\.assign\(payload\.url\)/);
+  assert.match(route, /request\.nextUrl\.searchParams\.get\('file'\) === '1'/);
+  assert.match(route, /url: `\/api\/downloads\/\$\{encodeURIComponent\(download\.id\)\}\?file=1`/);
+  assert.match(route, /if \(!directFileRequest\)/);
+});
+
 test('download entitlement trigger fills only blank file URLs from product metadata', () => {
   const migration = fs.readFileSync(
     'supabase/migrations/20260910070000_private_digital_product_assets.sql',
