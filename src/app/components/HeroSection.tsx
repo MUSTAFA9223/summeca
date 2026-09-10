@@ -65,11 +65,13 @@ export default function HeroSection() {
           </div>
         </div>
 
-        <div className="relative min-h-[520px] self-stretch overflow-hidden bg-[radial-gradient(circle_at_50%_40%,#23434a_0%,#152b31_48%,#10232a_100%)] md:min-h-[692px] md:bg-none">
+        <div className="relative min-h-[520px] self-stretch overflow-hidden bg-[radial-gradient(circle_at_50%_40%,#23434a_0%,#152b31_48%,#10232a_100%)] md:min-h-[692px] md:overflow-visible md:bg-none">
           <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_48%_45%,rgba(8,197,209,0.21),transparent_35%),linear-gradient(135deg,rgba(255,255,255,0.08),transparent_42%)]" />
           <div className="relative h-full min-h-[520px] w-full touch-pan-y md:min-h-[692px]" aria-hidden="true">
             <div className="absolute inset-[4%] rounded-[50%] border border-[#8eeef3]/10 blur-[0.2px]" />
-            <div className="absolute inset-0 z-10"><SplineRobotScene /></div>
+            <div className="absolute bottom-[-8%] left-[-8%] right-[-8%] top-[-6%] z-10">
+              <SplineRobotScene zoomScale={0.84} />
+            </div>
             <div className="pointer-events-none absolute left-1/2 top-[48%] z-0 h-56 w-56 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#08c5d1]/25 blur-[70px]" />
           </div>
         </div>
