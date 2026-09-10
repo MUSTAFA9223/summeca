@@ -75,13 +75,19 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         emailRedirectTo: `${getSiteUrl()}/auth/callback`,
       },
     });
-    if (error) throw error;
+    if (error) {
+      console.warn('[auth] Sign-up failed:', error.code || 'signup_failed');
+      throw new Error('Unable to create your account. Please check your details and try again.');
+    }
     return data;
   };
 
   const signIn = async (email: string, password: string) => {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) throw error;
+    if (error) {
+      console.warn('[auth] Sign-in failed:', error.code || 'signin_failed');
+      throw new Error('Unable to sign in. Check your email and password and try again.');
+    }
     return data;
   };
 
