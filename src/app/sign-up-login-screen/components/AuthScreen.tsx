@@ -63,7 +63,7 @@ export default function AuthScreen() {
               <span className={headlineLine}>when you</span>
               <span className={headlineLine}>are.</span>
             </h1>
-            <p className="mt-6 max-w-[340px] bg-gradient-to-r from-white via-teal-100 to-teal-300 bg-clip-text pr-5 text-[15px] font-medium leading-7 text-transparent xl:text-[17px]">
+            <p className="mt-14 max-w-[320px] pr-5 text-[15px] font-medium leading-7 text-teal-200 xl:mt-16 xl:text-[17px]">
               Sign in to access your SUMMECA tools, products and workspace from one secure place.
             </p>
           </div>
