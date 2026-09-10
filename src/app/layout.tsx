@@ -36,6 +36,14 @@ export const metadata: Metadata = {
     siteName: 'SUMMECA',
     title: 'SUMMECA — AI & SaaS for Modern Work',
     description: siteDescription,
+    images: [
+      {
+        url: '/assets/images/summeca-logo.png',
+        width: 1200,
+        height: 400,
+        alt: 'SUMMECA',
+      },
+    ],
   },
   twitter: {
     card: 'summary_large_image',
@@ -43,10 +51,12 @@ export const metadata: Metadata = {
     creator: '@summeca_',
     title: 'SUMMECA — AI & SaaS for Modern Work',
     description: siteDescription,
+    images: ['/assets/images/summeca-logo.png'],
   },
   icons: {
-    icon: [{ url: '/assets/images/summeca-mark.svg', type: 'image/svg+xml' }],
-    shortcut: ['/assets/images/summeca-mark.svg'],
+    icon: [{ url: '/assets/images/summeca-mark.png', type: 'image/png' }],
+    shortcut: ['/favicon.ico'],
+    apple: [{ url: '/assets/images/app_logo.png', sizes: '512x512', type: 'image/png' }],
   },
 };
 

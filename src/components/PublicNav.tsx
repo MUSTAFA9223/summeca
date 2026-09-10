@@ -34,9 +34,8 @@ export default function PublicNav() {
     <header className={`fixed left-0 right-0 top-0 z-50 transition-all duration-300 ${scrolled ? 'border-b border-primary/8 bg-white/95 shadow-sm shadow-primary/5 backdrop-blur-xl' : 'bg-transparent'}`}>
       <div className="mx-auto max-w-screen-xl px-6 lg:px-8">
         <div className="flex h-[68px] items-center justify-between">
-          <Link href="/" className="group flex shrink-0 items-center gap-2.5">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-teal shadow-sm transition group-hover:scale-105 group-hover:shadow-md"><AppLogo size={20} /></div>
-            <span className="text-xl font-extrabold tracking-tight text-foreground">SUMME<span className="text-gradient-primary">CA</span></span>
+          <Link href="/" className="group flex shrink-0 items-center" aria-label="SUMMECA home">
+            <AppLogo variant="wordmark" size={38} className="transition-transform duration-200 group-hover:scale-[1.02]" />
           </Link>
 
           <nav className="hidden items-center gap-0.5 lg:flex">

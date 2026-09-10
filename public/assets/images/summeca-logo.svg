@@ -1,32 +1,4 @@
-<svg width="480" height="96" viewBox="0 0 480 96" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <defs>
-    <linearGradient id="frame" x1="8" y1="6" x2="70" y2="74" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#67E8F9"/>
-      <stop offset="0.46" stop-color="#2DD4BF"/>
-      <stop offset="1" stop-color="#0EA5E9"/>
-    </linearGradient>
-    <linearGradient id="ribbon" x1="16" y1="16" x2="60" y2="66" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#A5F3FC"/>
-      <stop offset="0.28" stop-color="#2DD4BF"/>
-      <stop offset="0.7" stop-color="#14B8A6"/>
-      <stop offset="1" stop-color="#38BDF8"/>
-    </linearGradient>
-    <linearGradient id="word" x1="106" y1="28" x2="448" y2="70" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#F8FAFC"/>
-      <stop offset="0.72" stop-color="#E2E8F0"/>
-      <stop offset="1" stop-color="#67E8F9"/>
-    </linearGradient>
-  </defs>
-
-  <g transform="translate(8 8)">
-    <path d="M36 2L67.2 20V56L36 74L4.8 56V20L36 2Z" fill="#07110F"/>
-    <path d="M36 2L67.2 20V56L36 74L4.8 56V20L36 2Z" stroke="url(#frame)" stroke-width="2"/>
-    <path d="M52 20H28.8C21.3 20 16.6 24.3 16.6 30.5C16.6 36.8 21.1 40.9 28.1 40.9H44.4C51.8 40.9 56.1 45 56.1 51.2C56.1 57.5 51.3 61.8 43.7 61.8H20.2" stroke="#0B3B38" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" opacity="0.72"/>
-    <path d="M52 20H28.8C21.3 20 16.6 24.3 16.6 30.5C16.6 36.8 21.1 40.9 28.1 40.9H44.4C51.8 40.9 56.1 45 56.1 51.2C56.1 57.5 51.3 61.8 43.7 61.8H20.2" stroke="url(#ribbon)" stroke-width="8.5" stroke-linecap="round" stroke-linejoin="round"/>
-    <path d="M56.7 13.7L60.2 17.2L56.7 20.7L53.2 17.2L56.7 13.7Z" fill="#A5F3FC"/>
-    <circle cx="16.8" cy="61.7" r="2.8" fill="#38BDF8"/>
-  </g>
-
-  <text x="106" y="63" fill="url(#word)" font-family="Arial, Helvetica, sans-serif" font-size="42" font-weight="700" letter-spacing="8">SUMMECA</text>
-  <rect x="107" y="73" width="336" height="1.5" rx="0.75" fill="url(#frame)" opacity="0.35"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 400" role="img" aria-labelledby="title">
+  <title id="title">SUMMECA</title>
+  <image href="/assets/images/summeca-logo.png" width="1200" height="400" />
 </svg>

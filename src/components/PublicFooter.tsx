@@ -89,9 +89,8 @@ export default function PublicFooter() {
       <div className="relative max-w-screen-xl mx-auto px-6 lg:px-8 py-14">
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-8 lg:gap-10">
           <div className="col-span-2">
-            <div className="flex items-center gap-2.5 mb-4">
-              <div className="w-8 h-8 rounded-lg bg-gradient-teal flex items-center justify-center shadow-md"><AppLogo size={20} /></div>
-              <span className="font-extrabold text-lg text-white">SUMMECA</span>
+            <div className="mb-4">
+              <AppLogo variant="wordmark" tone="light" size={42} />
             </div>
             <p className="text-sm text-slate-400 leading-relaxed mb-5 max-w-[260px]">Digital products, SaaS tools, and AI-focused solutions for modern work.</p>
             <div className="w-12 h-0.5 bg-gradient-to-r from-primary to-accent rounded-full mb-5" />
