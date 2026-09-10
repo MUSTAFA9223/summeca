@@ -64,16 +64,17 @@ test('hero sends shoppers to public product and SaaS destinations', () => {
   assert.match(hero, /View SaaS Apps/);
 });
 
-test('homepage hero self-hosts the Spline scene without GLB or static image fallback', () => {
+test('homepage hero self-hosts the Spline scene with current viewer/runtime and no static fallback', () => {
   assert.match(hero, /SplineRobotScene/);
   assert.match(hero, /motion-reduce:/);
   assert.match(robot, /SCENE_URL = '\/assets\/spline\/summeca-robot\.splinecode'/);
-  assert.match(robot, /@splinetool\/viewer@1\.9\.82/);
+  assert.match(robot, /@splinetool\/viewer@2\.0\.15/);
+  assert.match(robot, /@splinetool\/runtime@2\.0\.43/);
   assert.match(robot, /events-target', 'global'/);
+  assert.match(robot, /setGlobalEvents/);
   assert.match(prepareSpline, /prod\.spline\.design\/H69K35LVSzZ9WcEG\/scene\.splinecode/);
   assert.match(prepareSpline, /MIN_SCENE_BYTES = 1024/);
   assert.match(cloudflareBuild, /prepare-spline-scene\.mjs/);
-  assert.doesNotMatch(robot, /@splinetool\/runtime/);
   assert.doesNotMatch(robot, /LocalRobot3D/);
   assert.doesNotMatch(robot, /useGLTF|MODEL_URL|summeca-robot\.glb/);
   assert.doesNotMatch(robot, /<img\b/i);
