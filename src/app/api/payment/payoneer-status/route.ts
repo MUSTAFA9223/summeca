@@ -1,15 +1,20 @@
-/**
- * GET /api/payment/payoneer-status
- *
- * Returns whether Payoneer Checkout is configured and available.
- * This endpoint is safe to call from the client — it returns only a boolean.
- * No credentials or secrets are ever exposed.
- */
-
 import { NextResponse } from 'next/server';
-import { isPayoneerConfigured } from '@/lib/payment/providers/payoneer';
+import { getPayoneerReadiness } from '@/lib/payment/providers/payoneer';
 
 export async function GET() {
-  const available = isPayoneerConfigured();
-  return NextResponse?.json({ available });
+  const readiness = getPayoneerReadiness();
+  const response = NextResponse.json({
+    available: readiness.configured && readiness.environment === 'live',
+    configured: readiness.configured,
+    live: readiness.environment === 'live',
+    provider: 'payoneer',
+    configuration: {
+      merchantCode: readiness.merchantCode,
+      paymentToken: readiness.paymentToken,
+      webhookSecret: readiness.webhookSecret,
+      divisionCode: readiness.divisionCode,
+    },
+  });
+  response.headers.set('Cache-Control', 'private, no-store, max-age=0');
+  return response;
 }
