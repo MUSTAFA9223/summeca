@@ -9,7 +9,8 @@ const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
 const homepage = read('src/app/page.tsx');
 const hero = read('src/app/components/HeroSection.tsx');
 const robot = read('src/components/ui/SplineRobotScene.tsx');
-const splineProxy = read('src/app/api/spline-scene/route.ts');
+const prepareSpline = read('scripts/prepare-spline-scene.mjs');
+const cloudflareBuild = read('scripts/cloudflare-build.mjs');
 const cryptoStatus = read('src/app/api/payment/crypto-status/route.ts');
 const publicHomepageMarketing = `${homepage}\n${hero}`;
 
@@ -63,14 +64,15 @@ test('hero sends shoppers to public product and SaaS destinations', () => {
   assert.match(hero, /View SaaS Apps/);
 });
 
-test('homepage hero uses Spline viewer through a same-origin scene proxy without GLB or static fallback', () => {
+test('homepage hero self-hosts the Spline scene without GLB or static image fallback', () => {
   assert.match(hero, /SplineRobotScene/);
   assert.match(hero, /motion-reduce:/);
-  assert.match(robot, /SCENE_URL = '\/api\/spline-scene'/);
+  assert.match(robot, /SCENE_URL = '\/assets\/spline\/summeca-robot\.splinecode'/);
   assert.match(robot, /@splinetool\/viewer@1\.9\.82/);
   assert.match(robot, /events-target', 'global'/);
-  assert.match(splineProxy, /prod\.spline\.design\/H69K35LVSzZ9WcEG\/scene\.splinecode/);
-  assert.match(splineProxy, /Cache-Control/);
+  assert.match(prepareSpline, /prod\.spline\.design\/H69K35LVSzZ9WcEG\/scene\.splinecode/);
+  assert.match(prepareSpline, /MIN_SCENE_BYTES = 1024/);
+  assert.match(cloudflareBuild, /prepare-spline-scene\.mjs/);
   assert.doesNotMatch(robot, /@splinetool\/runtime/);
   assert.doesNotMatch(robot, /LocalRobot3D/);
   assert.doesNotMatch(robot, /useGLTF|MODEL_URL|summeca-robot\.glb/);
