@@ -63,10 +63,13 @@ test('hero sends shoppers to public product and SaaS destinations', () => {
   assert.match(hero, /View SaaS Apps/);
 });
 
-test('homepage hero respects reduced motion without removing the 3D fallback', () => {
+test('homepage hero uses Spline-only 3D and respects reduced motion', () => {
   assert.match(hero, /SplineRobotScene/);
   assert.match(hero, /motion-reduce:/);
   assert.match(robot, /prefers-reduced-motion: reduce/);
-  assert.match(robot, /frameloop=\{reducedMotion \? 'demand' : 'always'\}/);
-  assert.match(robot, /LocalRobot3D/);
+  assert.match(robot, /spline-viewer/);
+  assert.match(robot, /SCENE_URL/);
+  assert.doesNotMatch(robot, /LocalRobot3D/);
+  assert.doesNotMatch(robot, /useGLTF|MODEL_URL|summeca-robot\.glb/);
+  assert.doesNotMatch(robot, /<img\b/i);
 });
