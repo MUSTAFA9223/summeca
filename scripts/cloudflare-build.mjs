@@ -24,6 +24,7 @@ if (innerBuild) {
 }
 
 run(process.execPath, ['scripts/prepare-robot-model.mjs']);
+run(process.execPath, ['scripts/prepare-spline-scene.mjs']);
 
 run(
   'npx',
