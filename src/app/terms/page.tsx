@@ -58,6 +58,21 @@ const sections = [
   },
 ];
 
+function protectBrandName(text: string) {
+  const parts = text.split('SUMMECA');
+
+  return parts.map((part, index) => (
+    <span key={`${part}-${index}`}>
+      {part}
+      {index < parts.length - 1 ? (
+        <span translate="no" className="notranslate">
+          SUMMECA
+        </span>
+      ) : null}
+    </span>
+  ));
+}
+
 export default function TermsPage() {
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -67,15 +82,18 @@ export default function TermsPage() {
           <div className="mx-auto max-w-4xl px-6 py-16 lg:px-8 lg:py-20">
             <p className="text-sm font-semibold text-primary">Legal</p>
             <h1 className="mt-2 text-4xl font-black tracking-tight sm:text-5xl">Terms of Service</h1>
-            <p className="mt-4 max-w-2xl text-muted-foreground">Effective September 8, 2026. These Terms apply to your use of SUMMECA and purchases made through summeca.com.</p>
+            <p className="mt-4 max-w-2xl text-muted-foreground">
+              Effective September 8, 2026. These Terms apply to your use of{' '}
+              <span translate="no" className="notranslate">SUMMECA</span> and purchases made through summeca.com.
+            </p>
           </div>
         </section>
         <section className="mx-auto max-w-4xl px-6 py-14 lg:px-8 lg:py-16">
           <div className="space-y-8">
             {sections.map((section) => (
               <article key={section.title} className="rounded-2xl border border-border bg-card p-6">
-                <h2 className="text-lg font-bold">{section.title}</h2>
-                <p className="mt-3 text-sm leading-7 text-muted-foreground">{section.body}</p>
+                <h2 className="text-lg font-bold">{protectBrandName(section.title)}</h2>
+                <p className="mt-3 text-sm leading-7 text-muted-foreground">{protectBrandName(section.body)}</p>
               </article>
             ))}
           </div>
