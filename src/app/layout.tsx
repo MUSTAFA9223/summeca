@@ -54,8 +54,8 @@ export const metadata: Metadata = {
     images: ['/assets/images/summeca-logo.png'],
   },
   icons: {
-    icon: [{ url: '/assets/images/summeca-mark.png?v=20260910', type: 'image/png' }],
-    shortcut: ['/assets/images/summeca-mark.png?v=20260910'],
+    icon: [{ url: '/assets/images/summeca-mark.svg?v=20260910-2', type: 'image/svg+xml' }],
+    shortcut: ['/assets/images/summeca-mark.svg?v=20260910-2'],
     apple: [{ url: '/assets/images/app_logo.png', sizes: '512x512', type: 'image/png' }],
   },
 };
