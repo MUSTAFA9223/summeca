@@ -127,7 +127,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Invalid request origin.' }, { status: 403, headers: noStoreHeaders() });
   }
 
-  const rate = checkRateLimit(`password-sign-in:${getRequestIdentity(request)}`, {
+  const rate = await checkRateLimit(`password-sign-in:${getRequestIdentity(request)}`, {
     limit: 20,
     windowMs: 15 * 60_000,
   });
