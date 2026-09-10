@@ -9,8 +9,25 @@ type SplineRobotSceneProps = {
   zoomScale?: number;
 };
 
+type IdleDeadlineLike = {
+  didTimeout: boolean;
+  timeRemaining: () => number;
+};
+
 type WindowWithSplineViewer = Window & {
   __summecaSplineViewerPromise?: Promise<void>;
+  requestIdleCallback?: (
+    callback: (deadline: IdleDeadlineLike) => void,
+    options?: { timeout: number },
+  ) => number;
+  cancelIdleCallback?: (handle: number) => void;
+};
+
+type NavigatorWithConnection = Navigator & {
+  connection?: {
+    saveData?: boolean;
+    effectiveType?: string;
+  };
 };
 
 function waitForViewerDefinition(timeoutMs = 8000) {
@@ -78,68 +95,140 @@ export default function SplineRobotScene({ zoomScale = 1 }: SplineRobotSceneProp
     if (!hostRef.current) return;
 
     const host = hostRef.current;
+    const win = window as WindowWithSplineViewer;
+    const nav = navigator as NavigatorWithConnection;
     const reducedMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const mobileQuery = window.matchMedia('(max-width: 767px)');
+    const connection = nav.connection;
+    const constrainedConnection = Boolean(
+      connection?.saveData ||
+      connection?.effectiveType === 'slow-2g' ||
+      connection?.effectiveType === '2g',
+    );
+
     let cancelled = false;
-    let retryTimer: number | undefined;
     let viewer: HTMLElement | undefined;
+    let retryTimer: number | undefined;
+    let fallbackTimer: number | undefined;
+    let idleHandle: number | undefined;
+    let observer: IntersectionObserver | undefined;
+    let scheduled = false;
+    let loading = false;
 
-    const syncMotionPreference = () => {
-      if (!viewer) return;
-
-      if (reducedMotionQuery.matches) {
-        viewer.removeAttribute('events-target');
-        viewer.style.pointerEvents = 'none';
-      } else {
-        viewer.setAttribute('events-target', 'global');
-        viewer.style.pointerEvents = 'auto';
-      }
+    const clearScheduledWork = () => {
+      if (retryTimer !== undefined) window.clearTimeout(retryTimer);
+      if (fallbackTimer !== undefined) window.clearTimeout(fallbackTimer);
+      if (idleHandle !== undefined) win.cancelIdleCallback?.(idleHandle);
+      retryTimer = undefined;
+      fallbackTimer = undefined;
+      idleHandle = undefined;
+      scheduled = false;
     };
 
+    const shouldSkipHeavyScene = () => reducedMotionQuery.matches || constrainedConnection;
+
     const mountSpline = async (attempt = 0) => {
+      if (cancelled || shouldSkipHeavyScene() || viewer || loading) return;
+      loading = true;
+
       try {
         await loadSplineViewer();
-        if (cancelled) return;
+        if (cancelled || shouldSkipHeavyScene()) return;
 
-        viewer = document.createElement('spline-viewer');
-        viewer.setAttribute('url', SCENE_URL);
-        viewer.setAttribute('loading', 'eager');
-        viewer.setAttribute('background', 'transparent');
-        viewer.setAttribute('renderer', 'webgl');
-        viewer.setAttribute('aria-hidden', 'true');
-        Object.assign(viewer.style, {
+        const nextViewer = document.createElement('spline-viewer');
+        nextViewer.setAttribute('url', SCENE_URL);
+        nextViewer.setAttribute('loading', 'lazy');
+        nextViewer.setAttribute('background', 'transparent');
+        nextViewer.setAttribute('renderer', 'webgl');
+        nextViewer.setAttribute('aria-hidden', 'true');
+
+        if (!mobileQuery.matches) nextViewer.setAttribute('events-target', 'global');
+
+        Object.assign(nextViewer.style, {
           display: 'block',
           width: '100%',
           height: '100%',
           minHeight: '100%',
           background: 'transparent',
+          pointerEvents: mobileQuery.matches ? 'none' : 'auto',
           touchAction: 'pan-y',
           transform: `scale(${zoomScale})`,
           transformOrigin: 'center center',
-          filter: 'saturate(1.5) contrast(1.09) brightness(1.02)',
+          filter: mobileQuery.matches ? 'none' : 'saturate(1.5) contrast(1.09) brightness(1.02)',
         });
 
-        syncMotionPreference();
-        host.replaceChildren(viewer);
+        viewer = nextViewer;
+        host.replaceChildren(nextViewer);
       } catch {
-        if (cancelled) return;
+        if (cancelled || shouldSkipHeavyScene()) return;
         viewer = undefined;
         try { host.replaceChildren(); } catch { /* host may already be detached */ }
 
-        if (attempt < 2) {
+        if (attempt < 1) {
           retryTimer = window.setTimeout(() => {
+            retryTimer = undefined;
             void mountSpline(attempt + 1);
-          }, 1000 * (attempt + 1));
+          }, 1200);
         }
+      } finally {
+        loading = false;
       }
     };
 
-    reducedMotionQuery.addEventListener?.('change', syncMotionPreference);
-    void mountSpline();
+    const scheduleMount = () => {
+      if (cancelled || shouldSkipHeavyScene() || viewer || loading || scheduled) return;
+      scheduled = true;
+
+      const start = () => {
+        scheduled = false;
+        idleHandle = undefined;
+        fallbackTimer = undefined;
+        void mountSpline();
+      };
+
+      if (typeof win.requestIdleCallback === 'function') {
+        idleHandle = win.requestIdleCallback(() => start(), {
+          timeout: mobileQuery.matches ? 1800 : 900,
+        });
+      } else {
+        fallbackTimer = window.setTimeout(start, mobileQuery.matches ? 450 : 120);
+      }
+    };
+
+    const handleMotionPreference = () => {
+      if (reducedMotionQuery.matches) {
+        clearScheduledWork();
+        viewer = undefined;
+        try { host.replaceChildren(); } catch { /* host may already be detached */ }
+        return;
+      }
+      scheduleMount();
+    };
+
+    reducedMotionQuery.addEventListener?.('change', handleMotionPreference);
+
+    if (!shouldSkipHeavyScene()) {
+      if ('IntersectionObserver' in window) {
+        observer = new IntersectionObserver((entries) => {
+          if (!entries.some((entry) => entry.isIntersecting)) return;
+          observer?.disconnect();
+          observer = undefined;
+          scheduleMount();
+        }, {
+          rootMargin: mobileQuery.matches ? '240px 0px' : '420px 0px',
+          threshold: 0.01,
+        });
+        observer.observe(host);
+      } else {
+        scheduleMount();
+      }
+    }
 
     return () => {
       cancelled = true;
-      reducedMotionQuery.removeEventListener?.('change', syncMotionPreference);
-      if (retryTimer !== undefined) window.clearTimeout(retryTimer);
+      observer?.disconnect();
+      reducedMotionQuery.removeEventListener?.('change', handleMotionPreference);
+      clearScheduledWork();
       try { host.replaceChildren(); } catch { /* host may already be detached */ }
     };
   }, [zoomScale]);
@@ -151,7 +240,7 @@ export default function SplineRobotScene({ zoomScale = 1 }: SplineRobotSceneProp
         <div className="absolute left-1/2 top-[58%] h-[36%] w-[36%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#0aaebd]/10 blur-[48px]" />
         <div className="absolute bottom-[2%] left-1/2 h-12 w-[44%] -translate-x-1/2 rounded-[50%] bg-black/20 blur-2xl" />
       </div>
-      <div ref={hostRef} className="absolute inset-0 z-[2] bg-transparent" />
+      <div ref={hostRef} className="absolute inset-0 z-[2] bg-transparent [contain:layout_paint_size]" />
     </div>
   );
 }
