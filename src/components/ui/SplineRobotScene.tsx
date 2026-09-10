@@ -29,13 +29,11 @@ function loadSplineViewer() {
         resolve();
         return;
       }
-      const onLoad = () => resolve();
-      const onError = () => {
+      existing.addEventListener('load', () => resolve(), { once: true });
+      existing.addEventListener('error', () => {
         win.__summecaSplineViewerPromise = undefined;
         reject(new Error('Spline viewer failed to load'));
-      };
-      existing.addEventListener('load', onLoad, { once: true });
-      existing.addEventListener('error', onError, { once: true });
+      }, { once: true });
       return;
     }
 
@@ -77,10 +75,8 @@ function RobotModel({ compact, zoomScale }: { compact: boolean; zoomScale: numbe
     if (!root.current) return;
 
     const t = clock.elapsedTime;
-    const autoYaw = Math.sin(t * 0.42) * (compact ? 0.075 : 0.045);
-    const autoPitch = Math.sin(t * 0.31) * 0.018;
-    const targetYaw = pointer.x * (compact ? 0.24 : 0.34) + autoYaw;
-    const targetPitch = -pointer.y * (compact ? 0.065 : 0.1) + autoPitch;
+    const targetYaw = pointer.x * (compact ? 0.24 : 0.34) + Math.sin(t * 0.42) * (compact ? 0.075 : 0.045);
+    const targetPitch = -pointer.y * (compact ? 0.065 : 0.1) + Math.sin(t * 0.31) * 0.018;
 
     root.current.rotation.y = THREE.MathUtils.damp(root.current.rotation.y, targetYaw, 4.2, delta);
     root.current.rotation.x = THREE.MathUtils.damp(root.current.rotation.x, targetPitch, 4.2, delta);
@@ -142,7 +138,6 @@ function LocalRobot3D({ zoomScale }: { zoomScale: number }) {
 export default function SplineRobotScene({ zoomScale = 1 }: SplineRobotSceneProps) {
   const hostRef = useRef<HTMLDivElement>(null);
   const [splineReady, setSplineReady] = useState(false);
-  const [splineUnavailable, setSplineUnavailable] = useState(false);
 
   useEffect(() => {
     if (!hostRef.current) return;
@@ -151,6 +146,12 @@ export default function SplineRobotScene({ zoomScale = 1 }: SplineRobotSceneProp
     let cancelled = false;
     let timeout: number | undefined;
     let viewer: HTMLElement | undefined;
+
+    const fallBackToLocal3D = () => {
+      if (cancelled) return;
+      setSplineReady(false);
+      try { host.replaceChildren(); } catch { /* host may already be detached */ }
+    };
 
     const mountSpline = async () => {
       try {
@@ -177,30 +178,18 @@ export default function SplineRobotScene({ zoomScale = 1 }: SplineRobotSceneProp
           filter: 'saturate(1.5) contrast(1.09) brightness(1.02)',
         });
 
-        const onComplete = () => {
+        viewer.addEventListener('load-complete', () => {
           if (cancelled || !viewer) return;
           if (timeout !== undefined) window.clearTimeout(timeout);
           viewer.style.opacity = '1';
           setSplineReady(true);
-          setSplineUnavailable(false);
-        };
+        }, { once: true });
+        viewer.addEventListener('context-loss', fallBackToLocal3D, { once: true });
 
-        const onContextLoss = () => {
-          if (cancelled) return;
-          setSplineReady(false);
-          setSplineUnavailable(true);
-        };
-
-        viewer.addEventListener('load-complete', onComplete, { once: true });
-        viewer.addEventListener('context-loss', onContextLoss, { once: true });
         host.replaceChildren(viewer);
-
-        timeout = window.setTimeout(() => {
-          if (cancelled || splineReady) return;
-          setSplineUnavailable(true);
-        }, 7000);
+        timeout = window.setTimeout(fallBackToLocal3D, 7000);
       } catch {
-        if (!cancelled) setSplineUnavailable(true);
+        fallBackToLocal3D();
       }
     };
 
@@ -228,10 +217,7 @@ export default function SplineRobotScene({ zoomScale = 1 }: SplineRobotSceneProp
         <div className="absolute bottom-[2%] left-1/2 h-12 w-[44%] -translate-x-1/2 rounded-[50%] bg-black/20 blur-2xl" />
       </div>
 
-      <div
-        ref={hostRef}
-        className={`absolute inset-0 z-[3] bg-transparent ${splineUnavailable ? 'pointer-events-none' : ''}`}
-      />
+      <div ref={hostRef} className="absolute inset-0 z-[3] bg-transparent" />
     </div>
   );
 }
