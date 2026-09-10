@@ -16,6 +16,7 @@ import {
 import PublicNav from '@/components/PublicNav';
 import PublicFooter from '@/components/PublicFooter';
 import WishlistButton from '@/components/WishlistButton';
+import SaasProductSalesExperience, { isSaasSalesSlug } from '@/components/catalog/SaasProductSalesExperience';
 import { createClient } from '@/lib/supabase/client';
 import { getEffectivePrice } from '@/lib/pricing';
 
@@ -274,6 +275,10 @@ export default function ProductDetailPage() {
       : providerCheckComplete
         ? 'Payment methods are temporarily unavailable.'
         : 'Checking live payment availability…';
+
+  if (isSaasSalesSlug(product.slug)) {
+    return <SaasProductSalesExperience product={product} plans={plans} />;
+  }
 
   return (
     <div className="min-h-screen bg-background pb-24 md:pb-0">
@@ -534,3 +539,4 @@ export default function ProductDetailPage() {
     </div>
   );
 }
+

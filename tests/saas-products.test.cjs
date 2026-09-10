@@ -10,6 +10,8 @@ const invoiceApi = fs.readFileSync('src/app/api/invoiceflow/route.ts', 'utf8');
 const leadApi = fs.readFileSync('src/app/api/leadfollow/route.ts', 'utf8');
 const leadGenerate = fs.readFileSync('src/app/api/leadfollow/generate/route.ts', 'utf8');
 const sidebar = fs.readFileSync('src/app/user-dashboard/components/DashboardSidebar.tsx', 'utf8');
+const productPage = fs.readFileSync('src/app/products/[slug]/page.tsx', 'utf8');
+const salesExperience = fs.readFileSync('src/components/catalog/SaasProductSalesExperience.tsx', 'utf8');
 
 test('SaaS tables are private to trusted server code', () => {
   for (const table of [
@@ -83,4 +85,27 @@ test('customer dashboard exposes both paid SaaS workspaces', () => {
   assert.ok(fs.existsSync('src/app/user-dashboard/invoiceflow/page.tsx'));
   assert.ok(fs.existsSync('src/app/user-dashboard/leadfollow/page.tsx'));
   assert.ok(fs.existsSync('src/app/invoice/[token]/page.tsx'));
+});
+
+test('public SaaS sales pages use product-specific, outcome-focused content', () => {
+  assert.match(productPage, /isSaasSalesSlug\(product\.slug\)/);
+  assert.match(salesExperience, /Create professional invoices in minutes, not spreadsheets\./);
+  assert.match(salesExperience, /Turn new leads into better follow-ups, faster\./);
+  assert.match(salesExperience, /SAMPLE DATA/g);
+  assert.match(salesExperience, /AI draft example — review before sending/);
+});
+
+test('public SaaS pricing stays connected to active checkout plans', () => {
+  assert.match(salesExperience, /plans\s*\.filter\(\(plan\) => plan\.is_active\)/);
+  assert.match(salesExperience, /getEffectivePrice\(plan\)/);
+  assert.match(salesExperience, /product_id=\$\{encodeURIComponent\(product\.id\)\}/);
+  assert.match(salesExperience, /plan_id=\$\{encodeURIComponent\(plan\.id\)\}/);
+  assert.doesNotMatch(salesExperience, /auto-renews|cancel anytime/i);
+  assert.doesNotMatch(salesExperience, /Payoneer|Crypto|FastSpring|Stripe/);
+});
+
+test('public SaaS access copy requires verified payment and rejects ZIP delivery', () => {
+  assert.match(salesExperience, /After verified payment, access is unlocked in your SUMMECA account\./);
+  assert.match(salesExperience, /only after the\s+payment is\s+confirmed/);
+  assert.match(salesExperience, /not\s+delivered\s+as\s+a\s+downloadable\s+ZIP/);
 });
