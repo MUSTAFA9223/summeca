@@ -40,7 +40,9 @@ jobs:
         run: npm run type-check
 
       - name: Semantic lint
-        run: ESLINT_USE_FLAT_CONFIG=false npx eslint src --ext .ts,.tsx --rule 'prettier/prettier: off'
+        run: >-
+          ESLINT_USE_FLAT_CONFIG=false npx eslint src --ext .ts,.tsx
+          --rule 'prettier/prettier: off'
 
       - name: Security and launch regression tests
         run: node --test tests/*.test.cjs
