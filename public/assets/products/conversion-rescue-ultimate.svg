@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800" viewBox="0 0 1200 800" role="img" aria-labelledby="title desc">
+  <title id="title">SUMMECA Conversion Rescue Kit Ultimate</title>
+  <desc id="desc">Premium dark teal product cover for the Ultimate toolkit.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#03141f"/><stop offset="0.55" stop-color="#0a2932"/><stop offset="1" stop-color="#0d5f5b"/></linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#2ee3cf"/><stop offset="1" stop-color="#a2fff2"/></linearGradient>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="20" stdDeviation="28" flood-color="#000" flood-opacity=".32"/></filter>
+  </defs>
+  <rect width="1200" height="800" rx="48" fill="url(#bg)"/>
+  <circle cx="1060" cy="140" r="280" fill="#30e1cf" opacity=".08"/>
+  <circle cx="1020" cy="720" r="360" fill="#5af3df" opacity=".05"/>
+  <rect x="72" y="70" width="1056" height="660" rx="38" fill="#ffffff" opacity=".04" stroke="#ffffff" stroke-opacity=".14"/>
+  <g transform="translate(100 105)">
+    <rect width="190" height="50" rx="25" fill="url(#accent)"/><text x="95" y="32" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="20" font-weight="800" fill="#03221f">ULTIMATE</text>
+    <text x="0" y="125" font-family="Arial,Helvetica,sans-serif" font-size="27" font-weight="700" fill="#63ebdc">SUMMECA</text>
+    <text x="0" y="205" font-family="Arial,Helvetica,sans-serif" font-size="58" font-weight="800" fill="#ffffff">Conversion Rescue Kit</text>
+    <text x="0" y="255" font-family="Arial,Helvetica,sans-serif" font-size="25" fill="#c7dcdf">From audit to implementation-ready page assets.</text>
+    <g transform="translate(0 340)" font-family="Arial,Helvetica,sans-serif" font-size="22" fill="#f3fffd">
+      <text y="0">Everything in Pro</text><text y="48">6 before / after training examples</text><text y="96">Ready-to-edit responsive HTML landing page</text><text y="144">Full reusable optimization system</text>
+    </g>
+  </g>
+  <g transform="translate(835 390)" filter="url(#shadow)">
+    <rect width="270" height="230" rx="30" fill="#ffffff"/>
+    <rect x="26" y="26" width="218" height="18" rx="9" fill="#d9faf5"/>
+    <rect x="26" y="63" width="166" height="13" rx="6" fill="#0f766e"/>
+    <rect x="26" y="93" width="202" height="13" rx="6" fill="#c8dedc"/>
+    <rect x="26" y="123" width="188" height="13" rx="6" fill="#c8dedc"/>
+    <rect x="26" y="153" width="144" height="13" rx="6" fill="#c8dedc"/>
+    <rect x="26" y="187" width="126" height="24" rx="12" fill="#14b8a6"/>
+  </g>
+</svg>
