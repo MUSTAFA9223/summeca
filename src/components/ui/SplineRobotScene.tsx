@@ -4,13 +4,25 @@ import { useEffect, useRef } from 'react';
 
 const SCENE_URL = 'https://prod.spline.design/H69K35LVSzZ9WcEG/scene.splinecode';
 const VIEWER_SCRIPT = 'https://unpkg.com/@splinetool/viewer@1.9.82/build/spline-viewer.js';
+const RUNTIME_URL = 'https://unpkg.com/@splinetool/runtime@1.9.82/build/runtime.js';
 
 type SplineRobotSceneProps = {
   zoomScale?: number;
 };
 
-type WindowWithSplineViewer = Window & {
+type SplineApplication = {
+  load: (url: string) => Promise<void>;
+  setZoom: (zoom: number) => void;
+  stop?: () => void;
+  dispose?: () => void;
+};
+
+type SplineApplicationConstructor = new (canvas: HTMLCanvasElement) => SplineApplication;
+
+type WindowWithSpline = Window & {
   __summecaSplineViewerPromise?: Promise<void>;
+  __summecaSplineRuntimePromise?: Promise<SplineApplicationConstructor>;
+  __summecaSplineApplication?: SplineApplicationConstructor;
 };
 
 function waitForViewerDefinition(timeoutMs = 8000) {
@@ -32,7 +44,7 @@ function waitForViewerDefinition(timeoutMs = 8000) {
 }
 
 function loadSplineViewer() {
-  const win = window as WindowWithSplineViewer;
+  const win = window as WindowWithSpline;
   if (customElements.get('spline-viewer')) return Promise.resolve();
   if (win.__summecaSplineViewerPromise) return win.__summecaSplineViewerPromise;
 
@@ -57,11 +69,63 @@ function loadSplineViewer() {
         .catch(fail);
     };
     script.onerror = () => fail(new Error('Spline viewer failed to load'));
-
     document.head.appendChild(script);
   });
 
   return win.__summecaSplineViewerPromise;
+}
+
+function loadSplineRuntime() {
+  const win = window as WindowWithSpline;
+  if (win.__summecaSplineApplication) return Promise.resolve(win.__summecaSplineApplication);
+  if (win.__summecaSplineRuntimePromise) return win.__summecaSplineRuntimePromise;
+
+  win.__summecaSplineRuntimePromise = new Promise<SplineApplicationConstructor>((resolve, reject) => {
+    const readyEvent = 'summeca-spline-runtime-ready';
+    const errorEvent = 'summeca-spline-runtime-error';
+
+    const cleanup = () => {
+      window.removeEventListener(readyEvent, handleReady);
+      window.removeEventListener(errorEvent, handleError);
+    };
+    const handleReady = () => {
+      cleanup();
+      if (win.__summecaSplineApplication) {
+        resolve(win.__summecaSplineApplication);
+      } else {
+        win.__summecaSplineRuntimePromise = undefined;
+        reject(new Error('Spline runtime loaded without Application'));
+      }
+    };
+    const handleError = () => {
+      cleanup();
+      win.__summecaSplineRuntimePromise = undefined;
+      reject(new Error('Spline runtime failed to load'));
+    };
+
+    window.addEventListener(readyEvent, handleReady, { once: true });
+    window.addEventListener(errorEvent, handleError, { once: true });
+
+    const source = `
+      import { Application } from '${RUNTIME_URL}';
+      window.__summecaSplineApplication = Application;
+      window.dispatchEvent(new Event('${readyEvent}'));
+    `;
+    const blob = new Blob([source], { type: 'text/javascript' });
+    const blobUrl = URL.createObjectURL(blob);
+    const script = document.createElement('script');
+    script.type = 'module';
+    script.dataset.summecaSplineRuntime = 'true';
+    script.src = blobUrl;
+    script.onload = () => URL.revokeObjectURL(blobUrl);
+    script.onerror = () => {
+      URL.revokeObjectURL(blobUrl);
+      window.dispatchEvent(new Event(errorEvent));
+    };
+    document.head.appendChild(script);
+  });
+
+  return win.__summecaSplineRuntimePromise;
 }
 
 export default function SplineRobotScene({ zoomScale = 1 }: SplineRobotSceneProps) {
@@ -71,45 +135,94 @@ export default function SplineRobotScene({ zoomScale = 1 }: SplineRobotSceneProp
     if (!hostRef.current) return;
 
     const host = hostRef.current;
-    const reducedMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const coarsePointer = window.matchMedia('(pointer: coarse)').matches;
+    const compactViewport = window.matchMedia('(max-width: 900px)').matches;
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const preferRuntimeCanvas = coarsePointer || compactViewport;
+
     let cancelled = false;
     let retryTimer: number | undefined;
-    let viewer: HTMLElement | undefined;
+    let app: SplineApplication | undefined;
 
-    const syncMotionPreference = () => {
-      if (!viewer) return;
-
-      if (reducedMotionQuery.matches) {
-        viewer.removeAttribute('events-target');
-        viewer.style.pointerEvents = 'none';
-      } else {
-        viewer.setAttribute('events-target', 'global');
-        viewer.style.pointerEvents = 'auto';
-      }
+    const clearHost = () => {
+      app?.stop?.();
+      app?.dispose?.();
+      app = undefined;
+      try { host.replaceChildren(); } catch { /* host may already be detached */ }
     };
 
-    const scheduleRetry = (attempt: number) => {
+    const scheduleRetry = (attempt: number, mount: (nextAttempt: number) => Promise<void>) => {
       if (cancelled || attempt >= 3) return;
       retryTimer = window.setTimeout(() => {
         retryTimer = undefined;
-        void mountSpline(attempt + 1);
+        void mount(attempt + 1);
       }, 900 * (attempt + 1));
     };
 
-    const mountSpline = async (attempt = 0) => {
+    const mountRuntime = async (attempt = 0) => {
+      try {
+        const Application = await loadSplineRuntime();
+        if (cancelled) return;
+
+        clearHost();
+        const canvas = document.createElement('canvas');
+        canvas.setAttribute('aria-hidden', 'true');
+        Object.assign(canvas.style, {
+          position: 'absolute',
+          inset: '0',
+          display: 'block',
+          width: '100%',
+          height: '100%',
+          background: 'transparent',
+          pointerEvents: 'auto',
+          touchAction: 'pan-y',
+          opacity: '0',
+          transition: reducedMotion ? 'none' : 'opacity 320ms ease',
+          filter: 'saturate(1.5) contrast(1.09) brightness(1.02)',
+        });
+        host.replaceChildren(canvas);
+
+        const nextApp = new Application(canvas);
+        app = nextApp;
+        await nextApp.load(SCENE_URL);
+        if (cancelled) {
+          nextApp.stop?.();
+          nextApp.dispose?.();
+          return;
+        }
+
+        // The production scene camera is framed too tightly on narrow/touch viewports.
+        // Runtime camera zoom keeps the actual Spline robot inside the visible hero.
+        nextApp.setZoom(preferRuntimeCanvas ? 0.66 : 0.76);
+        canvas.style.opacity = '1';
+
+        canvas.addEventListener('webglcontextlost', (event) => {
+          event.preventDefault();
+          if (cancelled) return;
+          clearHost();
+          scheduleRetry(0, mountRuntime);
+        }, { once: true });
+      } catch {
+        if (cancelled) return;
+        clearHost();
+        scheduleRetry(attempt, mountRuntime);
+      }
+    };
+
+    const mountViewer = async (attempt = 0) => {
       try {
         await loadSplineViewer();
         if (cancelled) return;
 
-        const nextViewer = document.createElement('spline-viewer');
-        nextViewer.setAttribute('url', SCENE_URL);
-        nextViewer.setAttribute('loading', 'eager');
-        nextViewer.setAttribute('background', 'transparent');
-        nextViewer.setAttribute('renderer', 'webgl');
-        nextViewer.setAttribute('aria-hidden', 'true');
-        nextViewer.setAttribute('events-target', 'global');
+        clearHost();
+        const viewer = document.createElement('spline-viewer');
+        viewer.setAttribute('url', SCENE_URL);
+        viewer.setAttribute('loading', 'eager');
+        viewer.setAttribute('background', 'transparent');
+        viewer.setAttribute('aria-hidden', 'true');
+        viewer.setAttribute('events-target', 'global');
 
-        Object.assign(nextViewer.style, {
+        Object.assign(viewer.style, {
           display: 'block',
           width: '100%',
           height: '100%',
@@ -123,33 +236,38 @@ export default function SplineRobotScene({ zoomScale = 1 }: SplineRobotSceneProp
           willChange: 'transform',
         });
 
-        viewer = nextViewer;
-        syncMotionPreference();
-
-        nextViewer.addEventListener('context-loss', () => {
+        viewer.addEventListener('context-loss', () => {
           if (cancelled) return;
-          viewer = undefined;
-          try { host.replaceChildren(); } catch { /* host may already be detached */ }
-          scheduleRetry(0);
+          clearHost();
+          void mountRuntime();
         }, { once: true });
 
-        host.replaceChildren(nextViewer);
+        host.replaceChildren(viewer);
       } catch {
         if (cancelled) return;
-        viewer = undefined;
-        try { host.replaceChildren(); } catch { /* host may already be detached */ }
-        scheduleRetry(attempt);
+        clearHost();
+        if (attempt < 1) {
+          scheduleRetry(attempt, mountViewer);
+        } else {
+          void mountRuntime();
+        }
       }
     };
 
-    reducedMotionQuery.addEventListener?.('change', syncMotionPreference);
-    void mountSpline();
+    const mountPreferredScene = async () => {
+      if (preferRuntimeCanvas) {
+        await mountRuntime();
+      } else {
+        await mountViewer();
+      }
+    };
+
+    void mountPreferredScene();
 
     return () => {
       cancelled = true;
-      reducedMotionQuery.removeEventListener?.('change', syncMotionPreference);
       if (retryTimer !== undefined) window.clearTimeout(retryTimer);
-      try { host.replaceChildren(); } catch { /* host may already be detached */ }
+      clearHost();
     };
   }, [zoomScale]);
 
