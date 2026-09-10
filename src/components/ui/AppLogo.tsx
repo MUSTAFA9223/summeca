@@ -32,7 +32,13 @@ const AppLogo = memo(function AppLogo({
       : '/assets/images/summeca-mark.png'
   );
   const isWordmark = !src && variant === 'wordmark';
-  const width = isWordmark ? Math.round(size * 3) : size;
+  const displaySize = isWordmark ? Math.round(size * 1.16) : size;
+  const width = isWordmark ? Math.round(displaySize * 3) : displaySize;
+  const logoToneClass = tone === 'light'
+    ? 'brightness-0 invert contrast-125'
+    : isWordmark
+      ? 'brightness-[0.72] contrast-125'
+      : '';
 
   const containerClassName = useMemo(() => {
     const classes = ['inline-flex items-center shrink-0'];
@@ -48,14 +54,16 @@ const AppLogo = memo(function AppLogo({
           src={resolvedSrc}
           alt={variant === 'wordmark' ? 'SUMMECA' : 'SUMMECA logo'}
           width={width}
-          height={size}
+          height={displaySize}
           sizes={`${width}px`}
-          className={`flex-shrink-0 object-contain ${tone === 'light' ? 'brightness-0 invert' : ''}`}
+          quality={100}
+          draggable={false}
+          className={`flex-shrink-0 select-none object-contain ${logoToneClass}`}
           priority
           unoptimized={resolvedSrc.endsWith('.svg')}
         />
       ) : (
-        <AppIcon name={iconName} size={size} className="flex-shrink-0" />
+        <AppIcon name={iconName} size={displaySize} className="flex-shrink-0" />
       )}
     </div>
   );
