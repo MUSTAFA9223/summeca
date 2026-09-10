@@ -7,6 +7,7 @@ import { ArrowRight, CheckCircle2, Package, ShieldCheck, Star } from 'lucide-rea
 import PublicNav from '@/components/PublicNav';
 import PublicFooter from '@/components/PublicFooter';
 import WishlistButton from '@/components/WishlistButton';
+import SaasProductSalesExperience, { isSaasSalesSlug } from '@/components/catalog/SaasProductSalesExperience';
 import { createClient } from '@/lib/supabase/client';
 import { getEffectivePrice } from '@/lib/pricing';
 
@@ -183,6 +184,10 @@ export default function ProductDetailPage() {
     ? reviews.reduce((sum, review) => sum + Number(review.rating), 0) / reviews.length
     : 0;
 
+  if (isSaasSalesSlug(product.slug)) {
+    return <SaasProductSalesExperience product={product} plans={plans} />;
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <PublicNav />
@@ -335,3 +340,4 @@ export default function ProductDetailPage() {
     </div>
   );
 }
+
