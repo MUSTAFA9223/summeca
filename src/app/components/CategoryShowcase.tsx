@@ -1,6 +1,15 @@
-import React from 'react';
+'use client';
+
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Brain, LayoutDashboard, FileText, ArrowRight, Sparkles, Zap, BarChart3, Globe } from 'lucide-react';
+import { createClient } from '@/lib/supabase/client';
+
+type CategoryKind = 'ai' | 'saas' | 'digital';
+type CategoryCounts = Record<CategoryKind, number | null>;
+
+const AI_CATEGORIES = ['ai_tool', 'api', 'plugin'];
+const DIGITAL_CATEGORIES = ['template', 'dataset'];
 
 const aiSolutions = [
   {
@@ -43,30 +52,27 @@ const aiSolutions = [
 
 const categories = [
   {
-    type: 'ai',
+    type: 'ai' as const,
     icon: Brain,
     label: 'AI Tools',
-    count: '12 products',
     desc: 'Intelligent automation for every workflow',
     href: '/ai',
     gradient: 'from-primary/8 to-accent/8',
     border: 'border-primary/20',
   },
   {
-    type: 'saas',
+    type: 'saas' as const,
     icon: LayoutDashboard,
     label: 'SaaS Apps',
-    count: '8 products',
     desc: 'Cloud-native business applications',
     href: '/saas',
     gradient: 'from-accent/8 to-primary/8',
     border: 'border-accent/20',
   },
   {
-    type: 'digital',
+    type: 'digital' as const,
     icon: FileText,
     label: 'Digital Products',
-    count: '24 products',
     desc: 'Templates, planners & digital assets',
     href: '/digital',
     gradient: 'from-warning/8 to-success/8',
@@ -74,7 +80,83 @@ const categories = [
   },
 ];
 
+function productCountLabel(count: number | null) {
+  if (count === null) return 'Loading products…';
+  return `${count} ${count === 1 ? 'product' : 'products'}`;
+}
+
 export default function CategoryShowcase() {
+  const supabase = useMemo(() => createClient(), []);
+  const [categoryCounts, setCategoryCounts] = useState<CategoryCounts>({
+    ai: null,
+    saas: null,
+    digital: null,
+  });
+
+  const loadCategoryCounts = useCallback(async () => {
+    const [totalResult, aiResult, digitalResult] = await Promise.all([
+      supabase
+        .from('products')
+        .select('id', { count: 'exact', head: true })
+        .eq('status', 'active'),
+      supabase
+        .from('products')
+        .select('id', { count: 'exact', head: true })
+        .eq('status', 'active')
+        .in('category', AI_CATEGORIES),
+      supabase
+        .from('products')
+        .select('id', { count: 'exact', head: true })
+        .eq('status', 'active')
+        .in('category', DIGITAL_CATEGORIES),
+    ]);
+
+    if (totalResult.error || aiResult.error || digitalResult.error) {
+      console.error(
+        'Homepage category counts could not be refreshed:',
+        totalResult.error?.message || aiResult.error?.message || digitalResult.error?.message,
+      );
+      return;
+    }
+
+    const total = totalResult.count ?? 0;
+    const ai = aiResult.count ?? 0;
+    const digital = digitalResult.count ?? 0;
+
+    setCategoryCounts({
+      ai,
+      digital,
+      saas: Math.max(0, total - ai - digital),
+    });
+  }, [supabase]);
+
+  useEffect(() => {
+    void loadCategoryCounts();
+
+    const channel = supabase
+      .channel('homepage-product-counts')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'products' },
+        () => void loadCategoryCounts(),
+      )
+      .subscribe();
+
+    const refreshOnFocus = () => void loadCategoryCounts();
+    const refreshOnVisibility = () => {
+      if (document.visibilityState === 'visible') void loadCategoryCounts();
+    };
+
+    window.addEventListener('focus', refreshOnFocus);
+    document.addEventListener('visibilitychange', refreshOnVisibility);
+
+    return () => {
+      window.removeEventListener('focus', refreshOnFocus);
+      document.removeEventListener('visibilitychange', refreshOnVisibility);
+      void supabase.removeChannel(channel);
+    };
+  }, [loadCategoryCounts, supabase]);
+
   return (
     <>
       {/* AI Solutions Section */}
@@ -143,9 +225,9 @@ export default function CategoryShowcase() {
               >
                 <div className="absolute top-0 right-0 w-32 h-32 rounded-full bg-white/30 -translate-y-16 translate-x-16" />
                 <div className="w-12 h-12 rounded-2xl bg-white shadow-card flex items-center justify-center mb-5">
-                  {React.createElement(cat.icon, { size: 22, className: "text-primary" })}
+                  {React.createElement(cat.icon, { size: 22, className: 'text-primary' })}
                 </div>
-                <div className="text-xs font-600 text-muted-foreground mb-1">{cat.count}</div>
+                <div className="text-xs font-600 text-muted-foreground mb-1">{productCountLabel(categoryCounts[cat.type])}</div>
                 <h3 className="text-xl font-700 text-foreground mb-2 group-hover:text-primary transition-colors">{cat.label}</h3>
                 <p className="text-sm text-secondary-foreground mb-5">{cat.desc}</p>
                 <div className="flex items-center gap-1.5 text-sm font-600 text-primary group-hover:gap-3 transition-all duration-200">
