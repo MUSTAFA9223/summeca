@@ -2,7 +2,7 @@
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { BarChart3, Building2, CheckCircle2, Download, ExternalLink, FilePlus2, Mail, Plus, ReceiptText, RefreshCw, Send, Users } from 'lucide-react';
+import { BarChart3, Building2, CheckCircle2, Download, ExternalLink, FilePlus2, Mail, Plus, ReceiptText, RefreshCw, Send, Users, type LucideIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import DashboardLayout from '@/app/user-dashboard/components/DashboardLayout';
 
@@ -12,6 +12,7 @@ type Client = { id: string; name: string; company: string; email: string; phone:
 type InvoiceItem = { description: string; quantity: number; rate: number; amount: number };
 type Invoice = { id: string; client_id: string; invoice_number: string; issue_date: string; due_date: string | null; status: 'draft' | 'sent' | 'paid' | 'cancelled'; currency: string; items: InvoiceItem[]; subtotal: number; tax_rate: number; tax_amount: number; total: number; notes: string; terms: string; share_token: string; share_enabled: boolean; created_at: string };
 type DashboardData = { access: Access; profile: Profile | null; clients: Client[]; invoices: Invoice[]; counts: { clients: number; invoices: number; outstanding: number; paid: number } };
+type Metric = [label: string, value: string | number, icon: LucideIcon];
 
 function formatMoney(value: number, currency = 'USD') {
   try { return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(value); }
@@ -64,6 +65,12 @@ export default function InvoiceFlowPage() {
 
   const clientById = useMemo(() => Object.fromEntries((data?.clients ?? []).map((client) => [client.id, client])), [data?.clients]);
   const overdueCount = useMemo(() => (data?.invoices ?? []).filter((invoice) => invoice.status === 'sent' && invoice.due_date && new Date(`${invoice.due_date}T23:59:59`).getTime() < Date.now()).length, [data?.invoices]);
+  const metrics = useMemo<Metric[]>(() => data ? [
+    ['Clients', data.counts.clients, Users],
+    ['Invoices', data.counts.invoices, ReceiptText],
+    ['Outstanding', formatMoney(data.counts.outstanding, profile.currency), BarChart3],
+    ['Paid', formatMoney(data.counts.paid, profile.currency), CheckCircle2],
+  ] : [], [data, profile.currency]);
 
   async function post(body: Record<string, unknown>) {
     const response = await fetch('/api/invoiceflow', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
@@ -157,7 +164,7 @@ export default function InvoiceFlowPage() {
         </header>
 
         <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          {[['Clients', data.counts.clients, Users], ['Invoices', data.counts.invoices, ReceiptText], ['Outstanding', formatMoney(data.counts.outstanding, profile.currency), BarChart3], ['Paid', formatMoney(data.counts.paid, profile.currency), CheckCircle2]].map(([label,value,Icon]) => <div key={String(label)} className="rounded-2xl border border-border bg-card p-5"><div className="flex items-center justify-between"><span className="text-sm text-muted-foreground">{String(label)}</span><Icon size={18} className="text-primary" /></div><div className="mt-2 text-2xl font-black">{String(value)}</div></div>)}
+          {metrics.map(([label, value, Icon]) => <div key={label} className="rounded-2xl border border-border bg-card p-5"><div className="flex items-center justify-between"><span className="text-sm text-muted-foreground">{label}</span><Icon size={18} className="text-primary" /></div><div className="mt-2 text-2xl font-black">{value}</div></div>)}
         </section>
 
         <section className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
