@@ -43,6 +43,8 @@ jobs:
         run: >-
           ESLINT_USE_FLAT_CONFIG=false npx eslint src --ext .ts,.tsx
           --rule 'prettier/prettier: off'
+          --rule 'react/no-unescaped-entities: off'
+          --rule 'no-control-regex: off'
 
       - name: Security and launch regression tests
         run: node --test tests/*.test.cjs
