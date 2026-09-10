@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/server';
 
 export const dynamic = 'force-dynamic';
 export const metadata = {
-  title: 'Digital tools for modern work',
+  title: { absolute: 'SUMMECA — Digital Tools for Modern Work' },
   description: 'Browse SUMMECA products and digital resources with pricing and availability sourced from the published catalog.',
 };
 
