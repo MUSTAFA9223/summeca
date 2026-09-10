@@ -3,6 +3,8 @@ import { NextResponse, type NextRequest } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 
+const PKCE_VERIFIER_MAX_AGE_SECONDS = 10 * 60;
+
 type PendingCookie = {
   name: string;
   value: string;
@@ -43,6 +45,29 @@ function getCanonicalCookieDomain(): string | null {
   }
 }
 
+function isPkceVerifierCookie(name: string) {
+  return name.includes('code-verifier');
+}
+
+function getAuthCookieOptions(
+  name: string,
+  options?: Parameters<NextResponse['cookies']['set']>[2],
+): Parameters<NextResponse['cookies']['set']>[2] {
+  const pkceVerifier = isPkceVerifierCookie(name);
+  return {
+    ...options,
+    path: options?.path || '/',
+    sameSite: 'lax',
+    secure: process.env.NODE_ENV === 'production',
+    // Session cookies remain readable by the browser Supabase client. The OAuth
+    // code verifier is only needed by the server callback, so keep it HttpOnly.
+    httpOnly: pkceVerifier,
+    ...(pkceVerifier && options?.maxAge !== 0
+      ? { maxAge: PKCE_VERIFIER_MAX_AGE_SECONDS }
+      : {}),
+  };
+}
+
 function clearStaleAuthCookies(request: NextRequest, response: NextResponse) {
   const prefix = getAuthCookiePrefix();
   if (!prefix) return;
@@ -55,7 +80,7 @@ function clearStaleAuthCookies(request: NextRequest, response: NextResponse) {
       maxAge: 0,
       sameSite: 'lax',
       secure: process.env.NODE_ENV === 'production',
-      httpOnly: false,
+      httpOnly: isPkceVerifierCookie(cookie.name),
     });
   }
 }
@@ -73,9 +98,10 @@ function appendDomainAuthCookieCleanup(request: NextRequest, response: NextRespo
   const secure = process.env.NODE_ENV === 'production' ? '; Secure' : '';
 
   for (const name of names) {
+    const httpOnly = isPkceVerifierCookie(name) ? '; HttpOnly' : '';
     response.headers.append(
       'Set-Cookie',
-      `${name}=; Path=/; Domain=${domain}; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax${secure}`,
+      `${name}=; Path=/; Domain=${domain}; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax${secure}${httpOnly}`,
     );
   }
 }
@@ -136,7 +162,7 @@ export async function GET(request: NextRequest) {
   });
 
   if (error || !data.url) {
-    console.error('[google-oauth] Failed to initialize OAuth:', error?.message || 'missing_provider_url');
+    console.error('[google-oauth] Failed to initialize OAuth:', error?.code || 'missing_provider_url');
     const loginUrl = new URL('/sign-up-login-screen', canonicalOrigin);
     loginUrl.searchParams.set('oauth_error', 'google_start_failed');
     const response = NextResponse.redirect(loginUrl);
@@ -147,13 +173,7 @@ export async function GET(request: NextRequest) {
   const response = NextResponse.redirect(data.url);
   clearStaleAuthCookies(request, response);
   pendingCookies.forEach(({ name, value, options }) => {
-    response.cookies.set(name, value, {
-      ...options,
-      path: options?.path || '/',
-      sameSite: 'lax',
-      secure: process.env.NODE_ENV === 'production',
-      httpOnly: false,
-    });
+    response.cookies.set(name, value, getAuthCookieOptions(name, options));
   });
   appendDomainAuthCookieCleanup(request, response);
   disableCaching(response);
