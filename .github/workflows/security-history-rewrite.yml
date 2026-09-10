@@ -1,0 +1,78 @@
+name: One-time security history rewrite
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/security-history-rewrite.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: summeca-security-history-rewrite
+  cancel-in-progress: false
+
+jobs:
+  purge-env-history:
+    if: github.event.head_commit.message == 'Run one-time secret history cleanup'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Verify repository target
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REPOSITORY" = "MUSTAFA9223/summeca"
+
+      - name: Snapshot remote refs and clone repository
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          AUTH_URL="https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git ls-remote --heads "$AUTH_URL" | sort > "$RUNNER_TEMP/heads-before.txt"
+          git ls-remote --tags "$AUTH_URL" | sort > "$RUNNER_TEMP/tags-before.txt"
+          git clone --bare "$AUTH_URL" "$RUNNER_TEMP/repo.git"
+
+      - name: Install git-filter-repo
+        run: python -m pip install --disable-pip-version-check --no-input git-filter-repo
+
+      - name: Remove .env from all reachable Git history
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP/repo.git"
+          git filter-repo --path .env --invert-paths --force
+          if git log --all --format='%H' -- .env | grep -q .; then
+            echo "The .env path is still reachable after filtering."
+            exit 31
+          fi
+          echo "Verified: .env is absent from rewritten reachable history."
+
+      - name: Abort if any remote branch or tag changed concurrently
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          AUTH_URL="https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git ls-remote --heads "$AUTH_URL" | sort > "$RUNNER_TEMP/heads-after.txt"
+          git ls-remote --tags "$AUTH_URL" | sort > "$RUNNER_TEMP/tags-after.txt"
+          diff -u "$RUNNER_TEMP/heads-before.txt" "$RUNNER_TEMP/heads-after.txt"
+          diff -u "$RUNNER_TEMP/tags-before.txt" "$RUNNER_TEMP/tags-after.txt"
+
+      - name: Force-push rewritten branches and tags
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          AUTH_URL="https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          cd "$RUNNER_TEMP/repo.git"
+          git push --force "$AUTH_URL" --all
+          if git show-ref --tags --quiet; then
+            git push --force "$AUTH_URL" --tags
+          fi
