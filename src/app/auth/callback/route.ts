@@ -2,6 +2,8 @@ import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 import { createServiceClient } from '@/lib/supabase/server';
 
+const PKCE_VERIFIER_MAX_AGE_SECONDS = 10 * 60;
+
 function getSafeNext(value: string | null): string {
   if (!value || !value.startsWith('/') || value.startsWith('//')) {
     return '/user-dashboard';
@@ -33,6 +35,27 @@ function getCanonicalCookieDomain(): string | null {
   } catch {
     return null;
   }
+}
+
+function isPkceVerifierCookie(name: string) {
+  return name.includes('code-verifier');
+}
+
+function getAuthCookieOptions(
+  name: string,
+  options?: Parameters<NextResponse['cookies']['set']>[2],
+): Parameters<NextResponse['cookies']['set']>[2] {
+  const pkceVerifier = isPkceVerifierCookie(name);
+  return {
+    ...options,
+    path: options?.path || '/',
+    sameSite: 'lax',
+    secure: process.env.NODE_ENV === 'production',
+    httpOnly: pkceVerifier,
+    ...(pkceVerifier && options?.maxAge !== 0
+      ? { maxAge: PKCE_VERIFIER_MAX_AGE_SECONDS }
+      : {}),
+  };
 }
 
 function decodeCookieValue(value: string) {
@@ -79,7 +102,7 @@ function clearStaleAuthCookies(request: NextRequest, response: NextResponse) {
       maxAge: 0,
       sameSite: 'lax',
       secure: process.env.NODE_ENV === 'production',
-      httpOnly: false,
+      httpOnly: isPkceVerifierCookie(cookie.name),
     });
   }
 }
@@ -97,9 +120,10 @@ function appendDomainAuthCookieCleanup(request: NextRequest, response: NextRespo
   const secure = process.env.NODE_ENV === 'production' ? '; Secure' : '';
 
   for (const name of names) {
+    const httpOnly = isPkceVerifierCookie(name) ? '; HttpOnly' : '';
     response.headers.append(
       'Set-Cookie',
-      `${name}=; Path=/; Domain=${domain}; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax${secure}`,
+      `${name}=; Path=/; Domain=${domain}; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax${secure}${httpOnly}`,
     );
   }
 }
@@ -135,8 +159,6 @@ export async function GET(request: NextRequest) {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        // Prefer the newest duplicate of each auth/PKCE cookie name when Chrome
-        // still carries a legacy Domain-scoped generation alongside host-only data.
         getAll() {
           return getCookiesForSupabase(request);
         },
@@ -160,7 +182,7 @@ export async function GET(request: NextRequest) {
   await new Promise<void>((resolve) => setTimeout(resolve, 0));
 
   if (error || !data.user) {
-    console.error('Google OAuth callback failed:', error?.message || 'No user returned');
+    console.error('Google OAuth callback failed:', error?.code || 'missing_user');
     const loginUrl = new URL('/sign-up-login-screen', origin);
     loginUrl.searchParams.set('oauth_error', 'callback_failed');
     const response = NextResponse.redirect(loginUrl);
@@ -168,14 +190,27 @@ export async function GET(request: NextRequest) {
     return response;
   }
 
+  const service = createServiceClient();
+
+  const { error: logError } = await service.from('user_security_logs').insert({
+    user_id: data.user.id,
+    event_type: 'login',
+    device_info: {
+      user_agent: request.headers.get('user-agent')?.slice(0, 500) ?? null,
+      source: 'server',
+      method: 'google_oauth',
+    },
+    ip_hash: null,
+  });
+  if (logError) console.warn('[google-oauth] Security log write failed:', logError.code || 'db_error');
+
   if (referralCode) {
-    const service = createServiceClient();
     const { error: referralError } = await service.rpc('claim_referral_code_for_user', {
       code: referralCode,
       user_id: data.user.id,
     });
     if (referralError) {
-      console.warn('Referral claim after Google OAuth failed:', referralError.message);
+      console.warn('Referral claim after Google OAuth failed:', referralError.code || 'rpc_failed');
     }
   }
 
@@ -190,13 +225,7 @@ export async function GET(request: NextRequest) {
 
   clearStaleAuthCookies(request, response);
   pendingCookies.forEach(({ name, value, options }) => {
-    response.cookies.set(name, value, {
-      ...options,
-      path: options?.path || '/',
-      sameSite: 'lax',
-      secure: process.env.NODE_ENV === 'production',
-      httpOnly: false,
-    });
+    response.cookies.set(name, value, getAuthCookieOptions(name, options));
   });
   appendDomainAuthCookieCleanup(request, response);
   responseHeaders.forEach((value, key) => response.headers.set(key, value));

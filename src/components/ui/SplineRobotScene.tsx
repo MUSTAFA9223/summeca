@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 
 const SCENE_URL = 'https://prod.spline.design/H69K35LVSzZ9WcEG/scene.splinecode';
-const RUNTIME_URL = 'https://unpkg.com/@splinetool/runtime@1.9.82/build/runtime.js';
+const RUNTIME_URL = 'https://unpkg.com/@splinetool/runtime@2.0.42/build/runtime.js';
 
 type SplineApplication = {
   load: (url: string) => Promise<void>;

@@ -20,6 +20,8 @@ interface CreateCryptoSessionRequest {
 const SUPPORTED_METHODS = new Set([
   'crypto_usdt_trc20',
   'crypto_usdt_erc20',
+  'crypto_usdc',
+  'crypto_usdc_polygon',
   'crypto_trx',
   'crypto_bnb',
 ]);
@@ -72,7 +74,7 @@ export async function POST(request: NextRequest) {
     return noStoreJson({ error: 'productId and planId are required.' }, { status: 400 });
   }
   if (!SUPPORTED_METHODS.has(paymentMethodType)) {
-    return noStoreJson({ error: 'Only USDT, TRX and BNB payments are supported.' }, { status: 400 });
+    return noStoreJson({ error: 'Unsupported cryptocurrency or network.' }, { status: 400 });
   }
 
   const supabase = createServiceClient();

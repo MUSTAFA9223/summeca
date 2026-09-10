@@ -10,13 +10,18 @@ export default async function AdminAIPage() {
 
   const {
     data: { user },
-  } = await supabase?.auth?.getUser();
+    error: authError,
+  } = await supabase.auth.getUser();
 
-  if (!user) redirect('/sign-up-login-screen');
+  if (authError || !user) redirect('/sign-up-login-screen?next=%2Fadmin%2Fai');
 
-  const { data: profile } = await supabase?.from('user_profiles')?.select('role')?.eq('id', user?.id)?.single();
+  const { data: profile } = await supabase
+    .from('user_profiles')
+    .select('is_admin')
+    .eq('id', user.id)
+    .maybeSingle();
 
-  if (profile?.role !== 'admin') redirect('/admin');
+  if (profile?.is_admin !== true) redirect('/');
 
   return <AdminAIClient />;
 }

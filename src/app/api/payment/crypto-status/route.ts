@@ -13,12 +13,14 @@ export async function GET() {
     methods: available
       ? [
           'crypto_usdt_trc20',
+          'crypto_usdt_erc20',
+          'crypto_usdc',
+          'crypto_usdc_polygon',
           'crypto_trx',
           'crypto_bnb',
-          'crypto_usdt_erc20',
         ]
       : [],
   });
-  response.headers.set('Cache-Control', 'private, no-store');
+  response.headers.set('Cache-Control', 'private, no-store, max-age=0');
   return response;
 }
