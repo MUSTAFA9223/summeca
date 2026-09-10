@@ -2,7 +2,7 @@
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { Bot, CalendarClock, Check, Clipboard, ExternalLink, MessageSquareText, Plus, RefreshCw, Sparkles, Target, Users } from 'lucide-react';
+import { Bot, CalendarClock, Check, Clipboard, ExternalLink, MessageSquareText, Plus, RefreshCw, Sparkles, Target, Users, type LucideIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import DashboardLayout from '@/app/user-dashboard/components/DashboardLayout';
 
@@ -12,6 +12,7 @@ type LeadStatus = 'new' | 'contacted' | 'replied' | 'won' | 'lost';
 type Lead = { id: string; name: string; company: string; email: string; phone: string; source: string; status: LeadStatus; notes: string; next_follow_up_at: string | null; last_contacted_at: string | null; created_at: string };
 type Message = { id: string; lead_id: string; channel: string; stage: string; tone: string; language: string; output_text: string; created_at: string };
 type Data = { access: Access; profile: Profile | null; leads: Lead[]; messages: Message[]; counts: { leads: number; due: number; pipeline: Record<string, number> }; usage: { used: number; limit: number; tokens: number; periodStart: string } };
+type Metric = [label: string, value: number, icon: LucideIcon];
 
 const emptyProfile: Profile = { business_name: '', offer: '', target_audience: '', value_proposition: '', default_tone: 'professional' };
 const statusOptions: LeadStatus[] = ['new', 'contacted', 'replied', 'won', 'lost'];
@@ -57,6 +58,13 @@ export default function LeadFollowPage() {
   useEffect(() => { void load(); }, [load]);
 
   const selectedLead = useMemo(() => data?.leads.find((lead) => lead.id === selectedLeadId) ?? null, [data?.leads, selectedLeadId]);
+  const metrics = useMemo<Metric[]>(() => data ? [
+    ['Leads', data.counts.leads, Users],
+    ['Due now', data.counts.due, CalendarClock],
+    ['Contacted', data.counts.pipeline.contacted || 0, MessageSquareText],
+    ['Replies', data.counts.pipeline.replied || 0, Target],
+    ['Won', data.counts.pipeline.won || 0, Check],
+  ] : [], [data]);
   useEffect(() => { setFollowUpValue(localInputDate(selectedLead?.next_follow_up_at ?? null)); }, [selectedLead?.id, selectedLead?.next_follow_up_at]);
 
   async function post(body: Record<string, unknown>) {
@@ -124,7 +132,7 @@ export default function LeadFollowPage() {
       <div className="space-y-7">
         <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between"><div><div className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-primary"><Sparkles size={15}/> SUMMECA SaaS</div><h1 className="mt-2 text-3xl font-black tracking-tight">LeadFollow AI</h1><p className="mt-2 text-sm text-muted-foreground">Keep every lead organized and turn verified business context into ready-to-edit follow-up drafts.</p></div><div className="flex flex-wrap gap-2"><span className="rounded-full bg-primary/10 px-3 py-2 text-xs font-bold text-primary">{data.access.planName} · Lifetime</span><span className="rounded-full border border-border bg-card px-3 py-2 text-xs font-semibold">AI drafts: {data.usage.used}/{data.usage.limit} this month</span><button onClick={()=>setShowLeadForm((value)=>!value)} className="btn-primary inline-flex items-center gap-2 px-4 py-2"><Plus size={15}/> Add lead</button></div></header>
 
-        <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">{[['Leads',data.counts.leads,Users],['Due now',data.counts.due,CalendarClock],['Contacted',data.counts.pipeline.contacted||0,MessageSquareText],['Replies',data.counts.pipeline.replied||0,Target],['Won',data.counts.pipeline.won||0,Check]].map(([label,value,Icon])=><div key={String(label)} className="rounded-2xl border border-border bg-card p-5"><div className="flex items-center justify-between"><span className="text-sm text-muted-foreground">{String(label)}</span><Icon size={18} className="text-primary"/></div><div className="mt-2 text-2xl font-black">{String(value)}</div></div>)}</section>
+        <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">{metrics.map(([label, value, Icon])=><div key={label} className="rounded-2xl border border-border bg-card p-5"><div className="flex items-center justify-between"><span className="text-sm text-muted-foreground">{label}</span><Icon size={18} className="text-primary"/></div><div className="mt-2 text-2xl font-black">{value}</div></div>)}</section>
 
         {showLeadForm && <section className="rounded-2xl border border-primary/25 bg-card p-6"><div className="flex items-center justify-between"><div><h2 className="font-bold">Add a lead</h2><p className="text-xs text-muted-foreground">Only add information you actually know. AI drafts use these facts as context.</p></div><button onClick={()=>setShowLeadForm(false)} className="text-sm text-muted-foreground">Close</button></div><form onSubmit={createLead} className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3"><input required className="form-input" placeholder="Lead name" value={leadForm.name} onChange={(e)=>setLeadForm({...leadForm,name:e.target.value})}/><input className="form-input" placeholder="Company" value={leadForm.company} onChange={(e)=>setLeadForm({...leadForm,company:e.target.value})}/><input className="form-input" placeholder="Source" value={leadForm.source} onChange={(e)=>setLeadForm({...leadForm,source:e.target.value})}/><input className="form-input" placeholder="Email" value={leadForm.email} onChange={(e)=>setLeadForm({...leadForm,email:e.target.value})}/><input className="form-input" placeholder="Phone" value={leadForm.phone} onChange={(e)=>setLeadForm({...leadForm,phone:e.target.value})}/><input className="form-input" type="datetime-local" value={leadForm.nextFollowUpAt} onChange={(e)=>setLeadForm({...leadForm,nextFollowUpAt:e.target.value})}/><textarea className="form-input sm:col-span-2 lg:col-span-3" placeholder="Factual notes: need, objection, last conversation, requested information..." value={leadForm.notes} onChange={(e)=>setLeadForm({...leadForm,notes:e.target.value})}/><button disabled={saving} className="btn-primary sm:col-span-2 lg:col-span-3 py-2.5">Save lead</button></form></section>}
 
