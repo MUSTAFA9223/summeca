@@ -13,7 +13,7 @@ const productLinks = [
 ];
 
 const simpleLinks = [
-  { label: 'Services', href: '/services/conversion-rescue' },
+  { label: 'Services', href: '/services' },
   { label: 'Pricing', href: '/pricing' },
   { label: 'About', href: '/about' },
   { label: 'Support', href: '/support' },
