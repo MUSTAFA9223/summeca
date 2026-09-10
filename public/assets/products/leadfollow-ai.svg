@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800" viewBox="0 0 1200 800" role="img" aria-labelledby="title desc">
+  <title id="title">SUMMECA LeadFollow AI</title>
+  <desc id="desc">Premium teal product artwork for the LeadFollow AI SaaS workspace.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#03141f"/><stop offset="0.55" stop-color="#0a2730"/><stop offset="1" stop-color="#105f5a"/></linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#2fe0cd"/><stop offset="1" stop-color="#9dfff2"/></linearGradient>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="20" stdDeviation="27" flood-color="#000" flood-opacity=".32"/></filter>
+  </defs>
+  <rect width="1200" height="800" rx="48" fill="url(#bg)"/>
+  <circle cx="1040" cy="130" r="285" fill="#43e6d4" opacity=".08"/><circle cx="1010" cy="710" r="370" fill="#43e6d4" opacity=".05"/>
+  <rect x="70" y="70" width="1060" height="660" rx="38" fill="#fff" opacity=".045" stroke="#fff" stroke-opacity=".13"/>
+  <g transform="translate(100 108)">
+    <rect width="154" height="46" rx="23" fill="url(#accent)"/><text x="77" y="30" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="18" font-weight="800" fill="#03221f">SUMMECA SaaS</text>
+    <text x="0" y="132" font-family="Arial,Helvetica,sans-serif" font-size="64" font-weight="800" fill="#fff">LeadFollow AI</text>
+    <text x="0" y="182" font-family="Arial,Helvetica,sans-serif" font-size="26" fill="#c9dcdf">Never lose the next sales follow-up.</text>
+    <g transform="translate(0 292)" font-family="Arial,Helvetica,sans-serif" font-size="23" fill="#f3fffd">
+      <text y="0">Organize leads and next actions</text><text y="50">Generate factual AI follow-up drafts</text><text y="100">Email, LinkedIn, WhatsApp + SMS</text><text y="150">Pipeline status + message history</text>
+    </g>
+  </g>
+  <g transform="translate(790 235)" filter="url(#shadow)">
+    <rect width="310" height="365" rx="30" fill="#fff"/>
+    <circle cx="48" cy="51" r="20" fill="#d5f8f3"/><rect x="82" y="36" width="115" height="13" rx="6" fill="#0f766e"/><rect x="82" y="60" width="175" height="11" rx="5" fill="#bdd2d0"/>
+    <rect x="28" y="104" width="254" height="70" rx="16" fill="#f0fbf9"/><rect x="44" y="122" width="140" height="11" rx="5" fill="#0f766e"/><rect x="44" y="145" width="207" height="9" rx="4" fill="#bcd0ce"/>
+    <rect x="28" y="194" width="254" height="70" rx="16" fill="#f7f9fa"/><rect x="44" y="212" width="122" height="11" rx="5" fill="#223b40"/><rect x="44" y="235" width="190" height="9" rx="4" fill="#c5d3d2"/>
+    <rect x="28" y="286" width="98" height="38" rx="19" fill="#19b9a8"/><rect x="140" y="286" width="142" height="38" rx="19" fill="#e6f6f4"/>
+    <circle cx="264" cy="339" r="9" fill="#33dbc8"/>
+  </g>
+</svg>
