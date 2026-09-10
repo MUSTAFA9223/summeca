@@ -106,7 +106,7 @@ export default function DashboardSidebar({
         <div className={`flex items-center h-16 border-b border-border px-4 flex-shrink-0 ${
           collapsed ? 'justify-center' : 'gap-2.5'
         }`}>
-          <AppLogo variant={collapsed ? 'mark' : 'wordmark'} size={collapsed ? 30 : 32} />
+          <AppLogo variant={collapsed ? 'mark' : 'wordmark'} size={collapsed ? 34 : 38} />
         </div>
 
         <nav className="flex-1 overflow-y-auto py-4 px-2">
@@ -177,7 +177,7 @@ export default function DashboardSidebar({
         }`}
       >
         <div className="flex items-center justify-between h-16 border-b border-border px-4">
-          <AppLogo variant="wordmark" size={32} />
+          <AppLogo variant="wordmark" size={38} />
           <button
             onClick={onCloseMobile}
             className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary transition-all duration-150"

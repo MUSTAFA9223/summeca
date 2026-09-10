@@ -90,7 +90,7 @@ export default function PublicFooter() {
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-8 lg:gap-10">
           <div className="col-span-2">
             <div className="mb-4">
-              <AppLogo variant="wordmark" tone="light" size={42} />
+              <AppLogo variant="wordmark" tone="light" size={50} />
             </div>
             <p className="text-sm text-slate-400 leading-relaxed mb-5 max-w-[260px]">Digital products, SaaS tools, and AI-focused solutions for modern work.</p>
             <div className="w-12 h-0.5 bg-gradient-to-r from-primary to-accent rounded-full mb-5" />
