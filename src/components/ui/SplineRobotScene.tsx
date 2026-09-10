@@ -16,12 +16,19 @@ type WindowWithSplineViewer = Window & {
 function waitForViewerDefinition(timeoutMs = 8000) {
   if (customElements.get('spline-viewer')) return Promise.resolve();
 
-  return Promise.race([
-    customElements.whenDefined('spline-viewer').then(() => undefined),
-    new Promise<void>((_, reject) => {
-      window.setTimeout(() => reject(new Error('Spline viewer definition timed out')), timeoutMs);
-    }),
-  ]);
+  return new Promise<void>((resolve, reject) => {
+    const timer = window.setTimeout(() => {
+      reject(new Error('Spline viewer definition timed out'));
+    }, timeoutMs);
+
+    customElements.whenDefined('spline-viewer').then(() => {
+      window.clearTimeout(timer);
+      resolve();
+    }).catch((error) => {
+      window.clearTimeout(timer);
+      reject(error);
+    });
+  });
 }
 
 function loadSplineViewer() {
@@ -41,15 +48,11 @@ function loadSplineViewer() {
 
     const existing = document.querySelector<HTMLScriptElement>('script[data-summeca-spline-viewer]');
     if (existing) {
-      if (customElements.get('spline-viewer')) {
-        resolve();
-        return;
-      }
-      existing.addEventListener('load', finish, { once: true });
       existing.addEventListener('error', () => {
         win.__summecaSplineViewerPromise = undefined;
         reject(new Error('Spline viewer failed to load'));
       }, { once: true });
+      finish();
       return;
     }
 
@@ -75,18 +78,31 @@ export default function SplineRobotScene({ zoomScale = 1 }: SplineRobotSceneProp
     if (!hostRef.current) return;
 
     const host = hostRef.current;
+    const reducedMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
     let cancelled = false;
     let retryTimer: number | undefined;
+    let viewer: HTMLElement | undefined;
+
+    const syncMotionPreference = () => {
+      if (!viewer) return;
+
+      if (reducedMotionQuery.matches) {
+        viewer.removeAttribute('events-target');
+        viewer.style.pointerEvents = 'none';
+      } else {
+        viewer.setAttribute('events-target', 'global');
+        viewer.style.pointerEvents = 'auto';
+      }
+    };
 
     const mountSpline = async (attempt = 0) => {
       try {
         await loadSplineViewer();
         if (cancelled) return;
 
-        const viewer = document.createElement('spline-viewer');
+        viewer = document.createElement('spline-viewer');
         viewer.setAttribute('url', SCENE_URL);
         viewer.setAttribute('loading', 'eager');
-        viewer.setAttribute('events-target', 'global');
         viewer.setAttribute('background', 'transparent');
         viewer.setAttribute('renderer', 'webgl');
         viewer.setAttribute('aria-hidden', 'true');
@@ -96,16 +112,17 @@ export default function SplineRobotScene({ zoomScale = 1 }: SplineRobotSceneProp
           height: '100%',
           minHeight: '100%',
           background: 'transparent',
-          pointerEvents: 'auto',
           touchAction: 'pan-y',
           transform: `scale(${zoomScale})`,
           transformOrigin: 'center center',
           filter: 'saturate(1.5) contrast(1.09) brightness(1.02)',
         });
 
+        syncMotionPreference();
         host.replaceChildren(viewer);
       } catch {
         if (cancelled) return;
+        viewer = undefined;
         try { host.replaceChildren(); } catch { /* host may already be detached */ }
 
         if (attempt < 2) {
@@ -116,10 +133,12 @@ export default function SplineRobotScene({ zoomScale = 1 }: SplineRobotSceneProp
       }
     };
 
+    reducedMotionQuery.addEventListener?.('change', syncMotionPreference);
     void mountSpline();
 
     return () => {
       cancelled = true;
+      reducedMotionQuery.removeEventListener?.('change', syncMotionPreference);
       if (retryTimer !== undefined) window.clearTimeout(retryTimer);
       try { host.replaceChildren(); } catch { /* host may already be detached */ }
     };
