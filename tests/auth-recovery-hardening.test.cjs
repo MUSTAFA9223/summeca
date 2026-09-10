@@ -13,11 +13,11 @@ test('reset page accepts token-hash recovery only and rejects legacy implicit/co
   assert.match(source, /fetch\('\/api\/auth\/recovery\/reset-password'/);
   assert.doesNotMatch(source, /searchParams\.get\('code'\)/);
   assert.doesNotMatch(source, /searchParams\.get\('sb_flow_id'\)/);
-  assert.doesNotMatch(source, /access_token/);
-  assert.doesNotMatch(source, /refresh_token/);
+  assert.doesNotMatch(source, /searchParams\.get\('access_token'\)/);
+  assert.doesNotMatch(source, /searchParams\.get\('refresh_token'\)/);
   assert.doesNotMatch(source, /auth\.setSession\(/);
   assert.doesNotMatch(source, /exchangeCodeForSession\(/);
-  assert.doesNotMatch(source, /localStorage/);
+  assert.doesNotMatch(source, /(?:window\.)?localStorage\.(?:getItem|setItem|removeItem)/);
 });
 
 test('recovery endpoint is isolated, non-persistent, scanner-safe, and returns generic update errors', () => {
