@@ -26,19 +26,20 @@ const AppLogo = memo(function AppLogo({
   className = '',
   onClick,
 }: AppLogoProps) {
+  const isBrandAsset = !src;
   const resolvedSrc = src ?? (
     variant === 'wordmark'
       ? '/assets/images/summeca-logo.png'
       : '/assets/images/summeca-mark.png'
   );
-  const isWordmark = !src && variant === 'wordmark';
+  const isWordmark = isBrandAsset && variant === 'wordmark';
   const displaySize = isWordmark ? Math.round(size * 1.16) : size;
   const width = isWordmark ? Math.round(displaySize * 3) : displaySize;
-  const logoToneClass = tone === 'light'
-    ? 'brightness-0 invert contrast-125'
-    : isWordmark
-      ? 'brightness-[0.72] contrast-125'
-      : '';
+  const logoToneClass = isBrandAsset
+    ? tone === 'light'
+      ? 'brightness-0 saturate-100 invert-[84%] sepia-[54%] saturate-[1040%] hue-rotate-[119deg] brightness-[102%] contrast-[95%] drop-shadow-[0_0_9px_rgba(45,212,191,0.42)]'
+      : 'brightness-0 saturate-100 invert-[67%] sepia-[89%] saturate-[1230%] hue-rotate-[128deg] brightness-[91%] contrast-[96%] drop-shadow-[0_0_6px_rgba(8,197,209,0.28)]'
+    : '';
 
   const containerClassName = useMemo(() => {
     const classes = ['inline-flex items-center shrink-0'];
