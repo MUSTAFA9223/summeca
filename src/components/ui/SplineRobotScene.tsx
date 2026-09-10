@@ -20,6 +20,10 @@ type WindowWithSplineRuntime = Window & {
   __summecaSplineApplication?: SplineApplicationConstructor;
 };
 
+type SplineRobotSceneProps = {
+  zoomScale?: number;
+};
+
 function loadSplineRuntime() {
   const win = window as WindowWithSplineRuntime;
   if (win.__summecaSplineApplication) return Promise.resolve(win.__summecaSplineApplication);
@@ -68,7 +72,7 @@ function safelyDisposeSpline(app: SplineApplication | undefined) {
   try { app.dispose?.(); } catch { /* decorative runtime cleanup */ }
 }
 
-export default function SplineRobotScene() {
+export default function SplineRobotScene({ zoomScale = 1 }: SplineRobotSceneProps) {
   const hostRef = useRef<HTMLDivElement>(null);
   const [ready, setReady] = useState(false);
 
@@ -94,7 +98,8 @@ export default function SplineRobotScene() {
         if (cancelled) return;
         app = new Application(canvas);
         const width = window.innerWidth;
-        const zoom = width < 640 ? 0.24 : width < 1024 ? 0.28 : width < 1440 ? 0.3 : 0.32;
+        const baseZoom = width < 640 ? 0.24 : width < 1024 ? 0.28 : width < 1440 ? 0.3 : 0.32;
+        const zoom = baseZoom * zoomScale;
         app.setZoom(zoom);
         await app.load(SCENE_URL);
         if (cancelled) { safelyDisposeSpline(app); return; }
@@ -128,7 +133,7 @@ export default function SplineRobotScene() {
       safelyDisposeSpline(app);
       try { host.replaceChildren(); } catch { /* host may already be detached */ }
     };
-  }, []);
+  }, [zoomScale]);
 
   return (
     <div className="relative h-full w-full overflow-hidden bg-transparent">
