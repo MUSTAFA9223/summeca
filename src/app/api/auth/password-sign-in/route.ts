@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextRequest, NextResponse } from 'next/server';
+import { createServiceClient } from '@/lib/supabase/server';
 import { checkRateLimit, getRequestIdentity } from '@/lib/security/rateLimit';
 
 export const dynamic = 'force-dynamic';
@@ -165,8 +166,6 @@ export async function POST(request: NextRequest) {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        // A password login is a brand-new session. Never feed stale Chrome cookie
-        // chunks into the authentication operation itself.
         getAll() {
           return [];
         },
@@ -188,6 +187,19 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  const service = createServiceClient();
+  const { error: logError } = await service.from('user_security_logs').insert({
+    user_id: data.user.id,
+    event_type: 'login',
+    device_info: {
+      user_agent: request.headers.get('user-agent')?.slice(0, 500) ?? null,
+      source: 'server',
+      method: 'password',
+    },
+    ip_hash: null,
+  });
+  if (logError) console.warn('[password-sign-in] Security log write failed:', logError.code || 'db_error');
+
   let destination = requestedNext ?? '/user-dashboard';
   if (!requestedNext) {
     const { data: profile } = await supabase
@@ -204,9 +216,6 @@ export async function POST(request: NextRequest) {
 
   Object.entries(noStoreHeaders()).forEach(([key, value]) => response.headers.set(key, value));
 
-  // Delete obsolete host-only chunks, write the fresh host-only session, then
-  // explicitly expire any legacy Domain=summeca.com copies that Chrome may still
-  // send under the same names.
   clearStaleAuthCookies(request, response);
   for (const { name, value, options } of pendingCookies) {
     response.cookies.set(name, value, {

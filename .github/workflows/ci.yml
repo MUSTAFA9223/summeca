@@ -39,7 +39,14 @@ jobs:
       - name: Type check
         run: npm run type-check
 
-      - name: Auth security regression tests
+      - name: Semantic lint
+        run: >-
+          ESLINT_USE_FLAT_CONFIG=false npx eslint src --ext .ts,.tsx
+          --rule 'prettier/prettier: off'
+          --rule 'react/no-unescaped-entities: off'
+          --rule 'no-control-regex: off'
+
+      - name: Security and launch regression tests
         run: node --test tests/*.test.cjs
 
       - name: Production build

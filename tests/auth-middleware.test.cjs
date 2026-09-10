@@ -83,15 +83,18 @@ test('password recovery email redirects directly to reset page', () => {
   assert.doesNotMatch(source, /resetPasswordForEmail[\s\S]*auth\/callback\?next=\/reset-password/);
   assert.match(source, /if \(hasRecoveryMarkerInUrl\(\)\)[\s\S]*setLoading\(false\)[\s\S]*else[\s\S]*auth\.getSession\(\)/);
 });
-test('reset page exchanges a PKCE recovery code before validating the user', () => {
+test('reset page uses cross-device token-hash recovery without implicit or browser PKCE exchange', () => {
   const source = fs.readFileSync('src/app/reset-password/page.tsx', 'utf8');
-  assert.match(source, /searchParams\.get\('code'\)/);
-  assert.match(source, /exchangeCodeForSession\(\s*code\s*,?/);
-  assert.match(source, /auth\.updateUser\(\{ password \}\)/);
+  assert.match(source, /searchParams\.get\('token_hash'\)/);
+  assert.match(source, /type === 'recovery'/);
   assert.match(source, /setRecoveryTokenHash\(pendingTokenHash\)/);
   assert.match(source, /fetch\('\/api\/auth\/recovery\/reset-password'/);
-  assert.match(source, /auth\.signOut\(\{ scope:\s*'local' \}\)/);
   assert.match(source, /window\.location\.replace\('\/sign-up-login-screen\?password_reset=success'\)/);
+  assert.doesNotMatch(source, /searchParams\.get\('code'\)/);
+  assert.doesNotMatch(source, /searchParams\.get\('sb_flow_id'\)/);
+  assert.doesNotMatch(source, /exchangeCodeForSession\(/);
+  assert.doesNotMatch(source, /auth\.setSession\(/);
+  assert.doesNotMatch(source, /auth\.updateUser\(\{ password \}\)/);
   const confirmation = source.slice(source.indexOf('function confirmRecoveryLink'), source.indexOf('async function handleSubmit'));
   assert.doesNotMatch(confirmation, /auth\.getUser\(\)/);
 });
@@ -229,8 +232,6 @@ test('rate limits are counted atomically across Cloudflare workers', () => {
     'src/app/api/refunds/request/route.ts',
     'src/app/api/security/change-password/route.ts',
     'src/app/api/security/logout-all/route.ts',
-    'src/app/api/security/logs/route.ts',
-    'src/app/api/security/settings/route.ts',
   ];
 
   assert.match(limiter, /export async function checkRateLimit/);
