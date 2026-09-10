@@ -54,6 +54,6 @@ test('security log endpoint is read-only to browser callers', () => {
 });
 
 test('digital product asset trigger cannot be executed by public client roles', () => {
-  assert.match(revokeMigration, /revoke execute/i);
+  assert.match(revokeMigration, /revoke all on function public\.apply_digital_product_download_asset\(\)/i);
   assert.match(revokeMigration, /from public, anon, authenticated/i);
 });
