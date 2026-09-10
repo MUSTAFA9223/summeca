@@ -25,6 +25,12 @@ jobs:
       CLOUDFLARE_ACCOUNT_ID: d1be5d550572a2e61551f95f485bf297
 
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Secret scan
+        run: node scripts/scan-secrets.mjs
+
       - name: Normalize and verify Cloudflare credentials
         shell: bash
         run: |
@@ -41,9 +47,6 @@ jobs:
           echo "::add-mask::$CLEAN_TOKEN"
           echo "CLOUDFLARE_API_TOKEN=$CLEAN_TOKEN" >> "$GITHUB_ENV"
           echo "Cloudflare deployment credentials are configured."
-
-      - name: Checkout
-        uses: actions/checkout@v4
 
       - name: Setup Node
         uses: actions/setup-node@v4
