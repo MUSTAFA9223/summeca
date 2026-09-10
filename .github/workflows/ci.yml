@@ -39,7 +39,10 @@ jobs:
       - name: Type check
         run: npm run type-check
 
-      - name: Auth security regression tests
+      - name: Lint
+        run: npm run lint
+
+      - name: Security and launch regression tests
         run: node --test tests/*.test.cjs
 
       - name: Production build
