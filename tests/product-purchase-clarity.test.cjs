@@ -21,13 +21,13 @@ test('public product page keeps product-specific purchase CTAs', () => {
   }
 });
 
-test('product page distinguishes SaaS account access from digital downloads', () => {
-  assert.match(productPage, /saas_product/);
-  assert.match(productPage, /digital_product/);
+test('product page distinguishes SaaS account access from digital ZIP delivery without exposing product metadata', () => {
+  assert.match(productPage, /isSaasProduct/);
+  assert.match(productPage, /isDigitalProduct/);
   assert.match(productPage, /access is unlocked in your SUMMECA account/i);
   assert.match(productPage, /does not require a downloadable ZIP package/i);
-  assert.match(productPage, /protected digital package becomes available/i);
-  assert.match(productPage, /download_file_name/);
+  assert.match(productPage, /protected ZIP package becomes available/i);
+  assert.doesNotMatch(productPage, /select\([^)]*metadata/);
 });
 
 test('product page only advertises payment methods reported by live readiness endpoints', () => {
