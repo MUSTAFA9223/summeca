@@ -20,13 +20,12 @@ import { useAuth } from '@/contexts/AuthContext';
 
 const productLinks = [
   { label: 'AI Tools', href: '/ai', icon: Brain, desc: 'Published AI tools, APIs, and plugins' },
-  { label: 'SaaS Apps', href: '/saas', icon: LayoutDashboard, desc: 'Published software and services' },
+  { label: 'SaaS Apps', href: '/saas', icon: LayoutDashboard, desc: 'Published SaaS applications' },
   { label: 'Digital Products', href: '/digital', icon: FileText, desc: 'Published templates, datasets, and files' },
   { label: 'Compare Products', href: '/compare', icon: GitCompare, desc: 'Compare published product facts' },
 ];
 
 const simpleLinks = [
-  { label: 'Services', href: '/services' },
   { label: 'Pricing', href: '/pricing' },
   { label: 'About', href: '/about' },
   { label: 'Support', href: '/support' },
