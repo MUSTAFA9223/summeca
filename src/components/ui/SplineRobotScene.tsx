@@ -52,7 +52,7 @@ function loadSplineViewer() {
   return win.__summecaSplineViewerPromise;
 }
 
-function RobotModel({ compact, zoomScale }: { compact: boolean; zoomScale: number }) {
+function RobotModel({ compact, zoomScale, reducedMotion }: { compact: boolean; zoomScale: number; reducedMotion: boolean }) {
   const root = useRef<THREE.Group>(null);
   const { scene } = useGLTF(MODEL_URL);
 
@@ -72,7 +72,7 @@ function RobotModel({ compact, zoomScale }: { compact: boolean; zoomScale: numbe
   }, [compact, scene]);
 
   useFrame(({ pointer, clock }, delta) => {
-    if (!root.current) return;
+    if (!root.current || reducedMotion) return;
 
     const t = clock.elapsedTime;
     const targetYaw = pointer.x * (compact ? 0.24 : 0.34) + Math.sin(t * 0.42) * (compact ? 0.075 : 0.045);
@@ -90,6 +90,13 @@ function RobotModel({ compact, zoomScale }: { compact: boolean; zoomScale: numbe
   });
 
   const scale = (compact ? 0.8 : 0.88) * Math.max(0.8, Math.min(1.1, zoomScale));
+  const robot = (
+    <group ref={root} position={[0, compact ? -0.72 : -0.64, 0]} scale={scale}>
+      <primitive object={model} />
+    </group>
+  );
+
+  if (reducedMotion) return robot;
 
   return (
     <Float
@@ -97,14 +104,12 @@ function RobotModel({ compact, zoomScale }: { compact: boolean; zoomScale: numbe
       rotationIntensity={compact ? 0.045 : 0.08}
       floatIntensity={compact ? 0.08 : 0.12}
     >
-      <group ref={root} position={[0, compact ? -0.72 : -0.64, 0]} scale={scale}>
-        <primitive object={model} />
-      </group>
+      {robot}
     </Float>
   );
 }
 
-function LocalRobot3D({ zoomScale }: { zoomScale: number }) {
+function LocalRobot3D({ zoomScale, reducedMotion }: { zoomScale: number; reducedMotion: boolean }) {
   const [compact, setCompact] = useState(false);
 
   useEffect(() => {
@@ -119,6 +124,7 @@ function LocalRobot3D({ zoomScale }: { zoomScale: number }) {
     <Canvas
       camera={{ position: [0, compact ? 0.08 : 0.12, compact ? 9.1 : 8.6], fov: compact ? 37 : 35 }}
       dpr={compact ? [1, 1.15] : [1, 1.5]}
+      frameloop={reducedMotion ? 'demand' : 'always'}
       gl={{ antialias: !compact, alpha: true, powerPreference: 'high-performance' }}
       shadows={!compact}
       style={{ width: '100%', height: '100%', background: 'transparent', touchAction: 'pan-y' }}
@@ -129,7 +135,7 @@ function LocalRobot3D({ zoomScale }: { zoomScale: number }) {
       <pointLight position={[0, 1.5, 4]} intensity={compact ? 4.5 : 7} distance={10} color="#ffffff" />
       <pointLight position={[0, -1.8, 1.5]} intensity={compact ? 2.8 : 4} distance={8} color="#08c5d1" />
       <Suspense fallback={null}>
-        <RobotModel compact={compact} zoomScale={zoomScale} />
+        <RobotModel compact={compact} zoomScale={zoomScale} reducedMotion={reducedMotion} />
       </Suspense>
     </Canvas>
   );
@@ -138,11 +144,26 @@ function LocalRobot3D({ zoomScale }: { zoomScale: number }) {
 export default function SplineRobotScene({ zoomScale = 1 }: SplineRobotSceneProps) {
   const hostRef = useRef<HTMLDivElement>(null);
   const [splineReady, setSplineReady] = useState(false);
+  const [reducedMotion, setReducedMotion] = useState(false);
+
+  useEffect(() => {
+    const media = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const sync = () => setReducedMotion(media.matches);
+    sync();
+    media.addEventListener?.('change', sync);
+    return () => media.removeEventListener?.('change', sync);
+  }, []);
 
   useEffect(() => {
     if (!hostRef.current) return;
 
     const host = hostRef.current;
+    if (reducedMotion) {
+      setSplineReady(false);
+      try { host.replaceChildren(); } catch { /* host may already be detached */ }
+      return;
+    }
+
     let cancelled = false;
     let timeout: number | undefined;
     let viewer: HTMLElement | undefined;
@@ -200,16 +221,16 @@ export default function SplineRobotScene({ zoomScale = 1 }: SplineRobotSceneProp
       if (timeout !== undefined) window.clearTimeout(timeout);
       try { host.replaceChildren(); } catch { /* host may already be detached */ }
     };
-  }, []);
+  }, [reducedMotion]);
 
   return (
     <div className="relative h-full w-full overflow-hidden bg-transparent">
       <div className="absolute inset-0 z-[1]">
-        {!splineReady && <LocalRobot3D zoomScale={zoomScale} />}
+        {!splineReady && <LocalRobot3D zoomScale={zoomScale} reducedMotion={reducedMotion} />}
       </div>
 
       <div
-        className={`pointer-events-none absolute inset-0 z-[2] transition-opacity duration-500 ${splineReady ? 'opacity-100' : 'opacity-75'}`}
+        className={`pointer-events-none absolute inset-0 z-[2] transition-opacity duration-500 motion-reduce:transition-none ${splineReady ? 'opacity-100' : 'opacity-75'}`}
         aria-hidden="true"
       >
         <div className="absolute left-1/2 top-[45%] h-[62%] w-[62%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#08c5d1]/12 blur-[68px]" />
