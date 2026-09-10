@@ -10,21 +10,21 @@ const robot = read('src/components/ui/SplineRobotScene.tsx');
 const layout = read('src/app/layout.tsx');
 const deferredAssistant = read('src/components/DeferredStoreAssistant.tsx');
 
-test('Spline hero defers heavy work until near the viewport and browser idle time', () => {
-  assert.match(robot, /IntersectionObserver/);
-  assert.match(robot, /requestIdleCallback/);
-  assert.match(robot, /loading', 'lazy'/);
-  assert.match(robot, /rootMargin/);
-  assert.doesNotMatch(robot, /loading', 'eager'/);
+test('Spline hero loads immediately so the primary 3D robot is never deferred away', () => {
+  assert.match(robot, /loading', 'eager'/);
+  assert.match(robot, /void mountSpline\(\)/);
+  assert.doesNotMatch(robot, /IntersectionObserver/);
+  assert.doesNotMatch(robot, /requestIdleCallback/);
+  assert.doesNotMatch(robot, /loading', 'lazy'/);
 });
 
-test('Spline hero protects constrained mobile devices', () => {
+test('Spline hero stays visible on constrained devices while preserving reduced-motion handling', () => {
   assert.match(robot, /prefers-reduced-motion: reduce/);
-  assert.match(robot, /saveData/);
-  assert.match(robot, /slow-2g/);
-  assert.match(robot, /effectiveType === '2g'/);
-  assert.match(robot, /mobileQuery\.matches \? 'none' : 'auto'/);
-  assert.match(robot, /mobileQuery\.matches \? 'none' : 'saturate/);
+  assert.match(robot, /events-target', 'global'/);
+  assert.match(robot, /pointerEvents: 'auto'/);
+  assert.doesNotMatch(robot, /saveData/);
+  assert.doesNotMatch(robot, /slow-2g/);
+  assert.doesNotMatch(robot, /effectiveType === '2g'/);
 });
 
 test('sales assistant is deferred instead of hydrating with the critical page bundle', () => {
