@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 
-const SCENE_URL = '/api/spline-scene';
+const SCENE_URL = '/assets/spline/summeca-robot.splinecode';
 const VIEWER_SCRIPT = 'https://unpkg.com/@splinetool/viewer@1.9.82/build/spline-viewer.js';
 
 type WindowWithSplineViewer = Window & {
