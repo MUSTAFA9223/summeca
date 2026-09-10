@@ -39,23 +39,8 @@ jobs:
       - name: Type check
         run: npm run type-check
 
-      - name: Auth email confirmation tests
-        run: node --test tests/auth-email-confirmation.test.cjs
-
-      - name: Auth middleware tests
-        run: node --test tests/auth-middleware.test.cjs
-
-      - name: Auth recovery hardening tests
-        run: node --test tests/auth-recovery-hardening.test.cjs
-
-      - name: Auth session and mobile tests
-        run: node --test tests/auth-session-mobile.test.cjs
-
-      - name: Digital product download tests
-        run: node --test tests/digital-product-downloads.test.cjs
-
-      - name: Security output tests
-        run: node --test tests/security-output.test.cjs
+      - name: Auth security regression tests
+        run: node --test tests/*.test.cjs
 
       - name: Production build
         run: npm run build
