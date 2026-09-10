@@ -44,7 +44,6 @@ test('featured homepage products and prices come from active production records'
   assert.match(homepage, /conversion-rescue-kit-starter/);
   assert.match(homepage, /conversion-rescue-kit-ultimate/);
   assert.match(homepage, /Starting at/);
-
   assert.doesNotMatch(homepage, /\$(?:29|49|59|79|89|99|129|149)(?:\b|\.)/);
 });
 
@@ -63,11 +62,13 @@ test('hero sends shoppers to public product and SaaS destinations', () => {
   assert.match(hero, /View SaaS Apps/);
 });
 
-test('homepage hero uses the restored Spline-only 3D runtime without GLB or static fallback', () => {
+test('homepage hero uses the restored Spline viewer without GLB or static fallback', () => {
   assert.match(hero, /SplineRobotScene/);
   assert.match(hero, /motion-reduce:/);
   assert.match(robot, /SCENE_URL/);
-  assert.match(robot, /@splinetool\/runtime@1\.9\.82/);
+  assert.match(robot, /@splinetool\/viewer@1\.9\.82/);
+  assert.match(robot, /events-target', 'global'/);
+  assert.doesNotMatch(robot, /@splinetool\/runtime/);
   assert.doesNotMatch(robot, /LocalRobot3D/);
   assert.doesNotMatch(robot, /useGLTF|MODEL_URL|summeca-robot\.glb/);
   assert.doesNotMatch(robot, /<img\b/i);

@@ -11,13 +11,14 @@ const hero = read('src/app/components/HeroSection.tsx');
 const layout = read('src/app/layout.tsx');
 const deferredAssistant = read('src/components/DeferredStoreAssistant.tsx');
 
-test('Spline hero uses the restored working canvas runtime path', () => {
-  assert.match(robot, /@splinetool\/runtime@1\.9\.82/);
-  assert.match(robot, /IntersectionObserver/);
-  assert.match(robot, /void mount\(\)/);
-  assert.match(robot, /app\.setZoom\(compact \? 0\.7 : 0\.76\)/);
-  assert.match(robot, /pointerEvents = 'auto'/);
-  assert.doesNotMatch(robot, /@splinetool\/viewer/);
+test('Spline hero uses the previously working viewer path and loads immediately', () => {
+  assert.match(robot, /@splinetool\/viewer@1\.9\.82/);
+  assert.match(robot, /events-target', 'global'/);
+  assert.match(robot, /loading', 'eager'/);
+  assert.match(robot, /pointerEvents: 'auto'/);
+  assert.match(robot, /void mountScene\(\)/);
+  assert.doesNotMatch(robot, /@splinetool\/runtime/);
+  assert.doesNotMatch(robot, /IntersectionObserver/);
   assert.doesNotMatch(robot, /useGLTF|MODEL_URL|summeca-robot\.glb/);
   assert.doesNotMatch(robot, /<img\b/i);
 });

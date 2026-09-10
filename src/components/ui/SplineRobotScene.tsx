@@ -1,151 +1,128 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 
 const SCENE_URL = 'https://prod.spline.design/H69K35LVSzZ9WcEG/scene.splinecode';
-const RUNTIME_URL = 'https://unpkg.com/@splinetool/runtime@1.9.82/build/runtime.js';
+const VIEWER_SCRIPT = 'https://unpkg.com/@splinetool/viewer@1.9.82/build/spline-viewer.js';
 
-type SplineApplication = {
-  load: (url: string) => Promise<void>;
-  setZoom: (zoom: number) => void;
-  stop?: () => void;
-  dispose?: () => void;
+type WindowWithSplineViewer = Window & {
+  __summecaSplineViewerPromise?: Promise<void>;
 };
 
-type SplineApplicationConstructor = new (canvas: HTMLCanvasElement) => SplineApplication;
+function waitForViewerDefinition(timeoutMs = 8000) {
+  if (customElements.get('spline-viewer')) return Promise.resolve();
 
-type WindowWithSplineRuntime = Window & {
-  __summecaSplineRuntimePromise?: Promise<SplineApplicationConstructor>;
-  __summecaSplineApplication?: SplineApplicationConstructor;
-};
+  return new Promise<void>((resolve, reject) => {
+    const timer = window.setTimeout(
+      () => reject(new Error('Spline viewer definition timed out')),
+      timeoutMs,
+    );
 
-function loadSplineRuntime() {
-  const win = window as WindowWithSplineRuntime;
-  if (win.__summecaSplineApplication) return Promise.resolve(win.__summecaSplineApplication);
-  if (win.__summecaSplineRuntimePromise) return win.__summecaSplineRuntimePromise;
+    customElements.whenDefined('spline-viewer').then(() => {
+      window.clearTimeout(timer);
+      resolve();
+    }).catch((error) => {
+      window.clearTimeout(timer);
+      reject(error);
+    });
+  });
+}
 
-  win.__summecaSplineRuntimePromise = new Promise<SplineApplicationConstructor>((resolve, reject) => {
-    const readyEvent = 'summeca-spline-runtime-ready';
-    const errorEvent = 'summeca-spline-runtime-error';
+function loadSplineViewer() {
+  const win = window as WindowWithSplineViewer;
+  if (customElements.get('spline-viewer')) return Promise.resolve();
+  if (win.__summecaSplineViewerPromise) return win.__summecaSplineViewerPromise;
 
-    const handleReady = () => {
-      cleanup();
-      if (win.__summecaSplineApplication) resolve(win.__summecaSplineApplication);
-      else reject(new Error('Spline runtime loaded without Application'));
-    };
-    const handleError = () => {
-      cleanup();
-      reject(new Error('Spline runtime failed to load'));
-    };
-    const cleanup = () => {
-      window.removeEventListener(readyEvent, handleReady);
-      window.removeEventListener(errorEvent, handleError);
-    };
+  win.__summecaSplineViewerPromise = new Promise<void>((resolve, reject) => {
+    const stale = document.querySelector<HTMLScriptElement>('script[data-summeca-spline-viewer]');
+    if (stale && !customElements.get('spline-viewer')) stale.remove();
 
-    window.addEventListener(readyEvent, handleReady, { once: true });
-    window.addEventListener(errorEvent, handleError, { once: true });
-
-    const source = `
-      import { Application } from '${RUNTIME_URL}';
-      window.__summecaSplineApplication = Application;
-      window.dispatchEvent(new Event('${readyEvent}'));
-    `;
-    const blob = new Blob([source], { type: 'text/javascript' });
-    const blobUrl = URL.createObjectURL(blob);
     const script = document.createElement('script');
     script.type = 'module';
-    script.dataset.summecaSplineRuntime = 'true';
-    script.src = blobUrl;
-    script.onload = () => URL.revokeObjectURL(blobUrl);
-    script.onerror = () => {
-      URL.revokeObjectURL(blobUrl);
-      window.dispatchEvent(new Event(errorEvent));
+    script.src = VIEWER_SCRIPT;
+    script.dataset.summecaSplineViewer = 'true';
+
+    const fail = (error: unknown) => {
+      script.remove();
+      win.__summecaSplineViewerPromise = undefined;
+      reject(error instanceof Error ? error : new Error('Spline viewer failed to load'));
     };
+
+    script.onload = () => {
+      void waitForViewerDefinition().then(resolve).catch(fail);
+    };
+    script.onerror = () => fail(new Error('Spline viewer failed to load'));
     document.head.appendChild(script);
   });
 
-  return win.__summecaSplineRuntimePromise;
+  return win.__summecaSplineViewerPromise;
 }
 
 export default function SplineRobotScene() {
   const hostRef = useRef<HTMLDivElement>(null);
-  const [ready, setReady] = useState(false);
 
   useEffect(() => {
     if (!hostRef.current) return;
 
     const host = hostRef.current;
     let cancelled = false;
-    let app: SplineApplication | undefined;
+    let retryTimer: number | undefined;
 
-    const canvas = document.createElement('canvas');
-    canvas.setAttribute('aria-hidden', 'true');
-    canvas.style.display = 'block';
-    canvas.style.width = '100%';
-    canvas.style.height = '100%';
-    canvas.style.background = 'transparent';
-    canvas.style.pointerEvents = 'auto';
-    canvas.style.touchAction = 'pan-y';
-    canvas.style.filter = 'saturate(1.5) contrast(1.09) brightness(1.02)';
-    canvas.style.opacity = '0';
-    canvas.style.transition = 'opacity 420ms ease';
-    host.replaceChildren(canvas);
-
-    const mount = async () => {
+    const mountScene = async (attempt = 0) => {
       try {
-        const Application = await loadSplineRuntime();
+        await loadSplineViewer();
         if (cancelled) return;
 
-        app = new Application(canvas);
-        await app.load(SCENE_URL);
-        if (cancelled) {
-          app.stop?.();
-          app.dispose?.();
-          return;
-        }
+        host.replaceChildren();
+        const viewer = document.createElement('spline-viewer');
+        viewer.setAttribute('url', SCENE_URL);
+        viewer.setAttribute('events-target', 'global');
+        viewer.setAttribute('loading', 'eager');
+        viewer.setAttribute('loading-anim-type', 'spinner-small-light');
+        viewer.setAttribute('background', 'transparent');
+        viewer.setAttribute('aria-hidden', 'true');
 
-        const compact = window.matchMedia('(max-width: 767px)').matches;
-        app.setZoom(compact ? 0.7 : 0.76);
+        Object.assign(viewer.style, {
+          position: 'absolute',
+          inset: '0',
+          display: 'block',
+          width: '100%',
+          height: '100%',
+          minHeight: '100%',
+          background: 'transparent',
+          pointerEvents: 'auto',
+          touchAction: 'pan-y',
+        });
 
-        canvas.style.opacity = '1';
-        setReady(true);
+        viewer.addEventListener('context-loss', () => {
+          if (cancelled) return;
+          host.replaceChildren();
+          if (attempt < 2) {
+            retryTimer = window.setTimeout(() => void mountScene(attempt + 1), 900);
+          }
+        }, { once: true });
+
+        host.appendChild(viewer);
       } catch {
-        if (!cancelled) setReady(false);
+        if (cancelled) return;
+        host.replaceChildren();
+        if (attempt < 2) {
+          retryTimer = window.setTimeout(() => void mountScene(attempt + 1), 900 * (attempt + 1));
+        }
       }
     };
 
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (!entry.isIntersecting) return;
-        observer.disconnect();
-        void mount();
-      },
-      { rootMargin: '260px', threshold: 0.01 },
-    );
-
-    observer.observe(host);
+    void mountScene();
 
     return () => {
       cancelled = true;
-      observer.disconnect();
-      app?.stop?.();
-      app?.dispose?.();
+      if (retryTimer !== undefined) window.clearTimeout(retryTimer);
       host.replaceChildren();
     };
   }, []);
 
   return (
     <div className="relative h-full w-full overflow-hidden bg-transparent">
-      <div
-        className={`pointer-events-none absolute inset-0 transition-opacity duration-500 ${
-          ready ? 'opacity-100' : 'opacity-70'
-        }`}
-        aria-hidden="true"
-      >
-        <div className="absolute left-1/2 top-[48%] h-[58%] w-[58%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#08c5d1]/12 blur-[64px]" />
-        <div className="absolute left-1/2 top-[54%] h-[34%] w-[34%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#0aaebd]/10 blur-[46px]" />
-      </div>
-
       <div ref={hostRef} className="absolute inset-0 z-[2] bg-transparent" />
     </div>
   );
