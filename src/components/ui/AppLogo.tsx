@@ -35,11 +35,11 @@ const AppLogo = memo(function AppLogo({
   const isWordmark = isBrandAsset && variant === 'wordmark';
   const displaySize = isWordmark ? Math.round(size * 1.16) : size;
   const width = isWordmark ? Math.round(displaySize * 3) : displaySize;
-  const logoToneClass = isBrandAsset
+  const logoFilter = isBrandAsset
     ? tone === 'light'
-      ? 'brightness-0 saturate-100 invert-[84%] sepia-[54%] saturate-[1040%] hue-rotate-[119deg] brightness-[102%] contrast-[95%] drop-shadow-[0_0_9px_rgba(45,212,191,0.42)]'
-      : 'brightness-0 saturate-100 invert-[67%] sepia-[89%] saturate-[1230%] hue-rotate-[128deg] brightness-[91%] contrast-[96%] drop-shadow-[0_0_6px_rgba(8,197,209,0.28)]'
-    : '';
+      ? 'brightness(0) saturate(100%) invert(84%) sepia(54%) saturate(1040%) hue-rotate(119deg) brightness(102%) contrast(95%) drop-shadow(0 0 9px rgba(45, 212, 191, 0.42))'
+      : 'brightness(0) saturate(100%) invert(67%) sepia(89%) saturate(1230%) hue-rotate(128deg) brightness(91%) contrast(96%) drop-shadow(0 0 6px rgba(8, 197, 209, 0.28))'
+    : undefined;
 
   const containerClassName = useMemo(() => {
     const classes = ['inline-flex items-center shrink-0'];
@@ -59,7 +59,8 @@ const AppLogo = memo(function AppLogo({
           sizes={`${width}px`}
           quality={100}
           draggable={false}
-          className={`flex-shrink-0 select-none object-contain ${logoToneClass}`}
+          className="flex-shrink-0 select-none object-contain"
+          style={logoFilter ? { filter: logoFilter } : undefined}
           priority
           unoptimized={resolvedSrc.endsWith('.svg')}
         />
