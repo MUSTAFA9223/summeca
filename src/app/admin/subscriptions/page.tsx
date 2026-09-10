@@ -2,7 +2,6 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import { AlertCircle, ChevronLeft, ChevronRight, Filter, RefreshCw, Search } from 'lucide-react';
-import { createClient } from '@/lib/supabase/client';
 
 interface Subscription {
   id: string;
@@ -19,6 +18,12 @@ interface Subscription {
     price: number;
     currency: string;
   } | null;
+}
+
+interface SubscriptionsResponse {
+  subscriptions?: Subscription[];
+  total?: number;
+  error?: string;
 }
 
 const PAGE_SIZE = 20;
@@ -51,8 +56,15 @@ function formatMoney(amount: number | null | undefined, currency: string | null 
   }
 }
 
+async function readJson(response: Response): Promise<SubscriptionsResponse> {
+  try {
+    return (await response.json()) as SubscriptionsResponse;
+  } catch {
+    return {};
+  }
+}
+
 export default function AdminSubscriptionsPage() {
-  const [supabase] = useState(() => createClient());
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -66,22 +78,24 @@ export default function AdminSubscriptionsPage() {
     setError(null);
 
     try {
-      let query = supabase
-        .from('subscriptions')
-        .select(
-          'id, status, payment_provider, current_period_start, current_period_end, created_at, user_profiles(email, full_name), products(name), product_plans(name, billing_period, price, currency)',
-          { count: 'exact' }
-        )
-        .order('created_at', { ascending: false })
-        .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
+      const params = new URLSearchParams({
+        page: String(page),
+        pageSize: String(PAGE_SIZE),
+      });
+      if (statusFilter) params.set('status', statusFilter);
 
-      if (statusFilter) query = query.eq('status', statusFilter);
+      const response = await fetch(`/api/admin/subscriptions?${params.toString()}`, {
+        cache: 'no-store',
+        credentials: 'same-origin',
+      });
+      const data = await readJson(response);
 
-      const { data, count, error: fetchError } = await query;
-      if (fetchError) throw fetchError;
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to load subscription access records.');
+      }
 
-      setSubscriptions((data as unknown as Subscription[]) ?? []);
-      setTotal(count ?? 0);
+      setSubscriptions(Array.isArray(data.subscriptions) ? data.subscriptions : []);
+      setTotal(Number.isFinite(Number(data.total)) ? Number(data.total) : 0);
     } catch (err: unknown) {
       setSubscriptions([]);
       setTotal(0);
@@ -89,7 +103,7 @@ export default function AdminSubscriptionsPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, statusFilter, supabase]);
+  }, [page, statusFilter]);
 
   useEffect(() => {
     void fetchSubscriptions();
