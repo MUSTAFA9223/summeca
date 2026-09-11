@@ -12,21 +12,17 @@ const authScreen = read('src/app/sign-up-login-screen/components/AuthScreen.tsx'
 const layout = read('src/app/layout.tsx');
 const deferredAssistant = read('src/components/DeferredStoreAssistant.tsx');
 
-test('Spline hero uses a current viewer with a runtime fallback and the original scene', () => {
-  assert.match(robot, /@splinetool\/viewer@2\.0\.44/);
-  assert.match(robot, /@splinetool\/runtime@2\.0\.44/);
+test('Spline hero uses the restored working canvas runtime path', () => {
+  assert.match(robot, /@splinetool\/runtime@1\.9\.82/);
   assert.match(robot, /SCENE_URL = 'https:\/\/prod\.spline\.design\/H69K35LVSzZ9WcEG\/scene\.splinecode'/);
-  assert.match(robot, /events-target', 'global'/);
-  assert.match(robot, /loading', 'eager'/);
-  assert.match(robot, /pointerEvents: 'auto'/);
-  assert.match(robot, /load-complete/);
-  assert.match(robot, /mountRuntime/);
-  assert.match(robot, /setGlobalEvents/);
-  assert.match(robot, /fallbackTimer = window\.setTimeout\(useRuntime, 10000\)/);
-  assert.match(robot, /FALLBACK_IMAGE = '\/assets\/images\/summeca-robot\.webp'/);
-  assert.match(robot, /motion-reduce:transition-none/);
-  assert.doesNotMatch(robot, /IntersectionObserver/);
+  assert.match(robot, /IntersectionObserver/);
+  assert.match(robot, /void mount\(\)/);
+  assert.match(robot, /app\.setZoom\(compact \? 0\.7 : 0\.76\)/);
+  assert.match(robot, /pointerEvents = 'auto'/);
+  assert.doesNotMatch(robot, /@splinetool\/viewer/);
+  assert.doesNotMatch(robot, /FALLBACK_IMAGE|summeca-robot\.webp/);
   assert.doesNotMatch(robot, /useGLTF|MODEL_URL|summeca-robot\.glb/);
+  assert.doesNotMatch(robot, /<img\b/i);
 });
 
 test('mobile hero gives the robot a full-width column before the large breakpoint', () => {

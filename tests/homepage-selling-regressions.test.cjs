@@ -9,9 +9,6 @@ const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
 const homepage = read('src/app/page.tsx');
 const hero = read('src/app/components/HeroSection.tsx');
 const robot = read('src/components/ui/SplineRobotScene.tsx');
-const prepareSpline = read('scripts/prepare-spline-scene.mjs');
-const cloudflareBuild = read('scripts/cloudflare-build.mjs');
-const staticHeaders = read('public/_headers');
 const nextConfig = read('next.config.mjs');
 const cryptoStatus = read('src/app/api/payment/crypto-status/route.ts');
 const publicHomepageMarketing = `${homepage}\n${hero}`;
@@ -66,22 +63,19 @@ test('hero sends shoppers to public product and SaaS destinations', () => {
   assert.match(hero, /View SaaS Apps/);
 });
 
-test('homepage hero loads the original Spline scene with matching viewer/runtime and a safe visual fallback', () => {
+test('homepage hero uses the previously working interactive Spline canvas runtime without a static image fallback', () => {
   assert.match(hero, /SplineRobotScene/);
   assert.match(hero, /motion-reduce:/);
   assert.match(robot, /SCENE_URL = 'https:\/\/prod\.spline\.design\/H69K35LVSzZ9WcEG\/scene\.splinecode'/);
-  assert.match(robot, /@splinetool\/viewer@2\.0\.44/);
-  assert.match(robot, /@splinetool\/runtime@2\.0\.44/);
-  assert.match(nextConfig, /connect-src[^\n]+https:\/\/cdn\.spline\.design/);
-  assert.match(robot, /events-target', 'global'/);
-  assert.match(robot, /setGlobalEvents/);
-  assert.match(prepareSpline, /prod\.spline\.design\/H69K35LVSzZ9WcEG\/scene\.splinecode/);
-  assert.match(prepareSpline, /MIN_SCENE_BYTES = 1024/);
-  assert.match(cloudflareBuild, /prepare-spline-scene\.mjs/);
-  assert.match(staticHeaders, /\/assets\/spline\/summeca-robot\.splinecode/);
-  assert.match(staticHeaders, /Content-Type: application\/json/);
-  assert.match(robot, /FALLBACK_IMAGE = '\/assets\/images\/summeca-robot\.webp'/);
-  assert.match(robot, /ready \? 'opacity-0' : 'opacity-100'/);
+  assert.match(robot, /@splinetool\/runtime@1\.9\.82/);
+  assert.match(robot, /IntersectionObserver/);
+  assert.match(robot, /pointerEvents = 'auto'/);
+  assert.match(robot, /app\.setZoom\(compact \? 0\.7 : 0\.76\)/);
+  assert.match(nextConfig, /script-src[^\n]+https:\/\/unpkg\.com/);
+  assert.match(nextConfig, /connect-src[^\n]+https:\/\/prod\.spline\.design/);
+  assert.doesNotMatch(robot, /@splinetool\/viewer/);
+  assert.doesNotMatch(robot, /FALLBACK_IMAGE|summeca-robot\.webp/);
   assert.doesNotMatch(robot, /LocalRobot3D/);
   assert.doesNotMatch(robot, /useGLTF|MODEL_URL|summeca-robot\.glb/);
+  assert.doesNotMatch(robot, /<img\b/i);
 });
