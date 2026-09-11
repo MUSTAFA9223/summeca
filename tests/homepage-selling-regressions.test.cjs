@@ -12,6 +12,7 @@ const robot = read('src/components/ui/SplineRobotScene.tsx');
 const prepareSpline = read('scripts/prepare-spline-scene.mjs');
 const cloudflareBuild = read('scripts/cloudflare-build.mjs');
 const staticHeaders = read('public/_headers');
+const nextConfig = read('next.config.mjs');
 const cryptoStatus = read('src/app/api/payment/crypto-status/route.ts');
 const publicHomepageMarketing = `${homepage}\n${hero}`;
 
@@ -71,6 +72,7 @@ test('homepage hero loads the original Spline scene with matching viewer/runtime
   assert.match(robot, /SCENE_URL = 'https:\/\/prod\.spline\.design\/H69K35LVSzZ9WcEG\/scene\.splinecode'/);
   assert.match(robot, /@splinetool\/viewer@2\.0\.44/);
   assert.match(robot, /@splinetool\/runtime@2\.0\.44/);
+  assert.match(nextConfig, /connect-src[^\n]+https:\/\/cdn\.spline\.design/);
   assert.match(robot, /events-target', 'global'/);
   assert.match(robot, /setGlobalEvents/);
   assert.match(prepareSpline, /prod\.spline\.design\/H69K35LVSzZ9WcEG\/scene\.splinecode/);
