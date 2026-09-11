@@ -3,6 +3,7 @@ import React from 'react';
 import type { Metadata, Viewport } from 'next';
 import { Plus_Jakarta_Sans } from 'next/font/google';
 import '../styles/tailwind.css';
+import '../styles/summeca-home-dark.css';
 import { Toaster } from 'sonner';
 import { AuthProvider } from '@/contexts/AuthContext';
 import DeferredStoreAssistant from '@/components/DeferredStoreAssistant';
