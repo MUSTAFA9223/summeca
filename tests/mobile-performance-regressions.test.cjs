@@ -12,19 +12,21 @@ const authScreen = read('src/app/sign-up-login-screen/components/AuthScreen.tsx'
 const layout = read('src/app/layout.tsx');
 const deferredAssistant = read('src/components/DeferredStoreAssistant.tsx');
 
-test('Spline hero eagerly loads the official viewer with CDN and scene fallbacks', () => {
+test('robot renders local Three.js immediately and upgrades to Spline only when ready', () => {
+  assert.match(robot, /LocalRobot3D/);
+  assert.match(robot, /useGLTF/);
+  assert.match(robot, /useFrame/);
+  assert.match(robot, /summeca-robot\.glb/);
+  assert.match(robot, /pointer\.x/);
+  assert.match(robot, /pointer\.y/);
   assert.match(robot, /@splinetool\/viewer@2\.0\.44/);
-  assert.match(robot, /cdn\.spline\.design/);
-  assert.match(robot, /unpkg\.com/);
   assert.match(robot, /\/assets\/spline\/summeca-robot\.splinecode/);
   assert.match(robot, /prod\.spline\.design\/H69K35LVSzZ9WcEG\/scene\.splinecode/);
   assert.match(robot, /events-target', 'global'/);
   assert.match(robot, /renderer', 'webgl'/);
   assert.match(robot, /loading', 'eager'/);
-  assert.match(robot, /void mount\(\)/);
+  assert.match(robot, /scene-error-local-3d-active/);
   assert.doesNotMatch(robot, /IntersectionObserver/);
-  assert.doesNotMatch(robot, /@splinetool\/runtime@1\.9\.82/);
-  assert.doesNotMatch(robot, /useGLTF|MODEL_URL|summeca-robot\.glb/);
 });
 
 test('mobile hero gives the robot a full-width column before the large breakpoint', () => {
