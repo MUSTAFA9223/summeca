@@ -63,18 +63,21 @@ test('hero sends shoppers to public product and SaaS destinations', () => {
   assert.match(hero, /View SaaS Apps/);
 });
 
-test('homepage hero uses the previously working interactive Spline canvas runtime without a static image fallback', () => {
+test('homepage hero uses an eager Spline viewer with resilient script and scene fallbacks', () => {
   assert.match(hero, /SplineRobotScene/);
   assert.match(hero, /motion-reduce:/);
-  assert.match(robot, /SCENE_URL = 'https:\/\/prod\.spline\.design\/H69K35LVSzZ9WcEG\/scene\.splinecode'/);
-  assert.match(robot, /@splinetool\/runtime@1\.9\.82/);
-  assert.match(robot, /IntersectionObserver/);
-  assert.match(robot, /pointerEvents = 'auto'/);
-  assert.match(robot, /app\.setZoom\(compact \? 0\.7 : 0\.76\)/);
+  assert.match(robot, /\/assets\/spline\/summeca-robot\.splinecode/);
+  assert.match(robot, /prod\.spline\.design\/H69K35LVSzZ9WcEG\/scene\.splinecode/);
+  assert.match(robot, /@splinetool\/viewer@2\.0\.44/);
+  assert.match(robot, /cdn\.spline\.design/);
+  assert.match(robot, /unpkg\.com/);
+  assert.match(robot, /events-target', 'global'/);
+  assert.match(robot, /renderer', 'webgl'/);
+  assert.match(robot, /loading', 'eager'/);
   assert.match(nextConfig, /script-src[^\n]+https:\/\/unpkg\.com/);
+  assert.match(nextConfig, /script-src[^\n]+https:\/\/cdn\.spline\.design/);
   assert.match(nextConfig, /connect-src[^\n]+https:\/\/prod\.spline\.design/);
-  assert.doesNotMatch(robot, /@splinetool\/viewer/);
-  assert.doesNotMatch(robot, /FALLBACK_IMAGE|summeca-robot\.webp/);
+  assert.doesNotMatch(robot, /@splinetool\/runtime@1\.9\.82/);
   assert.doesNotMatch(robot, /LocalRobot3D/);
   assert.doesNotMatch(robot, /useGLTF|MODEL_URL|summeca-robot\.glb/);
   assert.doesNotMatch(robot, /<img\b/i);
