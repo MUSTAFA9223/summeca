@@ -17,7 +17,7 @@ export default function HeroSection() {
   }, []);
 
   return (
-    <section className="summeca-home-hero relative isolate min-h-[780px] overflow-hidden bg-[#0d1116] pt-[76px] text-white lg:min-h-screen">
+    <section className="summeca-home-hero relative isolate min-h-[760px] overflow-hidden bg-[#0d1116] pt-[76px] text-white lg:min-h-screen">
       <div className="summeca-hero-grid pointer-events-none absolute inset-0" />
       <div className="summeca-hero-noise pointer-events-none absolute inset-0" />
       <div className="summeca-hero-orb summeca-hero-orb-a pointer-events-none absolute" />
@@ -27,7 +27,7 @@ export default function HeroSection() {
         SUMMECA
       </div>
 
-      <div className="relative z-10 mx-auto grid min-h-[704px] max-w-[1480px] grid-cols-1 items-center lg:grid-cols-[45%_55%]">
+      <div className="relative z-10 mx-auto grid min-h-[692px] max-w-[1480px] grid-cols-1 items-center lg:grid-cols-[45%_55%]">
         <div className="relative px-6 pb-14 pt-16 sm:px-10 lg:px-12 lg:pb-24 lg:pt-24 xl:px-20">
           <div className="summeca-reveal summeca-reveal-1 mb-7 inline-flex items-center gap-3 rounded-full border border-white/10 bg-white/[0.045] px-4 py-2 text-[10px] font-bold uppercase tracking-[0.24em] text-slate-300 backdrop-blur-xl sm:text-[11px]">
             <span className="h-2 w-2 rounded-full bg-[#22d3ee] shadow-[0_0_18px_rgba(34,211,238,0.9)]" />
@@ -70,13 +70,13 @@ export default function HeroSection() {
           </div>
         </div>
 
-        <div className="relative min-h-[570px] self-stretch overflow-hidden sm:min-h-[630px] lg:min-h-[704px] lg:overflow-visible">
+        <div className="relative min-h-[560px] self-stretch overflow-hidden sm:min-h-[600px] lg:min-h-[692px] lg:overflow-visible">
           <div className="pointer-events-none absolute inset-[6%] rounded-[44px] border border-white/[0.065] bg-white/[0.025] shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_50px_120px_rgba(0,0,0,0.24)] backdrop-blur-[2px] lg:inset-[7%_5%_5%_1%]" />
           <div className="summeca-robot-ring summeca-robot-ring-a pointer-events-none absolute left-[48%] top-[48%] h-[68%] aspect-square -translate-x-1/2 -translate-y-1/2 rounded-full border border-[#22d3ee]/10" />
           <div className="summeca-robot-ring summeca-robot-ring-b pointer-events-none absolute left-[48%] top-[48%] h-[52%] aspect-square -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/[0.06]" />
           <div className="pointer-events-none absolute left-[48%] top-[50%] h-[46%] aspect-square -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#08c5d1]/15 blur-[80px]" />
 
-          <div className="relative h-full min-h-[570px] w-full touch-pan-y sm:min-h-[630px] lg:min-h-[704px]" aria-hidden="true">
+          <div className="relative h-full min-h-[560px] w-full touch-pan-y sm:min-h-[600px] lg:min-h-[692px]" aria-hidden="true">
             <div className="absolute inset-0 z-10 origin-center transform-gpu lg:bottom-[-8%] lg:left-[-8%] lg:right-[-8%] lg:top-[-6%] lg:scale-[0.78] xl:scale-[0.74]">
               <SplineRobotScene />
             </div>
