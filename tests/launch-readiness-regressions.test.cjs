@@ -34,11 +34,12 @@ test('checkout exposes exactly supported stablecoin/network options needed for l
   assert.match(checkout, /Back to products/);
 });
 
-test('CSP supports Spline without unsafe-eval', () => {
+test('CSP supports Spline WebAssembly without general unsafe-eval', () => {
   assert.match(csp, /Content-Security-Policy/);
   assert.match(csp, /script-src[^\n]*blob:/);
+  assert.match(csp, /script-src[^\n]*'wasm-unsafe-eval'/);
   assert.match(csp, /connect-src[^\n]*https:\/\/prod\.spline\.design/);
-  assert.doesNotMatch(csp, /unsafe-eval/);
+  assert.doesNotMatch(csp, /(?:^|[\s"])'unsafe-eval'(?:[\s"]|$)/);
 });
 
 test('Payoneer hosted checkout redirects are pinned to expected Oscato hosts', () => {
