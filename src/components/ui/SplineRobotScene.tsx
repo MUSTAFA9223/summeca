@@ -1,10 +1,11 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 const SCENE_URL = '/assets/spline/summeca-robot.splinecode';
-const VIEWER_SCRIPT = 'https://unpkg.com/@splinetool/viewer@2.0.15/build/spline-viewer.js';
-const RUNTIME_SCRIPT = 'https://unpkg.com/@splinetool/runtime@2.0.43/build/runtime.js';
+const VIEWER_SCRIPT = 'https://unpkg.com/@splinetool/viewer@2.0.44/build/spline-viewer.js';
+const RUNTIME_SCRIPT = 'https://unpkg.com/@splinetool/runtime@2.0.44/build/runtime.js';
+const FALLBACK_IMAGE = '/assets/images/summeca-robot.webp';
 
 type SplineApplication = {
   load: (url: string) => Promise<void>;
@@ -129,6 +130,7 @@ function disposeSpline(app: SplineApplication | undefined) {
 
 export default function SplineRobotScene() {
   const hostRef = useRef<HTMLDivElement>(null);
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
     if (!hostRef.current) return;
@@ -152,6 +154,7 @@ export default function SplineRobotScene() {
       disposeSpline(app);
       app = undefined;
       host.replaceChildren();
+      setReady(false);
       host.dataset.splineStatus = attempt === 0 ? 'runtime-loading' : 'runtime-retrying';
 
       const canvas = document.createElement('canvas');
@@ -185,6 +188,7 @@ export default function SplineRobotScene() {
         nextApp.setGlobalEvents?.(true);
         nextApp.setZoom(window.innerWidth < 768 ? 0.7 : 0.76);
         canvas.style.opacity = '1';
+        setReady(true);
         host.dataset.splineStatus = 'ready-runtime';
       } catch {
         disposeSpline(app);
@@ -238,6 +242,7 @@ export default function SplineRobotScene() {
           viewerFinished = true;
           if (fallbackTimer !== undefined) window.clearTimeout(fallbackTimer);
           fallbackTimer = undefined;
+          setReady(true);
           host.dataset.splineStatus = 'ready-viewer';
         }, { once: true });
 
@@ -264,6 +269,11 @@ export default function SplineRobotScene() {
 
   return (
     <div className="relative h-full w-full overflow-hidden bg-transparent">
+      <div
+        aria-hidden="true"
+        className={`pointer-events-none absolute inset-0 z-[1] bg-contain bg-center bg-no-repeat transition-opacity duration-300 motion-reduce:transition-none ${ready ? 'opacity-0' : 'opacity-100'}`}
+        style={{ backgroundImage: `url(${FALLBACK_IMAGE})` }}
+      />
       <div ref={hostRef} className="absolute inset-0 z-[2] bg-transparent" />
     </div>
   );
