@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 
-const SCENE_URL = '/assets/spline/summeca-robot.splinecode';
+const SCENE_URL = 'https://prod.spline.design/H69K35LVSzZ9WcEG/scene.splinecode';
 const VIEWER_SCRIPT = 'https://unpkg.com/@splinetool/viewer@2.0.44/build/spline-viewer.js';
 const RUNTIME_SCRIPT = 'https://unpkg.com/@splinetool/runtime@2.0.44/build/runtime.js';
 const FALLBACK_IMAGE = '/assets/images/summeca-robot.webp';
