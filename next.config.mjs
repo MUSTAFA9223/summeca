@@ -11,7 +11,7 @@ const contentSecurityPolicy = [
   "font-src 'self' data: https://fonts.gstatic.com",
   "img-src 'self' data: blob: https:",
   "media-src 'self' blob: https:",
-  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://prod.spline.design https://api.nowpayments.io https://api.sandbox.oscato.com https://api.live.oscato.com https://www.google-analytics.com https://*.google-analytics.com https://www.googletagmanager.com",
+  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://prod.spline.design https://cdn.spline.design https://api.nowpayments.io https://api.sandbox.oscato.com https://api.live.oscato.com https://www.google-analytics.com https://*.google-analytics.com https://www.googletagmanager.com",
   "frame-src 'self' https://resources.sandbox.oscato.com https://resources.live.oscato.com",
   "worker-src 'self' blob:",
   "manifest-src 'self'",
