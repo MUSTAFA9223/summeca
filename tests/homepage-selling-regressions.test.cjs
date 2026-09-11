@@ -10,6 +10,8 @@ const homepage = read('src/app/page.tsx');
 const hero = read('src/app/components/HeroSection.tsx');
 const robot = read('src/components/ui/SplineRobotScene.tsx');
 const nextConfig = read('next.config.mjs');
+const cloudflareBuild = read('scripts/cloudflare-build.mjs');
+const prepareRobot = read('scripts/prepare-robot-model.mjs');
 const cryptoStatus = read('src/app/api/payment/crypto-status/route.ts');
 const publicHomepageMarketing = `${homepage}\n${hero}`;
 
@@ -63,22 +65,26 @@ test('hero sends shoppers to public product and SaaS destinations', () => {
   assert.match(hero, /View SaaS Apps/);
 });
 
-test('homepage hero uses an eager Spline viewer with resilient script and scene fallbacks', () => {
+test('homepage hero always has a real local interactive 3D robot while Spline remains an enhancement', () => {
   assert.match(hero, /SplineRobotScene/);
   assert.match(hero, /motion-reduce:/);
+  assert.match(robot, /LocalRobot3D/);
+  assert.match(robot, /useGLTF/);
+  assert.match(robot, /useFrame/);
+  assert.match(robot, /MODEL_URL = '\/assets\/models\/summeca-robot\.glb'/);
+  assert.match(robot, /pointer\.x/);
+  assert.match(robot, /pointer\.y/);
+  assert.match(robot, /!splineReady &&|splineReady \? 'pointer-events-none opacity-0' : 'opacity-100'/);
   assert.match(robot, /\/assets\/spline\/summeca-robot\.splinecode/);
   assert.match(robot, /prod\.spline\.design\/H69K35LVSzZ9WcEG\/scene\.splinecode/);
   assert.match(robot, /@splinetool\/viewer@2\.0\.44/);
-  assert.match(robot, /cdn\.spline\.design/);
-  assert.match(robot, /unpkg\.com/);
   assert.match(robot, /events-target', 'global'/);
   assert.match(robot, /renderer', 'webgl'/);
   assert.match(robot, /loading', 'eager'/);
+  assert.match(prepareRobot, /public\/assets\/models\/summeca-robot\.glb/);
+  assert.match(cloudflareBuild, /prepare-robot-model\.mjs/);
   assert.match(nextConfig, /script-src[^\n]+https:\/\/unpkg\.com/);
   assert.match(nextConfig, /script-src[^\n]+https:\/\/cdn\.spline\.design/);
   assert.match(nextConfig, /connect-src[^\n]+https:\/\/prod\.spline\.design/);
-  assert.doesNotMatch(robot, /@splinetool\/runtime@1\.9\.82/);
-  assert.doesNotMatch(robot, /LocalRobot3D/);
-  assert.doesNotMatch(robot, /useGLTF|MODEL_URL|summeca-robot\.glb/);
   assert.doesNotMatch(robot, /<img\b/i);
 });
