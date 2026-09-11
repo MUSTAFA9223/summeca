@@ -65,10 +65,10 @@ test('hero sends shoppers to public product and SaaS destinations', () => {
   assert.match(hero, /View SaaS Apps/);
 });
 
-test('homepage hero self-hosts the Spline scene with matching viewer/runtime and a safe visual fallback', () => {
+test('homepage hero loads the original Spline scene with matching viewer/runtime and a safe visual fallback', () => {
   assert.match(hero, /SplineRobotScene/);
   assert.match(hero, /motion-reduce:/);
-  assert.match(robot, /SCENE_URL = '\/assets\/spline\/summeca-robot\.splinecode'/);
+  assert.match(robot, /SCENE_URL = 'https:\/\/prod\.spline\.design\/H69K35LVSzZ9WcEG\/scene\.splinecode'/);
   assert.match(robot, /@splinetool\/viewer@2\.0\.44/);
   assert.match(robot, /@splinetool\/runtime@2\.0\.44/);
   assert.match(robot, /events-target', 'global'/);
