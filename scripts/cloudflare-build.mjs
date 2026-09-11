@@ -23,9 +23,6 @@ if (innerBuild) {
   process.exit(0);
 }
 
-run(process.execPath, ['scripts/prepare-robot-model.mjs']);
-run(process.execPath, ['scripts/prepare-spline-scene.mjs']);
-
 run(
   'npx',
   ['--no-install', 'opennextjs-cloudflare', 'build'],
