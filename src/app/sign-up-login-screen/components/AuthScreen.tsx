@@ -78,7 +78,7 @@ export default function AuthScreen() {
           <div className="absolute -inset-12 -z-10 rounded-full bg-teal-400/[0.06] blur-3xl" />
           <div className="w-full rounded-[2rem] border border-white/[0.09] bg-[#0b0f0e]/80 p-5 shadow-[0_30px_100px_rgba(0,0,0,.45)] backdrop-blur-2xl sm:p-8">
             <div className="mb-7 lg:hidden">
-              <div className="relative mx-auto mb-4 h-36 w-full max-w-xs overflow-hidden rounded-3xl border border-white/[0.06] bg-white/[0.02]">
+              <div className="relative mx-auto mb-4 h-52 w-full max-w-xs touch-pan-y overflow-hidden rounded-3xl border border-white/[0.06] bg-white/[0.02] sm:h-60">
                 <SplineRobotScene />
               </div>
               <p className="text-center text-xs font-semibold uppercase tracking-[0.18em] text-teal-300/80">Welcome to SUMMECA</p>
