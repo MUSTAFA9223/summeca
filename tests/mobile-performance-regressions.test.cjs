@@ -12,20 +12,15 @@ const authScreen = read('src/app/sign-up-login-screen/components/AuthScreen.tsx'
 const layout = read('src/app/layout.tsx');
 const deferredAssistant = read('src/components/DeferredStoreAssistant.tsx');
 
-test('robot renders local Three.js immediately and upgrades to Spline only when ready', () => {
-  assert.match(robot, /LocalRobot3D/);
-  assert.match(robot, /useGLTF/);
-  assert.match(robot, /useFrame/);
-  assert.match(robot, /summeca-robot\.glb/);
-  assert.match(robot, /pointer\.x/);
-  assert.match(robot, /pointer\.y/);
-  assert.match(robot, /@splinetool\/viewer@2\.0\.44/);
-  assert.match(robot, /\/assets\/spline\/summeca-robot\.splinecode/);
+test('robot uses the exported remote Spline viewer with global interaction and transparent background', () => {
+  assert.match(robot, /@splinetool\/viewer@2\.0\.46/);
   assert.match(robot, /prod\.spline\.design\/H69K35LVSzZ9WcEG\/scene\.splinecode/);
   assert.match(robot, /events-target', 'global'/);
-  assert.match(robot, /renderer', 'webgl'/);
+  assert.match(robot, /background', 'transparent'/);
   assert.match(robot, /loading', 'eager'/);
-  assert.match(robot, /scene-error-local-3d-active/);
+  assert.doesNotMatch(robot, /LocalRobot3D|useGLTF|useFrame|summeca-robot\.glb/);
+  assert.doesNotMatch(robot, /\/assets\/spline\/summeca-robot\.splinecode/);
+  assert.doesNotMatch(robot, /renderer', 'webgl'/);
   assert.doesNotMatch(robot, /IntersectionObserver/);
 });
 
