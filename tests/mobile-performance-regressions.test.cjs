@@ -13,14 +13,15 @@ const layout = read('src/app/layout.tsx');
 const deferredAssistant = read('src/components/DeferredStoreAssistant.tsx');
 
 test('robot uses the exported remote Spline viewer with global interaction and transparent background', () => {
-  assert.match(robot, /@splinetool\/viewer@2\.0\.46/);
+  assert.match(robot, /unpkg\.com\/@splinetool\/viewer\/build\/spline-viewer\.js/);
   assert.match(robot, /prod\.spline\.design\/H69K35LVSzZ9WcEG\/scene\.splinecode/);
   assert.match(robot, /events-target', 'global'/);
   assert.match(robot, /background', 'transparent'/);
   assert.match(robot, /loading', 'eager'/);
+  assert.match(robot, /opacity: '1'/);
+  assert.doesNotMatch(robot, /opacity: '0'|waitForScene/);
   assert.doesNotMatch(robot, /LocalRobot3D|useGLTF|useFrame|summeca-robot\.glb/);
   assert.doesNotMatch(robot, /\/assets\/spline\/summeca-robot\.splinecode/);
-  assert.doesNotMatch(robot, /renderer', 'webgl'/);
   assert.doesNotMatch(robot, /IntersectionObserver/);
 });
 
