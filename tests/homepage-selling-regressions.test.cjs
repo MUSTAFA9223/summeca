@@ -82,6 +82,8 @@ test('homepage hero uses only the exported remote Spline robot', () => {
   assert.doesNotMatch(cloudflareBuild, /prepare-robot-model\.mjs/);
   assert.doesNotMatch(cloudflareBuild, /prepare-spline-scene\.mjs/);
   assert.match(nextConfig, /script-src[^\n]+https:\/\/unpkg\.com/);
+  assert.match(nextConfig, /script-src[^\n]+wasm-unsafe-eval/);
   assert.match(nextConfig, /connect-src[^\n]+https:\/\/prod\.spline\.design/);
+  assert.match(nextConfig, /connect-src[^\n]+https:\/\/\*\.spline\.design/);
   assert.doesNotMatch(robot, /<img\b/i);
 });
