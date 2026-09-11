@@ -2,69 +2,114 @@
 
 import { useEffect, useRef, useState } from 'react';
 
-const SCENE_URL = 'https://prod.spline.design/H69K35LVSzZ9WcEG/scene.splinecode';
-const RUNTIME_URL = 'https://unpkg.com/@splinetool/runtime@1.9.82/build/runtime.js';
+const SCENE_URLS = [
+  '/assets/spline/summeca-robot.splinecode',
+  'https://prod.spline.design/H69K35LVSzZ9WcEG/scene.splinecode',
+] as const;
 
-type SplineApplication = {
-  load: (url: string) => Promise<void>;
-  setZoom: (zoom: number) => void;
-  stop?: () => void;
-  dispose?: () => void;
+const VIEWER_SCRIPTS = [
+  'https://cdn.spline.design/@splinetool/viewer@2.0.44/build/spline-viewer.js',
+  'https://unpkg.com/@splinetool/viewer@2.0.44/build/spline-viewer.js',
+] as const;
+
+type WindowWithSpline = Window & {
+  __summecaSplineViewerPromise?: Promise<void>;
 };
 
-type SplineApplicationConstructor = new (canvas: HTMLCanvasElement) => SplineApplication;
+function waitForViewerDefinition(timeoutMs = 10000) {
+  if (customElements.get('spline-viewer')) return Promise.resolve();
 
-type WindowWithSplineRuntime = Window & {
-  __summecaSplineRuntimePromise?: Promise<SplineApplicationConstructor>;
-  __summecaSplineApplication?: SplineApplicationConstructor;
-};
+  return new Promise<void>((resolve, reject) => {
+    const timer = window.setTimeout(
+      () => reject(new Error('Spline viewer definition timed out')),
+      timeoutMs,
+    );
 
-function loadSplineRuntime() {
-  const win = window as WindowWithSplineRuntime;
-  if (win.__summecaSplineApplication) return Promise.resolve(win.__summecaSplineApplication);
-  if (win.__summecaSplineRuntimePromise) return win.__summecaSplineRuntimePromise;
+    customElements.whenDefined('spline-viewer').then(() => {
+      window.clearTimeout(timer);
+      resolve();
+    }).catch((error) => {
+      window.clearTimeout(timer);
+      reject(error);
+    });
+  });
+}
 
-  win.__summecaSplineRuntimePromise = new Promise<SplineApplicationConstructor>((resolve, reject) => {
-    const readyEvent = 'summeca-spline-runtime-ready';
-    const errorEvent = 'summeca-spline-runtime-error';
+function loadModuleScript(src: string) {
+  return new Promise<void>((resolve, reject) => {
+    const existing = document.querySelector<HTMLScriptElement>(`script[data-summeca-spline-src="${src}"]`);
+    if (existing) {
+      existing.addEventListener('load', () => resolve(), { once: true });
+      existing.addEventListener('error', () => reject(new Error(`Failed to load ${src}`)), { once: true });
+      return;
+    }
 
-    const handleReady = () => {
-      cleanup();
-      if (win.__summecaSplineApplication) resolve(win.__summecaSplineApplication);
-      else reject(new Error('Spline runtime loaded without Application'));
-    };
-    const handleError = () => {
-      cleanup();
-      reject(new Error('Spline runtime failed to load'));
-    };
-    const cleanup = () => {
-      window.removeEventListener(readyEvent, handleReady);
-      window.removeEventListener(errorEvent, handleError);
-    };
-
-    window.addEventListener(readyEvent, handleReady, { once: true });
-    window.addEventListener(errorEvent, handleError, { once: true });
-
-    const source = `
-      import { Application } from '${RUNTIME_URL}';
-      window.__summecaSplineApplication = Application;
-      window.dispatchEvent(new Event('${readyEvent}'));
-    `;
-    const blob = new Blob([source], { type: 'text/javascript' });
-    const blobUrl = URL.createObjectURL(blob);
     const script = document.createElement('script');
     script.type = 'module';
-    script.dataset.summecaSplineRuntime = 'true';
-    script.src = blobUrl;
-    script.onload = () => URL.revokeObjectURL(blobUrl);
+    script.src = src;
+    script.dataset.summecaSplineSrc = src;
+    script.onload = () => resolve();
     script.onerror = () => {
-      URL.revokeObjectURL(blobUrl);
-      window.dispatchEvent(new Event(errorEvent));
+      script.remove();
+      reject(new Error(`Failed to load ${src}`));
     };
     document.head.appendChild(script);
   });
+}
 
-  return win.__summecaSplineRuntimePromise;
+function loadSplineViewer() {
+  const win = window as WindowWithSpline;
+  if (customElements.get('spline-viewer')) return Promise.resolve();
+  if (win.__summecaSplineViewerPromise) return win.__summecaSplineViewerPromise;
+
+  win.__summecaSplineViewerPromise = (async () => {
+    let lastError: unknown;
+
+    for (const src of VIEWER_SCRIPTS) {
+      try {
+        await loadModuleScript(src);
+        await waitForViewerDefinition();
+        return;
+      } catch (error) {
+        lastError = error;
+      }
+    }
+
+    throw lastError instanceof Error ? lastError : new Error('Spline viewer failed to load');
+  })().catch((error) => {
+    win.__summecaSplineViewerPromise = undefined;
+    throw error;
+  });
+
+  return win.__summecaSplineViewerPromise;
+}
+
+function waitForScene(viewer: HTMLElement, timeoutMs = 15000) {
+  return new Promise<void>((resolve, reject) => {
+    const timer = window.setTimeout(() => {
+      cleanup();
+      reject(new Error('Spline scene timed out'));
+    }, timeoutMs);
+
+    const onReady = () => {
+      cleanup();
+      resolve();
+    };
+    const onError = () => {
+      cleanup();
+      reject(new Error('Spline scene failed to load'));
+    };
+    const cleanup = () => {
+      window.clearTimeout(timer);
+      viewer.removeEventListener('load-complete', onReady);
+      viewer.removeEventListener('error', onError);
+      viewer.removeEventListener('context-loss', onError);
+    };
+
+    viewer.addEventListener('load-complete', onReady, { once: true });
+    viewer.addEventListener('error', onError, { once: true });
+    viewer.addEventListener('context-loss', onError, { once: true });
+  });
 }
 
 export default function SplineRobotScene() {
@@ -76,60 +121,75 @@ export default function SplineRobotScene() {
 
     const host = hostRef.current;
     let cancelled = false;
-    let app: SplineApplication | undefined;
-
-    const canvas = document.createElement('canvas');
-    canvas.setAttribute('aria-hidden', 'true');
-    canvas.style.display = 'block';
-    canvas.style.width = '100%';
-    canvas.style.height = '100%';
-    canvas.style.background = 'transparent';
-    canvas.style.pointerEvents = 'auto';
-    canvas.style.touchAction = 'pan-y';
-    canvas.style.filter = 'saturate(1.5) contrast(1.09) brightness(1.02)';
-    canvas.style.opacity = '0';
-    canvas.style.transition = 'opacity 420ms ease';
-    host.replaceChildren(canvas);
+    let activeViewer: HTMLElement | undefined;
 
     const mount = async () => {
+      host.dataset.splineStatus = 'viewer-script-loading';
+      setReady(false);
+
       try {
-        const Application = await loadSplineRuntime();
+        await loadSplineViewer();
+        if (cancelled) return;
+      } catch {
+        if (!cancelled) host.dataset.splineStatus = 'viewer-script-error';
+        return;
+      }
+
+      for (const sceneUrl of SCENE_URLS) {
         if (cancelled) return;
 
-        app = new Application(canvas);
-        await app.load(SCENE_URL);
-        if (cancelled) {
-          app.stop?.();
-          app.dispose?.();
+        host.replaceChildren();
+        host.dataset.splineStatus = sceneUrl.startsWith('/') ? 'scene-loading-local' : 'scene-loading-remote';
+
+        const viewer = document.createElement('spline-viewer');
+        activeViewer = viewer;
+        viewer.setAttribute('url', new URL(sceneUrl, window.location.origin).toString());
+        viewer.setAttribute('events-target', 'global');
+        viewer.setAttribute('loading', 'eager');
+        viewer.setAttribute('loading-anim-type', 'spinner-small-light');
+        viewer.setAttribute('background', 'transparent');
+        viewer.setAttribute('renderer', 'webgl');
+        viewer.setAttribute('aria-hidden', 'true');
+
+        Object.assign(viewer.style, {
+          position: 'absolute',
+          inset: '0',
+          display: 'block',
+          width: '100%',
+          height: '100%',
+          minHeight: '100%',
+          background: 'transparent',
+          pointerEvents: 'auto',
+          touchAction: 'pan-y',
+          opacity: '0',
+          transition: 'opacity 350ms ease',
+        });
+
+        const sceneReady = waitForScene(viewer);
+        host.appendChild(viewer);
+
+        try {
+          await sceneReady;
+          if (cancelled) return;
+          viewer.style.opacity = '1';
+          host.dataset.splineStatus = sceneUrl.startsWith('/') ? 'ready-local' : 'ready-remote';
+          setReady(true);
           return;
+        } catch {
+          if (cancelled) return;
+          viewer.remove();
+          activeViewer = undefined;
         }
-
-        const compact = window.matchMedia('(max-width: 767px)').matches;
-        app.setZoom(compact ? 0.7 : 0.76);
-
-        canvas.style.opacity = '1';
-        setReady(true);
-      } catch {
-        if (!cancelled) setReady(false);
       }
+
+      if (!cancelled) host.dataset.splineStatus = 'scene-error';
     };
 
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (!entry.isIntersecting) return;
-        observer.disconnect();
-        void mount();
-      },
-      { rootMargin: '260px', threshold: 0.01 },
-    );
-
-    observer.observe(host);
+    void mount();
 
     return () => {
       cancelled = true;
-      observer.disconnect();
-      app?.stop?.();
-      app?.dispose?.();
+      activeViewer?.remove();
       host.replaceChildren();
     };
   }, []);
@@ -137,8 +197,8 @@ export default function SplineRobotScene() {
   return (
     <div className="relative h-full w-full overflow-hidden bg-transparent">
       <div
-        className={`pointer-events-none absolute inset-0 transition-opacity duration-500 ${
-          ready ? 'opacity-100' : 'opacity-70'
+        className={`pointer-events-none absolute inset-0 transition-opacity duration-500 motion-reduce:transition-none ${
+          ready ? 'opacity-0' : 'opacity-100'
         }`}
         aria-hidden="true"
       >
