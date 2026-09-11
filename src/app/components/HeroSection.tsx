@@ -27,7 +27,7 @@ export default function HeroSection() {
         SUMMECA
       </div>
 
-      <div className="relative z-10 mx-auto grid min-h-[704px] max-w-[1480px] grid-cols-1 items-center lg:grid-cols-[46%_54%]">
+      <div className="relative z-10 mx-auto grid min-h-[704px] max-w-[1480px] grid-cols-1 items-center lg:grid-cols-[45%_55%]">
         <div className="relative px-6 pb-14 pt-16 sm:px-10 lg:px-12 lg:pb-24 lg:pt-24 xl:px-20">
           <div className="summeca-reveal summeca-reveal-1 mb-7 inline-flex items-center gap-3 rounded-full border border-white/10 bg-white/[0.045] px-4 py-2 text-[10px] font-bold uppercase tracking-[0.24em] text-slate-300 backdrop-blur-xl sm:text-[11px]">
             <span className="h-2 w-2 rounded-full bg-[#22d3ee] shadow-[0_0_18px_rgba(34,211,238,0.9)]" />
