@@ -11,10 +11,10 @@ const hero = read('src/app/components/HeroSection.tsx');
 const layout = read('src/app/layout.tsx');
 const deferredAssistant = read('src/components/DeferredStoreAssistant.tsx');
 
-test('Spline hero uses a current viewer with a runtime fallback and self-hosted scene', () => {
+test('Spline hero uses a current viewer with a runtime fallback and the original scene', () => {
   assert.match(robot, /@splinetool\/viewer@2\.0\.44/);
   assert.match(robot, /@splinetool\/runtime@2\.0\.44/);
-  assert.match(robot, /SCENE_URL = '\/assets\/spline\/summeca-robot\.splinecode'/);
+  assert.match(robot, /SCENE_URL = 'https:\/\/prod\.spline\.design\/H69K35LVSzZ9WcEG\/scene\.splinecode'/);
   assert.match(robot, /events-target', 'global'/);
   assert.match(robot, /loading', 'eager'/);
   assert.match(robot, /pointerEvents: 'auto'/);
