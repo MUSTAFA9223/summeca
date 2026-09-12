@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 
 const NEXBOT_SCENE_URL = 'https://prod.spline.design/BAodEVjHSYLR1KKy/scene.splinecode';
-const NEXBOT_SCENE_REVISION = 'eyes-20260912-r2';
+const NEXBOT_SCENE_REVISION = 'eyes-20260912-r3-webgpu-auto';
 const VIEWER_SCRIPTS = [
   'https://cdn.spline.design/@splinetool/viewer@2.0.44/build/spline-viewer.js',
   'https://unpkg.com/@splinetool/viewer@2.0.44/build/spline-viewer.js',
@@ -43,7 +43,9 @@ export default function SplineNexbotScene({
       viewer = document.createElement(VIEWER_TAG);
       viewer.setAttribute('url', freshSceneUrl);
       viewer.setAttribute('loading', 'eager');
-      viewer.setAttribute('renderer', 'webgl');
+      // Let Spline auto-select WebGPU when available and fall back to WebGL.
+      // The previous forced WebGL path can hide WebGPU-only materials/effects.
+      viewer.setAttribute('renderer', 'auto');
       viewer.setAttribute('events-target', 'global');
       viewer.style.display = 'block';
       viewer.style.width = '100%';
