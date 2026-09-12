@@ -27,7 +27,7 @@ test('authentication shows the new robot on desktop and mobile without blocking 
   assert.match(authScreen, /sm:h-60/);
   assert.match(authScreen, /lg:hidden/);
   assert.match(authScreen, /touch-pan-y/);
-  assert.match(robot, /touchAction = 'pan-y'/);
+  assert.match(robot, /touchAction: 'pan-y'/);
 });
 
 test('sales assistant is deferred instead of hydrating with the critical page bundle', () => {
