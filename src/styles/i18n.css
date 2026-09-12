@@ -1,0 +1,45 @@
+html[dir='rtl'] body {
+  direction: rtl;
+  font-family: Tahoma, Arial, var(--font-plus-jakarta-sans), sans-serif;
+}
+
+html[dir='rtl'] .text-left {
+  text-align: right;
+}
+
+html[dir='rtl'] .text-right {
+  text-align: left;
+}
+
+html[dir='rtl'] .sidebar-link.active {
+  border-left: 0;
+  border-right: 2px solid #0D9488;
+}
+
+html[dir='rtl'] input[type='email'],
+html[dir='rtl'] input[type='url'],
+html[dir='rtl'] input[type='tel'],
+html[dir='rtl'] input[type='number'],
+html[dir='rtl'] [data-ltr],
+html[dir='rtl'] code,
+html[dir='rtl'] pre,
+html[dir='rtl'] .tabular-nums {
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
+html[dir='rtl'] input[type='email'],
+html[dir='rtl'] input[type='url'],
+html[dir='rtl'] input[type='tel'],
+html[dir='rtl'] input[type='number'] {
+  text-align: left;
+}
+
+html[dir='rtl'] .rtl-flip {
+  transform: scaleX(-1);
+}
+
+html[dir='rtl'] [data-language-switcher],
+html[dir='rtl'] [data-i18n-skip] {
+  direction: ltr;
+}
