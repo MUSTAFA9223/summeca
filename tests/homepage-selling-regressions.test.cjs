@@ -8,7 +8,7 @@ const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
 
 const homepage = read('src/app/page.tsx');
 const hero = read('src/app/components/HeroSection.tsx');
-const robot = read('src/components/ui/SplineRobotScene.tsx');
+const authScreen = read('src/app/sign-up-login-screen/components/AuthScreen.tsx');
 const nextConfig = read('next.config.mjs');
 const cloudflareBuild = read('scripts/cloudflare-build.mjs');
 const cryptoStatus = read('src/app/api/payment/crypto-status/route.ts');
@@ -64,26 +64,17 @@ test('hero sends shoppers to public product and SaaS destinations', () => {
   assert.match(hero, /View SaaS Apps/);
 });
 
-test('homepage hero uses only the exported remote Spline robot', () => {
-  assert.match(hero, /SplineRobotScene/);
-  assert.match(hero, /motion-reduce:/);
-  assert.match(robot, /prod\.spline\.design\/H69K35LVSzZ9WcEG\/scene\.splinecode/);
-  assert.match(robot, /unpkg\.com\/@splinetool\/viewer\/build\/spline-viewer\.js/);
-  assert.match(robot, /events-target', 'global'/);
-  assert.match(robot, /background', 'transparent'/);
-  assert.match(robot, /loading', 'eager'/);
-  assert.match(robot, /opacity: '1'/);
-  assert.doesNotMatch(robot, /opacity: '0'/);
-  assert.doesNotMatch(robot, /waitForScene/);
-  assert.doesNotMatch(robot, /LocalRobot3D/);
-  assert.doesNotMatch(robot, /useGLTF|useFrame|@react-three\/fiber|@react-three\/drei/);
-  assert.doesNotMatch(robot, /summeca-robot\.glb/);
-  assert.doesNotMatch(robot, /\/assets\/spline\/summeca-robot\.splinecode/);
-  assert.doesNotMatch(cloudflareBuild, /prepare-robot-model\.mjs/);
-  assert.doesNotMatch(cloudflareBuild, /prepare-spline-scene\.mjs/);
-  assert.match(nextConfig, /script-src[^\n]+https:\/\/unpkg\.com/);
-  assert.match(nextConfig, /script-src[^\n]+wasm-unsafe-eval/);
-  assert.match(nextConfig, /connect-src[^\n]+https:\/\/prod\.spline\.design/);
-  assert.match(nextConfig, /connect-src[^\n]+https:\/\/\*\.spline\.design/);
-  assert.doesNotMatch(robot, /<img\b/i);
+test('legacy Spline robot integration is fully removed', () => {
+  const retiredRobotPath = path.join(root, 'src/components/ui/SplineRobotScene.tsx');
+  assert.equal(fs.existsSync(retiredRobotPath), false);
+
+  const retiredIntegrationSurfaces = `${hero}\n${authScreen}\n${nextConfig}`;
+  assert.doesNotMatch(retiredIntegrationSurfaces, /SplineRobotScene/);
+  assert.doesNotMatch(retiredIntegrationSurfaces, /prod\.spline\.design/i);
+  assert.doesNotMatch(retiredIntegrationSurfaces, /@splinetool\/viewer/i);
+  assert.doesNotMatch(retiredIntegrationSurfaces, /summeca-robot/i);
+  assert.doesNotMatch(nextConfig, /spline\.design/i);
+  assert.doesNotMatch(nextConfig, /unpkg\.com/i);
+  assert.doesNotMatch(nextConfig, /wasm-unsafe-eval/i);
+  assert.doesNotMatch(cloudflareBuild, /prepare-robot-model\.mjs|prepare-spline-scene\.mjs/);
 });
