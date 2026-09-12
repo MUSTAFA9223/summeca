@@ -2,7 +2,10 @@
 
 import { useEffect, useRef, useState } from 'react';
 
-const NEXBOT_SCENE_URL = 'https://prod.spline.design/BAodEVjHSYLR1KKy/scene.splinecode';
+// Keep the published Spline scene on the same project URL, but bump this
+// revision whenever the scene is republished so browsers/CDNs do not keep
+// serving an older cached copy (for example, before the face/eye updates).
+const NEXBOT_SCENE_URL = 'https://prod.spline.design/BAodEVjHSYLR1KKy/scene.splinecode?rev=20260912-eyes';
 const VIEWER_SCRIPTS = [
   'https://cdn.spline.design/@splinetool/viewer@2.0.44/build/spline-viewer.js',
   'https://unpkg.com/@splinetool/viewer@2.0.44/build/spline-viewer.js',
