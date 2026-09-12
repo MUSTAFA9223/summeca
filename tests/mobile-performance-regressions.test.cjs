@@ -32,6 +32,12 @@ test('authentication shows an interactive robot on desktop and mobile without bl
   assert.match(robot, /pointerEvents: interactive \? 'auto' : 'none'/);
 });
 
+test('Spline loading never exposes its temporary white canvas before the robot is ready', () => {
+  assert.match(robot, /ready \? 'opacity-100' : 'opacity-0'/);
+  assert.match(robot, /background: 'transparent'/);
+  assert.match(robot, /onLoad=\{\(\) => setReady\(true\)\}/);
+});
+
 test('sales assistant is deferred instead of hydrating with the critical page bundle', () => {
   assert.match(layout, /DeferredStoreAssistant/);
   assert.doesNotMatch(layout, /import StoreAssistant from/);
