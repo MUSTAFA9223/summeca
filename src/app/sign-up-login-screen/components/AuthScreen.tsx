@@ -75,8 +75,11 @@ export default function AuthScreen() {
           <div className="pointer-events-none absolute bottom-[18%] right-[12%] z-0 h-72 w-72 rounded-full bg-teal-300/[0.045] blur-3xl" />
         </section>
 
-        <section className="relative mx-auto flex w-full max-w-[510px] items-center justify-center py-6 lg:py-0">
+        <section className="relative mx-auto flex w-full max-w-[510px] flex-col items-center justify-center py-6 lg:py-0">
           <div className="absolute -inset-12 -z-10 rounded-full bg-teal-400/[0.06] blur-3xl" />
+          <div className="mb-4 h-52 w-full overflow-hidden rounded-[1.75rem] border border-white/[0.08] bg-white/[0.02] shadow-[0_24px_70px_rgba(0,0,0,.32)] touch-pan-y sm:h-60 lg:hidden">
+            <SplineNexbotScene interactive={false} className="h-full w-full" />
+          </div>
           <div className="w-full rounded-[2rem] border border-white/[0.09] bg-[#0b0f0e]/80 p-5 shadow-[0_30px_100px_rgba(0,0,0,.45)] backdrop-blur-2xl sm:p-8">
             <div className="mb-7 lg:hidden">
               <p className="text-center text-xs font-semibold uppercase tracking-[0.18em] text-teal-300/80">Welcome to SUMMECA</p>
