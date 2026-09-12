@@ -67,13 +67,11 @@ test('hero sends shoppers to public product and SaaS destinations', () => {
 
 test('new NEXBOT Spline scene is the only robot integration', () => {
   assert.match(robot, /BAodEVjHSYLR1KKy\/scene\.splinecode/);
-  assert.match(robot, /@splinetool\/viewer@2\.0\.44/);
-  assert.match(robot, /events-target/);
-  assert.match(robot, /renderer/);
+  assert.match(robot, /@splinetool\/react-spline/);
+  assert.match(robot, /scene=\{NEXBOT_SCENE_URL\}/);
   assert.match(hero, /SplineNexbotScene/);
   assert.match(authScreen, /SplineNexbotScene/);
   assert.doesNotMatch(`${hero}\n${authScreen}\n${robot}`, /H69K35LVSzZ9WcEG/);
   assert.doesNotMatch(cloudflareBuild, /prepare-robot-model\.mjs|prepare-spline-scene\.mjs/);
   assert.match(nextConfig, /https:\/\/prod\.spline\.design/);
-  assert.match(nextConfig, /https:\/\/cdn\.spline\.design/);
 });
