@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 
 const NEXBOT_SCENE_URL = 'https://prod.spline.design/BAodEVjHSYLR1KKy/scene.splinecode';
+const NEXBOT_SCENE_REVISION = 'eyes-20260912-r2';
 const VIEWER_SCRIPTS = [
   'https://cdn.spline.design/@splinetool/viewer@2.0.44/build/spline-viewer.js',
   'https://unpkg.com/@splinetool/viewer@2.0.44/build/spline-viewer.js',
@@ -35,9 +36,9 @@ export default function SplineNexbotScene({
       hostRef.current.replaceChildren();
       setReady(false);
 
-      // Always request the latest published revision from Spline. This avoids
-      // stale scene responses after visual edits such as the NEXBOT eye layer.
-      const freshSceneUrl = `${NEXBOT_SCENE_URL}?refresh=${Date.now()}`;
+      // Use both a deployment revision and a per-mount timestamp so the
+      // browser/CDN must request the newest published Spline scene.
+      const freshSceneUrl = `${NEXBOT_SCENE_URL}?revision=${NEXBOT_SCENE_REVISION}&refresh=${Date.now()}`;
 
       viewer = document.createElement(VIEWER_TAG);
       viewer.setAttribute('url', freshSceneUrl);
