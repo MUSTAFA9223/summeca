@@ -179,25 +179,6 @@ body.summeca-home-theme main article:hover img {
 .summeca-reveal-4 { animation-delay: 360ms; }
 .summeca-reveal-5 { animation-delay: 460ms; }
 
-.summeca-robot-ring {
-  will-change: transform, opacity;
-  animation: summecaRingPulse 7s ease-in-out infinite;
-}
-
-.summeca-robot-ring-b {
-  animation-delay: -3.2s;
-  animation-duration: 9s;
-}
-
-.summeca-float-chip {
-  animation: summecaFloatChip 5.5s ease-in-out infinite;
-}
-
-.summeca-float-chip-delayed {
-  animation-delay: -2.4s;
-  animation-duration: 6.5s;
-}
-
 @keyframes summecaReveal {
   from { opacity: 0; transform: translateY(24px); }
   to { opacity: 1; transform: translateY(0); }
@@ -211,16 +192,6 @@ body.summeca-home-theme main article:hover img {
 @keyframes summecaWordBreath {
   0%, 100% { opacity: 0.55; transform: translate(-50%, -50%) scale(0.985); }
   50% { opacity: 1; transform: translate(-50%, -50%) scale(1.015); }
-}
-
-@keyframes summecaRingPulse {
-  0%, 100% { opacity: 0.42; transform: translate(-50%, -50%) scale(0.96); }
-  50% { opacity: 0.82; transform: translate(-50%, -50%) scale(1.04); }
-}
-
-@keyframes summecaFloatChip {
-  0%, 100% { transform: translate3d(0, 0, 0); }
-  50% { transform: translate3d(0, -10px, 0); }
 }
 
 @keyframes summecaSectionIn {
@@ -272,8 +243,6 @@ body.summeca-home-theme main article:hover img {
   .summeca-reveal,
   .summeca-hero-orb,
   .summeca-hero-word,
-  .summeca-robot-ring,
-  .summeca-float-chip,
   body.summeca-home-theme main > section:not(.summeca-home-hero) > div {
     animation: none !important;
     opacity: 1;
