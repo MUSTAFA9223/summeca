@@ -16,6 +16,7 @@ import {
   X,
 } from 'lucide-react';
 import AppLogo from '@/components/ui/AppLogo';
+import LanguageSwitcher from '@/components/LanguageSwitcher';
 import { useAuth } from '@/contexts/AuthContext';
 
 const productLinks = [
@@ -70,7 +71,7 @@ export default function PublicNav() {
   };
 
   return (
-    <header className={`fixed left-0 right-0 top-0 z-50 transition-all duration-300 ${scrolled ? 'border-b border-primary/8 bg-white/95 shadow-sm shadow-primary/5 backdrop-blur-xl' : 'bg-transparent'}`}>
+    <header data-public-nav="true" className={`fixed left-0 right-0 top-0 z-50 transition-all duration-300 ${scrolled ? 'border-b border-primary/8 bg-white/95 shadow-sm shadow-primary/5 backdrop-blur-xl' : 'bg-transparent'}`}>
       <div className="mx-auto max-w-screen-xl px-6 lg:px-8">
         <div className="flex h-[76px] items-center justify-between">
           <Link href="/" className="group flex shrink-0 items-center" aria-label="SUMMECA home">
@@ -98,6 +99,7 @@ export default function PublicNav() {
           </nav>
 
           <div className="hidden items-center gap-2 lg:flex">
+            <LanguageSwitcher compact />
             {loading ? (
               <div className="h-9 w-28 animate-pulse rounded-lg bg-secondary/70" aria-label="Loading account" />
             ) : user ? (
@@ -120,7 +122,7 @@ export default function PublicNav() {
                       <div className="border-b border-border px-3 py-2.5">
                         <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Signed in as</div>
                         <div className="mt-0.5 truncate text-sm font-semibold text-foreground">{displayName}</div>
-                        {user.email && <div className="mt-0.5 truncate text-xs text-muted-foreground">{user.email}</div>}
+                        {user.email && <div className="mt-0.5 truncate text-xs text-muted-foreground" data-ltr>{user.email}</div>}
                       </div>
                       <Link href="/user-dashboard" onClick={() => setAccountOpen(false)} className="mt-1 flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-medium text-secondary-foreground transition hover:bg-secondary/70 hover:text-foreground" role="menuitem">
                         <LayoutDashboard size={15} /> Dashboard
@@ -144,9 +146,12 @@ export default function PublicNav() {
             )}
           </div>
 
-          <button className="flex h-9 w-9 items-center justify-center rounded-xl border border-border text-muted-foreground transition hover:border-primary/40 hover:bg-primary/5 hover:text-foreground lg:hidden" onClick={() => setMobileOpen((open) => !open)} aria-label="Toggle mobile menu">
-            {mobileOpen ? <X size={18} /> : <Menu size={18} />}
-          </button>
+          <div className="flex items-center gap-2 lg:hidden">
+            <LanguageSwitcher compact />
+            <button className="flex h-9 w-9 items-center justify-center rounded-xl border border-border text-muted-foreground transition hover:border-primary/40 hover:bg-primary/5 hover:text-foreground" onClick={() => setMobileOpen((open) => !open)} aria-label="Toggle mobile menu">
+              {mobileOpen ? <X size={18} /> : <Menu size={18} />}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -164,7 +169,7 @@ export default function PublicNav() {
                 <>
                   <div className="rounded-xl border border-border bg-secondary/40 px-3 py-3">
                     <div className="flex items-center gap-2 text-sm font-semibold text-foreground"><User size={15} className="text-primary" /><span className="truncate">{displayName}</span></div>
-                    {user.email && <div className="mt-1 truncate pl-[23px] text-xs text-muted-foreground">{user.email}</div>}
+                    {user.email && <div className="mt-1 truncate pl-[23px] text-xs text-muted-foreground" data-ltr>{user.email}</div>}
                   </div>
                   <Link href="/user-dashboard" className="btn-primary flex items-center justify-center gap-1.5 text-center text-sm" onClick={() => setMobileOpen(false)}><LayoutDashboard size={13} />Dashboard</Link>
                   <Link href="/user-dashboard/settings" className="btn-secondary flex items-center justify-center gap-1.5 text-center text-sm" onClick={() => setMobileOpen(false)}><Settings size={13} />Account settings</Link>
