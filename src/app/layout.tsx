@@ -4,9 +4,12 @@ import type { Metadata, Viewport } from 'next';
 import { Plus_Jakarta_Sans } from 'next/font/google';
 import '../styles/tailwind.css';
 import '../styles/summeca-home-dark.css';
+import '../styles/i18n.css';
 import { Toaster } from 'sonner';
 import { AuthProvider } from '@/contexts/AuthContext';
+import { LanguageProvider } from '@/contexts/LanguageContext';
 import DeferredStoreAssistant from '@/components/DeferredStoreAssistant';
+import GlobalLanguageSwitcher from '@/components/GlobalLanguageSwitcher';
 import GoogleAnalytics from '@/components/GoogleAnalytics';
 
 const plusJakartaSans = Plus_Jakarta_Sans({
@@ -65,14 +68,17 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={plusJakartaSans.variable}>
+    <html lang="en" dir="ltr" suppressHydrationWarning className={plusJakartaSans.variable}>
       <body className={plusJakartaSans.className}>
         <Suspense fallback={null}>
           <GoogleAnalytics />
         </Suspense>
-        <AuthProvider>{children}</AuthProvider>
-        <DeferredStoreAssistant />
-        <Toaster position="bottom-right" richColors closeButton />
+        <LanguageProvider>
+          <AuthProvider>{children}</AuthProvider>
+          <GlobalLanguageSwitcher />
+          <DeferredStoreAssistant />
+          <Toaster position="bottom-right" richColors closeButton />
+        </LanguageProvider>
       </body>
     </html>
   );
