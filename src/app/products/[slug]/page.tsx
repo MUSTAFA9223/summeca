@@ -270,10 +270,8 @@ export default function ProductDetailPage() {
   const isDigital = isDigitalProduct(product);
   const availableProviders = [
     providerAvailability.crypto === true ? 'Crypto' : null,
-    providerAvailability.payoneer === true ? 'Payoneer' : null,
-    providerAvailability.fastspring === true ? 'FastSpring' : null,
   ].filter((provider): provider is string => Boolean(provider));
-  const providerCheckComplete = Object.values(providerAvailability).every((value) => value !== null);
+  const providerCheckComplete = providerAvailability.crypto !== null;
   const checkoutHref = selectedPlan
     ? `/checkout?product_id=${encodeURIComponent(product.id)}&plan_id=${encodeURIComponent(selectedPlan.id)}`
     : '/products';
