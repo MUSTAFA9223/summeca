@@ -8,20 +8,26 @@ const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
 
 const hero = read('src/app/components/HeroSection.tsx');
 const authScreen = read('src/app/sign-up-login-screen/components/AuthScreen.tsx');
+const robot = read('src/components/ui/SplineNexbotScene.tsx');
 const layout = read('src/app/layout.tsx');
 const deferredAssistant = read('src/components/DeferredStoreAssistant.tsx');
 
-test('homepage no longer reserves mobile rendering space for the retired robot', () => {
-  assert.doesNotMatch(hero, /SplineRobotScene/);
-  assert.doesNotMatch(hero, /summeca-robot-ring/);
-  assert.doesNotMatch(hero, /Move your pointer/);
-  assert.match(hero, /max-w-\[960px\]/);
+test('homepage reserves a responsive touch-safe stage for the new 3D robot', () => {
+  assert.match(hero, /SplineNexbotScene/);
+  assert.match(hero, /grid-cols-1/);
+  assert.match(hero, /lg:grid-cols-\[45%_55%\]/);
+  assert.match(hero, /min-h-\[540px\]/);
+  assert.match(hero, /sm:min-h-\[620px\]/);
+  assert.match(hero, /touch-pan-y/);
 });
 
-test('authentication no longer hydrates the retired robot on mobile or desktop', () => {
-  assert.doesNotMatch(authScreen, /SplineRobotScene/);
-  assert.doesNotMatch(authScreen, /touch-pan-y/);
-  assert.match(authScreen, /Welcome to SUMMECA/);
+test('authentication shows the new robot on desktop and mobile without blocking touch scroll', () => {
+  assert.match(authScreen, /SplineNexbotScene/);
+  assert.match(authScreen, /h-52 w-full/);
+  assert.match(authScreen, /sm:h-60/);
+  assert.match(authScreen, /lg:hidden/);
+  assert.match(authScreen, /touch-pan-y/);
+  assert.match(robot, /touchAction = 'pan-y'/);
 });
 
 test('sales assistant is deferred instead of hydrating with the critical page bundle', () => {

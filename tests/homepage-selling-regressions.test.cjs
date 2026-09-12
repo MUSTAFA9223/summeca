@@ -9,6 +9,7 @@ const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
 const homepage = read('src/app/page.tsx');
 const hero = read('src/app/components/HeroSection.tsx');
 const authScreen = read('src/app/sign-up-login-screen/components/AuthScreen.tsx');
+const robot = read('src/components/ui/SplineNexbotScene.tsx');
 const nextConfig = read('next.config.mjs');
 const cloudflareBuild = read('scripts/cloudflare-build.mjs');
 const cryptoStatus = read('src/app/api/payment/crypto-status/route.ts');
@@ -64,17 +65,15 @@ test('hero sends shoppers to public product and SaaS destinations', () => {
   assert.match(hero, /View SaaS Apps/);
 });
 
-test('legacy Spline robot integration is fully removed', () => {
-  const retiredRobotPath = path.join(root, 'src/components/ui/SplineRobotScene.tsx');
-  assert.equal(fs.existsSync(retiredRobotPath), false);
-
-  const retiredIntegrationSurfaces = `${hero}\n${authScreen}\n${nextConfig}`;
-  assert.doesNotMatch(retiredIntegrationSurfaces, /SplineRobotScene/);
-  assert.doesNotMatch(retiredIntegrationSurfaces, /prod\.spline\.design/i);
-  assert.doesNotMatch(retiredIntegrationSurfaces, /@splinetool\/viewer/i);
-  assert.doesNotMatch(retiredIntegrationSurfaces, /summeca-robot/i);
-  assert.doesNotMatch(nextConfig, /spline\.design/i);
-  assert.doesNotMatch(nextConfig, /unpkg\.com/i);
-  assert.doesNotMatch(nextConfig, /wasm-unsafe-eval/i);
+test('new NEXBOT Spline scene is the only robot integration', () => {
+  assert.match(robot, /BAodEVjHSYLR1KKy\/scene\.splinecode/);
+  assert.match(robot, /@splinetool\/viewer@2\.0\.44/);
+  assert.match(robot, /events-target/);
+  assert.match(robot, /renderer/);
+  assert.match(hero, /SplineNexbotScene/);
+  assert.match(authScreen, /SplineNexbotScene/);
+  assert.doesNotMatch(`${hero}\n${authScreen}\n${robot}`, /H69K35LVSzZ9WcEG/);
   assert.doesNotMatch(cloudflareBuild, /prepare-robot-model\.mjs|prepare-spline-scene\.mjs/);
+  assert.match(nextConfig, /https:\/\/prod\.spline\.design/);
+  assert.match(nextConfig, /https:\/\/cdn\.spline\.design/);
 });

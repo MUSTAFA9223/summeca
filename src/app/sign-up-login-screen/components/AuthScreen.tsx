@@ -1,12 +1,13 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, Sparkles } from 'lucide-react';
 import LoginForm from './LoginForm';
 import SignupForm from './SignupForm';
 import ForgotPasswordForm from './ForgotPasswordForm';
 import AppLogo from '@/components/ui/AppLogo';
+import SplineNexbotScene from '@/components/ui/SplineNexbotScene';
 
 type AuthView = 'login' | 'signup' | 'forgot';
 type TransitionDirection = 'left' | 'right' | null;
@@ -14,7 +15,16 @@ type TransitionDirection = 'left' | 'right' | null;
 export default function AuthScreen() {
   const [view, setView] = useState<AuthView>('login');
   const [transitionDirection, setTransitionDirection] = useState<TransitionDirection>(null);
+  const [isDesktopViewport, setIsDesktopViewport] = useState<boolean | null>(null);
   const headlineLine = 'block w-fit bg-gradient-to-r from-white from-[0%] via-teal-50 via-[52%] to-teal-300 bg-clip-text text-transparent';
+
+  useEffect(() => {
+    const media = window.matchMedia('(min-width: 1024px)');
+    const syncViewport = () => setIsDesktopViewport(media.matches);
+    syncViewport();
+    media.addEventListener('change', syncViewport);
+    return () => media.removeEventListener('change', syncViewport);
+  }, []);
 
   const showLogin = () => {
     if (view === 'login') return;
@@ -49,8 +59,14 @@ export default function AuthScreen() {
       </header>
 
       <div className="relative z-10 mx-auto grid min-h-screen w-full max-w-[1500px] items-center gap-4 px-5 pb-8 pt-24 sm:px-8 lg:grid-cols-[1.12fr_.88fr] lg:gap-8 lg:px-12 lg:pb-10 lg:pt-20">
-        <section className="relative hidden h-[min(82vh,820px)] min-h-[620px] lg:block">
+        <section className="relative hidden h-[min(82vh,820px)] min-h-[620px] overflow-hidden lg:block">
           <div className="absolute inset-[4%] rounded-[3rem] border border-white/[0.07] bg-white/[0.018] shadow-[inset_0_1px_0_rgba(255,255,255,.06),0_40px_120px_rgba(0,0,0,.35)] backdrop-blur-[2px]" />
+          <div className="pointer-events-none absolute inset-[4%] z-10 rounded-[3rem] bg-[linear-gradient(90deg,rgba(5,8,7,.82)_0%,rgba(5,8,7,.48)_38%,rgba(5,8,7,.08)_62%,transparent_100%)]" />
+          <div className="absolute bottom-[2%] left-[30%] right-[-10%] top-[8%] z-[5] touch-pan-y">
+            {isDesktopViewport === true && (
+              <SplineNexbotScene interactive={false} className="h-full w-full" />
+            )}
+          </div>
           <div className="pointer-events-none absolute left-[8%] top-[12%] z-20 max-w-lg">
             <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-teal-300/20 bg-teal-300/[0.08] px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-teal-200">
               <Sparkles size={13} /> Interactive workspace
@@ -66,12 +82,17 @@ export default function AuthScreen() {
               Sign in to access your SUMMECA tools, products and workspace from one secure place.
             </p>
           </div>
-          <div className="pointer-events-none absolute bottom-[12%] left-[8%] h-44 w-44 rounded-full border border-teal-300/10 bg-teal-300/[0.025] blur-[1px]" />
-          <div className="pointer-events-none absolute bottom-[18%] right-[12%] h-72 w-72 rounded-full bg-teal-300/[0.045] blur-3xl" />
+          <div className="pointer-events-none absolute bottom-[12%] left-[8%] z-20 h-44 w-44 rounded-full border border-teal-300/10 bg-teal-300/[0.025] blur-[1px]" />
+          <div className="pointer-events-none absolute bottom-[18%] right-[12%] z-0 h-72 w-72 rounded-full bg-teal-300/[0.045] blur-3xl" />
         </section>
 
-        <section className="relative mx-auto flex w-full max-w-[510px] items-center justify-center py-6 lg:py-0">
+        <section className="relative mx-auto flex w-full max-w-[510px] flex-col items-center justify-center py-6 lg:py-0">
           <div className="absolute -inset-12 -z-10 rounded-full bg-teal-400/[0.06] blur-3xl" />
+          <div className="mb-4 h-52 w-full overflow-hidden rounded-[1.75rem] border border-white/[0.08] bg-white/[0.02] shadow-[0_24px_70px_rgba(0,0,0,.32)] touch-pan-y sm:h-60 lg:hidden">
+            {isDesktopViewport === false && (
+              <SplineNexbotScene interactive={false} className="h-full w-full" />
+            )}
+          </div>
           <div className="w-full rounded-[2rem] border border-white/[0.09] bg-[#0b0f0e]/80 p-5 shadow-[0_30px_100px_rgba(0,0,0,.45)] backdrop-blur-2xl sm:p-8">
             <div className="mb-7 lg:hidden">
               <p className="text-center text-xs font-semibold uppercase tracking-[0.18em] text-teal-300/80">Welcome to SUMMECA</p>
