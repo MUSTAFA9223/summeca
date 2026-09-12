@@ -13,9 +13,9 @@ import {
   isAppLanguage,
   LANGUAGE_COOKIE_KEY,
   LANGUAGE_STORAGE_KEY,
-  translateToArabic,
   type AppLanguage,
 } from '@/lib/i18n';
+import { translateUiText } from '@/lib/i18n-extra';
 
 type LanguageContextValue = {
   language: AppLanguage;
@@ -49,7 +49,7 @@ function shouldSkipElement(element: Element | null) {
 function translateTextNode(node: Text) {
   if (shouldSkipElement(node.parentElement)) return;
   const current = node.nodeValue ?? '';
-  const translated = translateToArabic(current);
+  const translated = translateUiText(current);
   if (translated !== current) node.nodeValue = translated;
 }
 
@@ -59,7 +59,7 @@ function translateElementAttributes(element: Element) {
   for (const attribute of TRANSLATABLE_ATTRIBUTES) {
     const current = element.getAttribute(attribute);
     if (!current) continue;
-    const translated = translateToArabic(current);
+    const translated = translateUiText(current);
     if (translated !== current) element.setAttribute(attribute, translated);
   }
 }
@@ -164,7 +164,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   );
 
   const t = useCallback(
-    (english: string) => (language === 'ar' ? translateToArabic(english) : english),
+    (english: string) => (language === 'ar' ? translateUiText(english) : english),
     [language],
   );
 
