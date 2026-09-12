@@ -18,7 +18,7 @@ export default function HeroSection() {
       <div className="summeca-hero-orb summeca-hero-orb-a pointer-events-none absolute" />
       <div className="summeca-hero-orb summeca-hero-orb-b pointer-events-none absolute" />
       <div className="pointer-events-none absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-[#0d1116] via-[#0d1116]/85 to-transparent" />
-      <div className="summeca-hero-word pointer-events-none absolute left-1/2 top-[46%] -translate-x-1/2 -translate-y-1/2 select-none whitespace-nowrap text-[clamp(7rem,19vw,22rem)] font-black uppercase leading-none tracking-[-0.08em] text-white/[0.018]">
+      <div className="summeca-hero-word pointer-events-none absolute left-1/2 top-[46%] -translate-x-1/2 -translate-y-1/2 select-none whitespace-nowrap text-[clamp(7rem,19vw,22rem)] font-black uppercase leading-none tracking-[-0.08em] text-transparent [-webkit-text-stroke:1.15px_rgba(34,211,238,0.24)] [filter:drop-shadow(0_0_10px_rgba(34,211,238,0.10))]">
         SUMMECA
       </div>
 
