@@ -64,7 +64,7 @@ export default function AuthScreen() {
           <div className="pointer-events-none absolute inset-[4%] z-10 rounded-[3rem] bg-[linear-gradient(90deg,rgba(5,8,7,.82)_0%,rgba(5,8,7,.48)_38%,rgba(5,8,7,.08)_62%,transparent_100%)]" />
           <div className="absolute bottom-[2%] left-[30%] right-[-10%] top-[8%] z-[5] touch-pan-y">
             {isDesktopViewport === true && (
-              <SplineNexbotScene interactive={false} className="h-full w-full" />
+              <SplineNexbotScene interactive className="h-full w-full" />
             )}
           </div>
           <div className="pointer-events-none absolute left-[8%] top-[12%] z-20 max-w-lg">
@@ -90,7 +90,7 @@ export default function AuthScreen() {
           <div className="absolute -inset-12 -z-10 rounded-full bg-teal-400/[0.06] blur-3xl" />
           <div className="mb-4 h-52 w-full overflow-hidden rounded-[1.75rem] border border-white/[0.08] bg-white/[0.02] shadow-[0_24px_70px_rgba(0,0,0,.32)] touch-pan-y sm:h-60 lg:hidden">
             {isDesktopViewport === false && (
-              <SplineNexbotScene interactive={false} className="h-full w-full" />
+              <SplineNexbotScene interactive className="h-full w-full" />
             )}
           </div>
           <div className="w-full rounded-[2rem] border border-white/[0.09] bg-[#0b0f0e]/80 p-5 shadow-[0_30px_100px_rgba(0,0,0,.45)] backdrop-blur-2xl sm:p-8">

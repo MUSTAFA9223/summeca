@@ -21,13 +21,15 @@ test('homepage reserves a responsive touch-safe stage for the new 3D robot', () 
   assert.match(hero, /touch-pan-y/);
 });
 
-test('authentication shows the new robot on desktop and mobile without blocking touch scroll', () => {
-  assert.match(authScreen, /SplineNexbotScene/);
+test('authentication shows an interactive robot on desktop and mobile without blocking touch scroll', () => {
+  assert.match(authScreen, /SplineNexbotScene interactive/);
+  assert.doesNotMatch(authScreen, /interactive=\{false\}/);
   assert.match(authScreen, /h-52 w-full/);
   assert.match(authScreen, /sm:h-60/);
   assert.match(authScreen, /lg:hidden/);
   assert.match(authScreen, /touch-pan-y/);
   assert.match(robot, /touchAction: 'pan-y'/);
+  assert.match(robot, /pointerEvents: interactive \? 'auto' : 'none'/);
 });
 
 test('sales assistant is deferred instead of hydrating with the critical page bundle', () => {
