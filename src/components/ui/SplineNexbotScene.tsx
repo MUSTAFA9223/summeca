@@ -2,10 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 
-// Keep the published Spline scene on the same project URL, but bump this
-// revision whenever the scene is republished so browsers/CDNs do not keep
-// serving an older cached copy (for example, before the face/eye updates).
-const NEXBOT_SCENE_URL = 'https://prod.spline.design/BAodEVjHSYLR1KKy/scene.splinecode?rev=20260912-eyes';
+const NEXBOT_SCENE_URL = 'https://prod.spline.design/BAodEVjHSYLR1KKy/scene.splinecode';
 const VIEWER_SCRIPTS = [
   'https://cdn.spline.design/@splinetool/viewer@2.0.44/build/spline-viewer.js',
   'https://unpkg.com/@splinetool/viewer@2.0.44/build/spline-viewer.js',
@@ -36,8 +33,14 @@ export default function SplineNexbotScene({
       if (disposed || !hostRef.current || !customElements.get(VIEWER_TAG)) return;
 
       hostRef.current.replaceChildren();
+      setReady(false);
+
+      // Always request the latest published revision from Spline. This avoids
+      // stale scene responses after visual edits such as the NEXBOT eye layer.
+      const freshSceneUrl = `${NEXBOT_SCENE_URL}?refresh=${Date.now()}`;
+
       viewer = document.createElement(VIEWER_TAG);
-      viewer.setAttribute('url', NEXBOT_SCENE_URL);
+      viewer.setAttribute('url', freshSceneUrl);
       viewer.setAttribute('loading', 'eager');
       viewer.setAttribute('renderer', 'webgl');
       viewer.setAttribute('events-target', 'global');
