@@ -1,14 +1,8 @@
 'use client';
 
 import { useEffect } from 'react';
-import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { ArrowRight, Boxes, Sparkles } from 'lucide-react';
-
-const SplineRobotScene = dynamic(() => import('@/components/ui/SplineRobotScene'), {
-  ssr: false,
-  loading: () => null,
-});
 
 export default function HeroSection() {
   useEffect(() => {
@@ -27,21 +21,21 @@ export default function HeroSection() {
         SUMMECA
       </div>
 
-      <div className="relative z-10 mx-auto grid min-h-[692px] max-w-[1480px] grid-cols-1 items-center lg:grid-cols-[45%_55%]">
-        <div className="relative px-6 pb-14 pt-16 sm:px-10 lg:px-12 lg:pb-24 lg:pt-24 xl:px-20">
+      <div className="relative z-10 mx-auto flex min-h-[692px] max-w-[1480px] items-center">
+        <div className="relative w-full max-w-[960px] px-6 pb-14 pt-16 sm:px-10 lg:px-12 lg:pb-24 lg:pt-24 xl:px-20">
           <div className="summeca-reveal summeca-reveal-1 mb-7 inline-flex items-center gap-3 rounded-full border border-white/10 bg-white/[0.045] px-4 py-2 text-[10px] font-bold uppercase tracking-[0.24em] text-slate-300 backdrop-blur-xl sm:text-[11px]">
             <span className="h-2 w-2 rounded-full bg-[#22d3ee] shadow-[0_0_18px_rgba(34,211,238,0.9)]" />
             AI <span className="text-[#22d3ee]">•</span> SaaS <span className="text-[#22d3ee]">•</span> Digital Products
           </div>
 
-          <h1 className="summeca-reveal summeca-reveal-2 max-w-[760px] uppercase font-black leading-[0.84] tracking-[-0.065em]">
-            <span className="block text-[clamp(3.55rem,5.8vw,6.75rem)] text-white">DIGITAL</span>
-            <span className="mt-1 block text-[clamp(2.9rem,4.65vw,5.45rem)] text-white">TOOLS &amp; SAAS</span>
-            <span className="mt-2 block text-[clamp(2.35rem,3.75vw,4.4rem)] text-slate-200">BUILT FOR FASTER</span>
-            <span className="summeca-outline-text mt-2 block pb-3 text-[clamp(2.85rem,4.55vw,5.3rem)]">BUSINESS<span className="text-[#22d3ee]">.</span></span>
+          <h1 className="summeca-reveal summeca-reveal-2 max-w-[900px] uppercase font-black leading-[0.84] tracking-[-0.065em]">
+            <span className="block text-[clamp(3.55rem,6.6vw,7.4rem)] text-white">DIGITAL</span>
+            <span className="mt-1 block text-[clamp(2.9rem,5.55vw,6.2rem)] text-white">TOOLS &amp; SAAS</span>
+            <span className="mt-2 block text-[clamp(2.35rem,4.5vw,5rem)] text-slate-200">BUILT FOR FASTER</span>
+            <span className="summeca-outline-text mt-2 block pb-3 text-[clamp(2.85rem,5.25vw,5.85rem)]">BUSINESS<span className="text-[#22d3ee]">.</span></span>
           </h1>
 
-          <p className="summeca-reveal summeca-reveal-3 mt-7 max-w-xl text-base leading-7 text-slate-400 sm:text-lg sm:leading-8">
+          <p className="summeca-reveal summeca-reveal-3 mt-7 max-w-2xl text-base leading-7 text-slate-400 sm:text-lg sm:leading-8">
             Practical SaaS apps, AI tools, and ready-to-use digital products designed to help modern businesses move faster through everyday workflows.
           </p>
 
@@ -67,27 +61,6 @@ export default function HeroSection() {
             <span>AI tools</span>
             <span className="h-1 w-1 rounded-full bg-white/20" />
             <span>Digital kits</span>
-          </div>
-        </div>
-
-        <div className="relative min-h-[560px] self-stretch overflow-hidden sm:min-h-[600px] lg:min-h-[692px] lg:overflow-visible">
-          <div className="pointer-events-none absolute inset-[6%] rounded-[44px] border border-white/[0.065] bg-white/[0.025] shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_50px_120px_rgba(0,0,0,0.24)] backdrop-blur-[2px] lg:inset-[7%_5%_5%_1%]" />
-          <div className="summeca-robot-ring summeca-robot-ring-a pointer-events-none absolute left-[48%] top-[48%] h-[68%] aspect-square -translate-x-1/2 -translate-y-1/2 rounded-full border border-[#22d3ee]/10" />
-          <div className="summeca-robot-ring summeca-robot-ring-b pointer-events-none absolute left-[48%] top-[48%] h-[52%] aspect-square -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/[0.06]" />
-          <div className="pointer-events-none absolute left-[48%] top-[50%] h-[46%] aspect-square -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#08c5d1]/15 blur-[80px]" />
-
-          <div className="relative h-full min-h-[560px] w-full touch-pan-y sm:min-h-[600px] lg:min-h-[692px]" aria-hidden="true">
-            <div className="absolute inset-0 z-10 origin-center transform-gpu lg:bottom-[-8%] lg:left-[-8%] lg:right-[-8%] lg:top-[-6%] lg:scale-[0.78] xl:scale-[0.74]">
-              <SplineRobotScene />
-            </div>
-          </div>
-
-          <div className="summeca-float-chip pointer-events-none absolute bottom-[11%] left-[8%] hidden rounded-2xl border border-white/10 bg-[#111820]/75 px-4 py-3 shadow-2xl backdrop-blur-xl sm:block lg:left-[2%]">
-            <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-slate-500">Interactive 3D</p>
-            <p className="mt-1 text-xs font-semibold text-slate-200">Move your pointer</p>
-          </div>
-          <div className="summeca-float-chip summeca-float-chip-delayed pointer-events-none absolute right-[7%] top-[18%] hidden rounded-full border border-[#22d3ee]/20 bg-[#0d1116]/70 px-4 py-2 text-[10px] font-bold uppercase tracking-[0.16em] text-[#67e8f9] shadow-[0_0_30px_rgba(34,211,238,0.08)] backdrop-blur-xl sm:block lg:right-[4%]">
-            Built for modern work
           </div>
         </div>
       </div>
