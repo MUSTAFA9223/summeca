@@ -15,7 +15,29 @@ function normalizeCurrency(value: string | null | undefined) {
   return /^[A-Z]{3}$/.test(currency) ? currency : 'USD';
 }
 
+function getTrafficPeriodStarts() {
+  const now = new Date();
+  const yemenOffsetMs = 3 * 60 * 60 * 1000;
+  const yemenNow = new Date(now.getTime() + yemenOffsetMs);
+  const localDayStartUtc = Date.UTC(
+    yemenNow.getUTCFullYear(),
+    yemenNow.getUTCMonth(),
+    yemenNow.getUTCDate(),
+    0,
+    0,
+    0
+  );
+  const localMonthStartUtc = Date.UTC(yemenNow.getUTCFullYear(), yemenNow.getUTCMonth(), 1, 0, 0, 0);
+
+  return {
+    today: new Date(localDayStartUtc - yemenOffsetMs).toISOString(),
+    week: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+    month: new Date(localMonthStartUtc - yemenOffsetMs).toISOString(),
+  };
+}
+
 async function getStats(supabase: Awaited<ReturnType<typeof createClient>>) {
+  const periods = getTrafficPeriodStarts();
   const results = await Promise.all([
     supabase.from('orders').select('*', { count: 'exact', head: true }),
     supabase.from('orders').select('*', { count: 'exact', head: true }).eq('status', 'completed'),
@@ -24,6 +46,11 @@ async function getStats(supabase: Awaited<ReturnType<typeof createClient>>) {
     supabase.from('downloads').select('*', { count: 'exact', head: true }),
     supabase.from('orders').select('amount, currency').eq('status', 'completed'),
     supabase.from('orders').select('*', { count: 'exact', head: true }).eq('status', 'pending_payment'),
+    supabase.from('analytics_visits').select('*', { count: 'exact', head: true }).gte('started_at', periods.today),
+    supabase.from('analytics_visits').select('*', { count: 'exact', head: true }).gte('started_at', periods.week),
+    supabase.from('analytics_visits').select('*', { count: 'exact', head: true }).gte('started_at', periods.month),
+    supabase.from('analytics_events').select('*', { count: 'exact', head: true }).eq('event_type', 'page_view').gte('created_at', periods.today),
+    supabase.from('orders').select('*', { count: 'exact', head: true }).eq('status', 'completed').gte('created_at', periods.month),
   ]);
 
   const revenueByCurrency = new Map<string, number>();
@@ -36,6 +63,10 @@ async function getStats(supabase: Awaited<ReturnType<typeof createClient>>) {
     .map(([currency, amount]) => ({ currency, amount }))
     .sort((a, b) => a.currency.localeCompare(b.currency));
 
+  const visitsMonth = results[9].count ?? 0;
+  const completedOrdersMonth = results[11].count ?? 0;
+  const conversionMonth = visitsMonth > 0 ? (completedOrdersMonth / visitsMonth) * 100 : 0;
+
   return {
     revenueTotals,
     totalOrders: results[0].count ?? 0,
@@ -44,6 +75,12 @@ async function getStats(supabase: Awaited<ReturnType<typeof createClient>>) {
     totalCustomers: results[2].count ?? 0,
     totalProducts: results[3].count ?? 0,
     totalDownloads: results[4].count ?? 0,
+    visitsToday: results[7].count ?? 0,
+    visitsWeek: results[8].count ?? 0,
+    visitsMonth,
+    pageViewsToday: results[10].count ?? 0,
+    completedOrdersMonth,
+    conversionMonth,
   };
 }
 
