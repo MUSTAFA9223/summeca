@@ -4,12 +4,22 @@ import { useEffect } from 'react';
 import Link from 'next/link';
 import { ArrowRight, Boxes, Sparkles } from 'lucide-react';
 import SplineNexbotScene from '@/components/ui/SplineNexbotScene';
+import { useTheme } from '@/contexts/ThemeContext';
 
 export default function HeroSection() {
+  const { theme } = useTheme();
+
   useEffect(() => {
-    document.body.classList.add('summeca-home-theme');
-    return () => document.body.classList.remove('summeca-home-theme');
-  }, []);
+    const darkClass = 'summeca-home-theme';
+    const lightClass = 'summeca-home-light-theme';
+
+    document.body.classList.toggle(darkClass, theme === 'dark');
+    document.body.classList.toggle(lightClass, theme === 'light');
+
+    return () => {
+      document.body.classList.remove(darkClass, lightClass);
+    };
+  }, [theme]);
 
   return (
     <section className="summeca-home-hero relative isolate min-h-[760px] overflow-hidden bg-[#0d1116] pt-[76px] text-white lg:min-h-screen">

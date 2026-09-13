@@ -3,13 +3,16 @@ import React from 'react';
 import type { Metadata, Viewport } from 'next';
 import { Plus_Jakarta_Sans } from 'next/font/google';
 import '../styles/tailwind.css';
+import '../styles/site-theme.css';
 import '../styles/summeca-home-dark.css';
 import '../styles/i18n.css';
 import { Toaster } from 'sonner';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { LanguageProvider } from '@/contexts/LanguageContext';
+import { ThemeProvider } from '@/contexts/ThemeContext';
 import DeferredStoreAssistant from '@/components/DeferredStoreAssistant';
 import GlobalLanguageSwitcher from '@/components/GlobalLanguageSwitcher';
+import GlobalThemeSwitcher from '@/components/GlobalThemeSwitcher';
 import GoogleAnalytics from '@/components/GoogleAnalytics';
 
 const plusJakartaSans = Plus_Jakarta_Sans({
@@ -21,6 +24,16 @@ const plusJakartaSans = Plus_Jakarta_Sans({
 
 const siteDescription =
   'Discover and access premium AI tools, SaaS applications, and digital products designed for modern knowledge workers and businesses.';
+
+const themeInitScript = `
+try {
+  var storedTheme = window.localStorage.getItem('summeca:theme');
+  if (storedTheme === 'light' || storedTheme === 'dark') {
+    document.documentElement.dataset.siteTheme = storedTheme;
+    document.documentElement.style.colorScheme = storedTheme;
+  }
+} catch (_) {}
+`;
 
 export const viewport: Viewport = {
   width: 'device-width',
@@ -68,17 +81,29 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" dir="ltr" suppressHydrationWarning className={plusJakartaSans.variable}>
+    <html
+      lang="en"
+      dir="ltr"
+      suppressHydrationWarning
+      className={plusJakartaSans.variable}
+      data-site-theme="dark"
+    >
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+      </head>
       <body className={plusJakartaSans.className}>
         <Suspense fallback={null}>
           <GoogleAnalytics />
         </Suspense>
-        <LanguageProvider>
-          <AuthProvider>{children}</AuthProvider>
-          <GlobalLanguageSwitcher />
-          <DeferredStoreAssistant />
-          <Toaster position="bottom-right" richColors closeButton />
-        </LanguageProvider>
+        <ThemeProvider>
+          <LanguageProvider>
+            <AuthProvider>{children}</AuthProvider>
+            <GlobalLanguageSwitcher />
+            <DeferredStoreAssistant />
+            <Toaster position="bottom-right" richColors closeButton />
+          </LanguageProvider>
+          <GlobalThemeSwitcher />
+        </ThemeProvider>
       </body>
     </html>
   );
