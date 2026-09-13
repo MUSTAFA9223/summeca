@@ -32,5 +32,7 @@ test('homepage keeps the cinematic hero while the rest follows the selected them
 test('dark theme has site-wide semantic tokens and light mode remaps dark product landing surfaces', () => {
   assert.match(themeCss, /html\[data-site-theme='dark'\]/);
   assert.match(themeCss, /--background: #0d1116/);
-  assert.match(themeCss, /html\[data-site-theme='light'\] \[class~='bg\[\#070b10\]'\]/);
+  assert.ok(
+    themeCss.includes("html[data-site-theme='light'] [class~='bg-[#070b10]']"),
+  );
 });
