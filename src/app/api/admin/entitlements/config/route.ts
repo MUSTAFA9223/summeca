@@ -1,14 +1,35 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient, createServiceClient } from '@/lib/supabase/server';
 import { requireAdmin } from '@/lib/auth/requireAdmin';
+import { isGeneratedDigitalProductKey } from '@/lib/digital-products/generatedKits';
 
 const DOWNLOAD_BUCKET = 'downloads';
+const DB_ASSET_PREFIX = 'dbasset:';
+const GENERATED_ASSET_PREFIX = 'generated:';
 
 type DownloadConfig = {
   bucket: 'downloads';
   path: string;
   name: string;
   size: number;
+};
+
+type DeliveryKind = 'storage' | 'database' | 'generated' | 'saas' | 'missing';
+
+type DeliveryState = {
+  kind: DeliveryKind;
+  ready: boolean;
+  path: string;
+  name: string;
+  size: number;
+  detail: string;
+};
+
+type AssetState = {
+  asset_key: string;
+  file_name: string | null;
+  byte_size: number | null;
+  is_active: boolean | null;
 };
 
 function noStoreJson(body: unknown, init?: ResponseInit) {
@@ -47,6 +68,110 @@ function createUploadPath(productId: string, fileName: unknown) {
 
   if (!safeName || safeName === '.' || safeName === '..') return null;
   return `products/${productId}/${crypto.randomUUID()}-${safeName}`;
+}
+
+function recordValue(record: Record<string, unknown> | null, key: string) {
+  return String(record?.[key] ?? '').trim();
+}
+
+function productDownloadRecord(metadata: Record<string, unknown>) {
+  return metadata.download && typeof metadata.download === 'object'
+    ? metadata.download as Record<string, unknown>
+    : null;
+}
+
+function configuredDeliverySource(metadata: Record<string, unknown>, download: Record<string, unknown> | null) {
+  return String(metadata.download_url ?? '').trim() || recordValue(download, 'path');
+}
+
+function databaseAssetKey(source: string) {
+  if (!source.startsWith(DB_ASSET_PREFIX)) return null;
+  const key = source.slice(DB_ASSET_PREFIX.length);
+  return /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(key) ? key : null;
+}
+
+function generatedAssetKey(source: string) {
+  if (!source.startsWith(GENERATED_ASSET_PREFIX)) return null;
+  const key = source.slice(GENERATED_ASSET_PREFIX.length);
+  return key || null;
+}
+
+function resolveDeliveryState(
+  metadata: Record<string, unknown>,
+  assetByKey: Map<string, AssetState>,
+): DeliveryState {
+  const download = productDownloadRecord(metadata);
+  const source = configuredDeliverySource(metadata, download);
+  const preferredName = String(metadata.download_file_name ?? '').trim() || recordValue(download, 'name');
+  const appPath = String(metadata.app_path ?? '').trim();
+  const isSaas = metadata.saas_product === true || String(metadata.saas_product ?? '').toLowerCase() === 'true';
+
+  if (isSaas) {
+    return {
+      kind: 'saas',
+      ready: Boolean(appPath),
+      path: appPath,
+      name: 'In-app access',
+      size: 0,
+      detail: appPath
+        ? 'Delivered inside the customer dashboard; no downloadable file is required.'
+        : 'SaaS product is missing its customer app path.',
+    };
+  }
+
+  const generatedKey = generatedAssetKey(source);
+  if (generatedKey) {
+    const ready = isGeneratedDigitalProductKey(generatedKey);
+    return {
+      kind: 'generated',
+      ready,
+      path: source,
+      name: preferredName || `${generatedKey}.zip`,
+      size: 0,
+      detail: ready
+        ? 'ZIP bundle is generated securely when an entitled customer downloads it.'
+        : 'Generated bundle key is not recognized by the server.',
+    };
+  }
+
+  const assetKey = databaseAssetKey(source);
+  if (assetKey) {
+    const asset = assetByKey.get(assetKey);
+    const ready = Boolean(asset?.is_active);
+    return {
+      kind: 'database',
+      ready,
+      path: source,
+      name: preferredName || asset?.file_name || `${assetKey}.zip`,
+      size: Number(asset?.byte_size ?? 0),
+      detail: ready
+        ? 'Private ZIP is stored as a protected database asset and delivered through the secure download API.'
+        : 'Private database asset is missing or inactive.',
+    };
+  }
+
+  if (download) {
+    const path = recordValue(download, 'path');
+    if (path) {
+      return {
+        kind: 'storage',
+        ready: true,
+        path,
+        name: preferredName || path.split('/').pop() || 'download',
+        size: Number(download.size ?? 0),
+        detail: 'Private file is stored in the downloads bucket and served with a short-lived signed URL.',
+      };
+    }
+  }
+
+  return {
+    kind: 'missing',
+    ready: false,
+    path: '',
+    name: '',
+    size: 0,
+    detail: 'No downloadable file or SaaS delivery path is configured for this product.',
+  };
 }
 
 async function authenticateAdmin() {
@@ -146,25 +271,53 @@ export async function GET() {
 
     if (error) return noStoreJson({ error: 'Could not load product delivery configuration.' }, { status: 500 });
 
+    const products = data ?? [];
+    const assetKeys = Array.from(new Set(products.flatMap((product) => {
+      const metadata = (product.metadata ?? {}) as Record<string, unknown>;
+      const source = configuredDeliverySource(metadata, productDownloadRecord(metadata));
+      const key = databaseAssetKey(source);
+      return key ? [key] : [];
+    })));
+
+    const assetByKey = new Map<string, AssetState>();
+    if (assetKeys.length > 0) {
+      const service = createServiceClient();
+      const { data: assets, error: assetsError } = await service
+        .from('digital_product_assets')
+        .select('asset_key, file_name, byte_size, is_active')
+        .in('asset_key', assetKeys);
+
+      if (assetsError) {
+        console.error('[admin/entitlements/config] Could not inspect database assets:', assetsError.message);
+        return noStoreJson({ error: 'Could not inspect private digital assets.' }, { status: 500 });
+      }
+
+      for (const asset of (assets ?? []) as AssetState[]) {
+        assetByKey.set(asset.asset_key, asset);
+      }
+    }
+
     return noStoreJson({
-      products: (data ?? []).map((product) => {
+      products: products.map((product) => {
         const metadata = (product.metadata ?? {}) as Record<string, unknown>;
-        const download = metadata.download && typeof metadata.download === 'object'
-          ? metadata.download as Record<string, unknown>
+        const rawDownload = productDownloadRecord(metadata);
+        const delivery = resolveDeliveryState(metadata, assetByKey);
+        const storageDownload = delivery.kind === 'storage' && rawDownload
+          ? {
+              bucket: String(rawDownload.bucket ?? DOWNLOAD_BUCKET),
+              path: String(rawDownload.path ?? ''),
+              name: String(rawDownload.name ?? ''),
+              size: Number(rawDownload.size ?? 0),
+            }
           : null;
+
         return {
           id: product.id,
           name: product.name,
           slug: product.slug,
           status: product.status,
-          download: download
-            ? {
-                bucket: String(download.bucket ?? DOWNLOAD_BUCKET),
-                path: String(download.path ?? ''),
-                name: String(download.name ?? ''),
-                size: Number(download.size ?? 0),
-              }
-            : null,
+          download: storageDownload,
+          delivery,
         };
       }),
     });
