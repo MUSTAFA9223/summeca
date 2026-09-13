@@ -76,11 +76,11 @@ export default function HeroSection() {
           <div className="pointer-events-none absolute inset-[5%] rounded-[44px] border border-white/[0.055] bg-white/[0.018] shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_50px_120px_rgba(0,0,0,0.22)] backdrop-blur-[2px] lg:inset-[6%_4%_4%_0%]" />
           <div className="pointer-events-none absolute left-[50%] top-[48%] h-[52%] aspect-square -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#08c5d1]/12 blur-[90px]" />
           <div className="absolute inset-0 z-10 min-h-[540px] touch-pan-y sm:min-h-[620px] lg:min-h-[692px]">
-            <SplineNexbotScene className="h-full w-full" />
+            <SplineNexbotScene className="h-full w-full" pointerScopeSelector=".summeca-home-hero" />
           </div>
           <div className="pointer-events-none absolute bottom-[9%] left-[7%] z-20 hidden rounded-2xl border border-white/10 bg-[#111820]/75 px-4 py-3 shadow-2xl backdrop-blur-xl sm:block lg:left-[2%]">
             <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-slate-500">Interactive 3D</p>
-            <p className="mt-1 text-xs font-semibold text-slate-200">Move your pointer</p>
+            <p className="mt-1 text-xs font-semibold text-slate-200">Move your pointer anywhere</p>
           </div>
         </div>
       </div>
