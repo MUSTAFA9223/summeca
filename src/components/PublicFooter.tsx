@@ -1,7 +1,7 @@
 import React from 'react';
 import Link from 'next/link';
 import AppLogo from '@/components/ui/AppLogo';
-import { Mail, ArrowRight, PackageCheck, ShieldCheck, Headphones } from 'lucide-react';
+import { Mail } from 'lucide-react';
 
 const footerLinks = {
   Platform: [
@@ -18,7 +18,6 @@ const footerLinks = {
     { label: 'Help Center', href: '/support' },
     { label: 'FAQ', href: '/faq' },
     { label: 'Refund Policy', href: '/refunds' },
-    { label: 'Status', href: '/status' },
   ],
   Legal: [
     { label: 'Privacy Policy', href: '/privacy' },
@@ -40,81 +39,39 @@ export default function PublicFooter() {
     { Icon: TwitterIcon, href: 'https://x.com/summeca_', label: 'SUMMECA on X (@summeca_)' },
   ];
 
-  const trustBadges = [
-    { icon: ShieldCheck, text: 'Secure account access' },
-    { icon: PackageCheck, text: 'Digital products & SaaS' },
-    { icon: Headphones, text: 'Support center available' },
-  ];
-
   return (
-    <footer className="bg-[#0A0F1E] text-white relative overflow-hidden">
-      <div className="absolute inset-0 opacity-30" style={{ backgroundImage: 'linear-gradient(rgba(13,148,136,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(13,148,136,0.06) 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[200px] rounded-full bg-primary/5 blur-3xl pointer-events-none" />
+    <footer className="relative overflow-hidden border-t border-white/8 bg-[#0A0F1E] text-white">
+      <div className="absolute inset-0 opacity-25" style={{ backgroundImage: 'linear-gradient(rgba(13,148,136,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(13,148,136,0.05) 1px, transparent 1px)', backgroundSize: '44px 44px' }} />
+      <div className="pointer-events-none absolute left-1/2 top-0 h-[140px] w-[520px] -translate-x-1/2 rounded-full bg-primary/5 blur-3xl" />
 
-      <div className="relative border-b border-white/6">
-        <div className="max-w-screen-xl mx-auto px-6 lg:px-8 py-4">
-          <div className="flex flex-wrap items-center justify-center gap-6">
-            {trustBadges.map(({ icon: IconComponent, text }) => (
-              <div key={text} className="flex items-center gap-2 text-slate-400">
-                <IconComponent size={13} className="text-primary/70" />
-                <span className="text-xs font-500">{text}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      <div className="relative border-b border-white/8">
-        <div className="max-w-screen-xl mx-auto px-6 lg:px-8 py-12">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-            <div>
-              <h3 className="text-xl font-700 text-white mb-1">Need help choosing a SUMMECA product?</h3>
-              <p className="text-sm text-slate-400">Talk to sales before you buy, or contact support if you already need help.</p>
-            </div>
-            <div className="flex flex-wrap items-center justify-center gap-2">
-              <Link href="/products" className="btn-primary text-sm px-4 py-2.5 flex items-center gap-1.5 whitespace-nowrap rounded-xl">
-                Browse products <ArrowRight size={13} />
-              </Link>
-              <a href="mailto:sales@summeca.com?subject=SUMMECA%20Sales%20Inquiry" className="text-sm px-4 py-2.5 rounded-xl border border-primary/30 text-primary hover:text-white hover:bg-primary/20 transition-colors">
-                Talk to sales
-              </a>
-              <Link href="/support" className="text-sm px-4 py-2.5 rounded-xl border border-white/12 text-slate-300 hover:text-white hover:bg-white/8 transition-colors">
-                Support center
-              </Link>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="relative max-w-screen-xl mx-auto px-6 lg:px-8 py-14">
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-8 lg:gap-10">
-          <div className="col-span-2">
-            <div className="mb-4">
-              <AppLogo variant="wordmark" tone="light" size={50} />
-            </div>
-            <p className="text-sm text-slate-400 leading-relaxed mb-5 max-w-[260px]">Digital products, SaaS tools, and AI-focused solutions for modern work.</p>
-            <div className="w-12 h-0.5 bg-gradient-to-r from-primary to-accent rounded-full mb-5" />
-            <div className="flex items-center gap-2">
+      <div className="relative mx-auto max-w-screen-xl px-6 py-9 lg:px-8 lg:py-10">
+        <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-[1.6fr_repeat(4,1fr)] lg:gap-7">
+          <div className="sm:col-span-2 lg:col-span-1">
+            <AppLogo variant="wordmark" tone="light" size={44} />
+            <p className="mt-3 max-w-[250px] text-sm leading-6 text-slate-400">Digital products, SaaS tools, and AI-focused solutions for modern work.</p>
+            <div className="mt-4 flex items-center gap-2">
               {socialLinks.map(({ Icon, href, label }) => (
-                <a key={`footer-social-${label}`} href={href} target="_blank" rel="noopener noreferrer" aria-label={label} title={label} className="w-8 h-8 rounded-lg bg-white/8 flex items-center justify-center text-slate-400 hover:text-white hover:bg-primary/30 hover:scale-110 transition-all duration-200"><Icon size={15} /></a>
+                <a key={`footer-social-${label}`} href={href} target="_blank" rel="noopener noreferrer" aria-label={label} title={label} className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/8 text-slate-400 transition hover:bg-primary/30 hover:text-white"><Icon size={15} /></a>
               ))}
-              <a href="mailto:hello@summeca.com?subject=SUMMECA%20General%20Inquiry" aria-label="Email SUMMECA general inquiries" title="hello@summeca.com" className="w-8 h-8 rounded-lg bg-white/8 flex items-center justify-center text-slate-400 hover:text-white hover:bg-primary/30 hover:scale-110 transition-all duration-200"><Mail size={15} /></a>
+              <a href="mailto:hello@summeca.com?subject=SUMMECA%20General%20Inquiry" aria-label="Email SUMMECA general inquiries" title="hello@summeca.com" className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/8 text-slate-400 transition hover:bg-primary/30 hover:text-white"><Mail size={15} /></a>
             </div>
           </div>
 
           {Object.entries(footerLinks).map(([section, links]) => (
             <div key={`footer-section-${section}`}>
-              <h4 className="text-xs font-700 uppercase tracking-widest text-slate-500 mb-4">{section}</h4>
-              <ul className="space-y-2.5">
+              <h4 className="mb-3 text-[11px] font-700 uppercase tracking-widest text-slate-500">{section}</h4>
+              <ul className="space-y-2">
                 {links.map((link) => (
-                  <li key={`footer-link-${link.label}`}><Link href={link.href} className="text-sm text-slate-400 hover:text-primary transition-colors duration-150 hover:translate-x-0.5 inline-block">{link.label}</Link></li>
+                  <li key={`footer-link-${link.label}`}>
+                    <Link href={link.href} className="text-sm text-slate-400 transition-colors hover:text-primary">{link.label}</Link>
+                  </li>
                 ))}
               </ul>
             </div>
           ))}
         </div>
 
-        <div className="mt-12 pt-6 border-t border-white/8 flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div className="mt-8 flex flex-col items-center justify-between gap-2 border-t border-white/8 pt-5 sm:flex-row">
           <p className="text-xs text-slate-600">© 2026 SUMMECA. All rights reserved.</p>
           <p className="text-xs text-slate-600">summeca.com</p>
         </div>
