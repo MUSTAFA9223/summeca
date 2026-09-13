@@ -15,7 +15,7 @@ import {
   LANGUAGE_STORAGE_KEY,
   type AppLanguage,
 } from '@/lib/i18n';
-import { translateComprehensiveText } from '@/lib/i18n-comprehensive';
+import { translateSurfaceText } from '@/lib/i18n-surfaces';
 import { translateSiteText } from '@/lib/i18n-products';
 
 type LanguageContextValue = {
@@ -53,8 +53,8 @@ function shouldSkipElement(element: Element | null) {
 }
 
 function translateValue(value: string) {
-  const comprehensive = translateComprehensiveText(value);
-  return translateSiteText(comprehensive);
+  const surface = translateSurfaceText(value);
+  return translateSiteText(surface);
 }
 
 function translateTextNode(node: Text) {
@@ -166,7 +166,6 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     (nextLanguage: AppLanguage) => {
       persistLanguage(nextLanguage);
       if (nextLanguage === language) return;
-
       window.location.reload();
     },
     [language],
