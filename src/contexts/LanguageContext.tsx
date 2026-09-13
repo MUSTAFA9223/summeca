@@ -16,6 +16,7 @@ import {
   type AppLanguage,
 } from '@/lib/i18n';
 import { translateHomepageText } from '@/lib/i18n-homepage';
+import { translateSupportText } from '@/lib/i18n-support';
 import { translateSurfaceText } from '@/lib/i18n-surfaces';
 import { translateSiteText } from '@/lib/i18n-products';
 
@@ -55,7 +56,8 @@ function shouldSkipElement(element: Element | null) {
 
 function translateValue(value: string) {
   const homepage = translateHomepageText(value);
-  const surface = translateSurfaceText(homepage);
+  const support = translateSupportText(homepage);
+  const surface = translateSurfaceText(support);
   return translateSiteText(surface);
 }
 
