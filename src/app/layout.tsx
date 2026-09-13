@@ -14,6 +14,7 @@ import DeferredStoreAssistant from '@/components/DeferredStoreAssistant';
 import GlobalLanguageSwitcher from '@/components/GlobalLanguageSwitcher';
 import GlobalThemeSwitcher from '@/components/GlobalThemeSwitcher';
 import GoogleAnalytics from '@/components/GoogleAnalytics';
+import VisitorTracker from '@/components/VisitorTracker';
 
 const plusJakartaSans = Plus_Jakarta_Sans({
   subsets: ['latin'],
@@ -94,6 +95,7 @@ export default function RootLayout({
       <body className={plusJakartaSans.className}>
         <Suspense fallback={null}>
           <GoogleAnalytics />
+          <VisitorTracker />
         </Suspense>
         <ThemeProvider>
           <LanguageProvider>
