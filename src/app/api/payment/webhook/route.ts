@@ -555,11 +555,13 @@ async function sendCompletionEmails(
       .maybeSingle();
     const { data: product } = await supabase
       .from('products')
-      .select('name')
+      .select('name, metadata')
       .eq('id', order.product_id)
       .maybeSingle();
 
     const productName = product?.name ?? 'Your Product';
+    const productMetadata = (product?.metadata ?? {}) as Record<string, unknown>;
+    const isSaasProduct = productMetadata.saas_product === true;
     const now = new Date();
 
     await sendPaymentReceipt(userEmail, {
@@ -574,10 +576,9 @@ async function sendCompletionEmails(
       paidAt: now.toISOString(),
     });
 
-    // Monthly/yearly values currently represent paid access periods, not a
-    // provider-confirmed automatic renewal contract. Do not send renewal or
-    // subscription-activation messaging that could imply recurring billing.
-    if (plan.billing_period === 'one_time' || plan.billing_period === 'lifetime') {
+    // Lifetime SaaS grants application access in the dashboard. It is not a
+    // downloadable file, so never enter the download-email flow for SaaS.
+    if (!isSaasProduct && (plan.billing_period === 'one_time' || plan.billing_period === 'lifetime')) {
       const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL ?? 'https://summeca.com').replace(/\/$/, '');
       await sendDownloadLink(userEmail, {
         customerName: profile?.full_name ?? '',
