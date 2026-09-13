@@ -7,6 +7,7 @@ const root = path.resolve(__dirname, '..');
 const homepage = fs.readFileSync(path.join(root, 'src/app/page.tsx'), 'utf8');
 const translations = fs.readFileSync(path.join(root, 'src/lib/i18n-homepage.ts'), 'utf8');
 const provider = fs.readFileSync(path.join(root, 'src/contexts/LanguageContext.tsx'), 'utf8');
+const normalizedHomepage = homepage.replace(/\s+/g, ' ');
 
 const visibleHomepagePhrases = [
   'AI Tool',
@@ -42,7 +43,7 @@ const visibleHomepagePhrases = [
 
 test('all explicitly rendered homepage marketing copy has an Arabic translation', () => {
   for (const phrase of visibleHomepagePhrases) {
-    assert.ok(homepage.includes(phrase), `homepage phrase moved or changed: ${phrase}`);
+    assert.ok(normalizedHomepage.includes(phrase), `homepage phrase moved or changed: ${phrase}`);
     assert.ok(translations.includes(`'${phrase}'`) || translations.includes(`\"${phrase}\"`), `missing Arabic homepage translation: ${phrase}`);
   }
 });

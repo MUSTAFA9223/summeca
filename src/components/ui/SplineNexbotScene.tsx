@@ -1,7 +1,12 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
-import Spline from '@splinetool/react-spline';
+import dynamic from 'next/dynamic';
+import { Component, useEffect, useRef, useState, type ErrorInfo, type ReactNode } from 'react';
+
+const Spline = dynamic(() => import('./SplineClient'), {
+  ssr: false,
+  loading: () => null,
+});
 
 const NEXBOT_SCENE_URL = 'https://prod.spline.design/BAodEVjHSYLR1KKy/scene.splinecode';
 
@@ -13,16 +18,83 @@ type SplineNexbotSceneProps = {
   pointerScopeSelector?: string;
 };
 
+function StaticNexbotFallback() {
+  return (
+    <div
+      className="pointer-events-none absolute inset-0 flex items-center justify-center overflow-hidden"
+      data-spline-fallback="true"
+      role="img"
+      aria-label="SUMMECA interactive scene fallback"
+    >
+      <div className="absolute h-[58%] aspect-square rounded-full border border-cyan-300/15 bg-cyan-300/[0.035] shadow-[0_0_90px_rgba(34,211,238,0.12)]" />
+      <div className="absolute h-[40%] aspect-square rounded-full border border-dashed border-cyan-200/20 motion-safe:animate-[spin_24s_linear_infinite]" />
+      <div className="relative grid h-28 w-28 place-items-center rounded-[2rem] border border-cyan-200/25 bg-[#09161b]/85 shadow-[0_24px_70px_rgba(0,0,0,.42),0_0_45px_rgba(34,211,238,.12)] backdrop-blur-xl sm:h-36 sm:w-36">
+        <span className="text-3xl font-black tracking-[-0.08em] text-cyan-200 sm:text-4xl">
+          SMC
+        </span>
+        <span className="absolute -bottom-8 whitespace-nowrap text-[9px] font-bold uppercase tracking-[0.32em] text-cyan-100/55">
+          SUMMECA
+        </span>
+      </div>
+    </div>
+  );
+}
+
+class SplineSceneBoundary extends Component<
+  { children: ReactNode; onFailure: () => void },
+  { failed: boolean }
+> {
+  state = { failed: false };
+
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+
+  componentDidCatch(error: Error, info: ErrorInfo) {
+    console.warn(
+      '[SplineNexbotScene] Interactive scene failed; using fallback.',
+      error.message,
+      info.componentStack
+    );
+    this.props.onFailure();
+  }
+
+  render() {
+    return this.state.failed ? null : this.props.children;
+  }
+}
+
 export default function SplineNexbotScene({
   className = '',
   interactive = true,
   pointerScopeSelector = 'main',
 }: SplineNexbotSceneProps) {
   const [ready, setReady] = useState(false);
+  const [webglSupported, setWebglSupported] = useState<boolean | null>(null);
+  const [failed, setFailed] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!interactive || !ready || !pointerScopeSelector) return;
+    try {
+      const canvas = document.createElement('canvas');
+      const supported =
+        Boolean(
+          window.WebGL2RenderingContext &&
+          canvas.getContext('webgl2', { failIfMajorPerformanceCaveat: true })
+        ) ||
+        Boolean(
+          window.WebGLRenderingContext &&
+          canvas.getContext('webgl', { failIfMajorPerformanceCaveat: true })
+        );
+      setWebglSupported(supported);
+    } catch {
+      setWebglSupported(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!interactive || !ready || !pointerScopeSelector || webglSupported !== true || failed)
+      return;
 
     const root = rootRef.current;
     const scope = root?.closest(pointerScopeSelector) as HTMLElement | null;
@@ -71,7 +143,7 @@ export default function SplineNexbotScene({
           bubbles: true,
           cancelable: true,
           composed: true,
-        }),
+        })
       );
 
       canvas.dispatchEvent(
@@ -87,7 +159,7 @@ export default function SplineNexbotScene({
           bubbles: true,
           cancelable: true,
           composed: true,
-        }),
+        })
       );
     };
 
@@ -109,7 +181,10 @@ export default function SplineNexbotScene({
       scope.removeEventListener('pointermove', handlePointerMove);
       if (animationFrame !== null) window.cancelAnimationFrame(animationFrame);
     };
-  }, [interactive, pointerScopeSelector, ready]);
+  }, [failed, interactive, pointerScopeSelector, ready, webglSupported]);
+
+  const showFallback = webglSupported === false || failed;
+  const showLoader = webglSupported === null || (webglSupported === true && !ready && !failed);
 
   return (
     <div
@@ -119,25 +194,31 @@ export default function SplineNexbotScene({
       data-spline-ready={ready ? 'true' : 'false'}
       style={{ touchAction: 'pan-y' }}
     >
-      <div
-        className={`absolute inset-0 transition-opacity duration-200 ${ready ? 'opacity-100' : 'opacity-0'}`}
-        aria-hidden={!ready}
-      >
-        <Spline
-          scene={NEXBOT_SCENE_URL}
-          onLoad={() => setReady(true)}
-          className="absolute inset-0 h-full w-full"
-          style={{
-            width: '100%',
-            height: '100%',
-            background: 'transparent',
-            touchAction: 'pan-y',
-            pointerEvents: interactive ? 'auto' : 'none',
-          }}
-        />
-      </div>
+      {showFallback && <StaticNexbotFallback />}
 
-      {!ready && (
+      {webglSupported === true && !failed && (
+        <SplineSceneBoundary onFailure={() => setFailed(true)}>
+          <div
+            className={`absolute inset-0 transition-opacity duration-200 ${ready ? 'opacity-100' : 'opacity-0'}`}
+            aria-hidden={!ready}
+          >
+            <Spline
+              scene={NEXBOT_SCENE_URL}
+              onLoad={() => setReady(true)}
+              className="absolute inset-0 h-full w-full"
+              style={{
+                width: '100%',
+                height: '100%',
+                background: 'transparent',
+                touchAction: 'pan-y',
+                pointerEvents: interactive ? 'auto' : 'none',
+              }}
+            />
+          </div>
+        </SplineSceneBoundary>
+      )}
+
+      {showLoader && (
         <div className="pointer-events-none absolute inset-0 grid place-items-center bg-transparent">
           <div className="h-8 w-8 animate-spin rounded-full border-2 border-white/15 border-t-cyan-300" />
         </div>

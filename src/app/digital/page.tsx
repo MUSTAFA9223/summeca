@@ -2,17 +2,23 @@ import type { Metadata } from 'next';
 import PublicNav from '@/components/PublicNav';
 import PublicFooter from '@/components/PublicFooter';
 import CatalogClient from '@/components/catalog/CatalogClient';
+import { getPublicCatalog } from '@/lib/catalog/publicCatalog';
+
+export const revalidate = 300;
 
 export const metadata: Metadata = {
   title: 'Digital Products',
-  description: 'Browse published SUMMECA templates, datasets, and digital products with pricing from active production plans.',
+  description:
+    'Browse published SUMMECA templates, datasets, and digital products with pricing from active production plans.',
 };
 
-export default function DigitalPage() {
+export default async function DigitalPage() {
+  const products = await getPublicCatalog();
   return (
     <div className="min-h-screen bg-background">
       <PublicNav />
       <CatalogClient
+        initialProducts={products}
         kind="digital"
         eyebrow="Digital Products"
         title="Digital resources ready for delivery"

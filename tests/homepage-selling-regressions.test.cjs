@@ -13,6 +13,7 @@ const robot = read('src/components/ui/SplineNexbotScene.tsx');
 const nextConfig = read('next.config.mjs');
 const cloudflareBuild = read('scripts/cloudflare-build.mjs');
 const cryptoStatus = read('src/app/api/payment/crypto-status/route.ts');
+const publicCatalog = read('src/lib/catalog/publicCatalog.ts');
 const publicHomepageMarketing = `${homepage}\n${hero}`;
 
 test('public homepage marketing never links to admin routes', () => {
@@ -37,9 +38,12 @@ test('homepage avoids fake static business metrics and guaranteed outcomes', () 
 });
 
 test('featured homepage products and prices come from active production records', () => {
-  assert.match(homepage, /\.from\('products'\)/);
-  assert.match(homepage, /product_plans\(/);
-  assert.match(homepage, /\.eq\('status', 'active'\)/);
+  assert.match(homepage, /getPublicCatalog/);
+  assert.match(publicCatalog, /\/rest\/v1\/products/);
+  assert.match(publicCatalog, /product_plans!inner/);
+  assert.match(publicCatalog, /status', 'eq\.active'/);
+  assert.match(publicCatalog, /plans\.is_active', 'eq\.true'/);
+  assert.match(publicCatalog, /revalidate: 300/);
   assert.match(homepage, /getEffectivePrice/);
   assert.match(homepage, /summeca-invoiceflow/);
   assert.match(homepage, /summeca-leadfollow-ai/);

@@ -39,6 +39,17 @@ test('Spline loading never exposes its temporary white canvas before the robot i
   assert.match(robot, /onLoad=\{\(\) => setReady\(true\)\}/);
 });
 
+test('Spline failure never crashes the storefront when WebGL is unavailable', () => {
+  assert.match(robot, /canvas\.getContext\('webgl2'/);
+  assert.match(robot, /canvas\.getContext\('webgl'/);
+  assert.match(robot, /SplineSceneBoundary/);
+  assert.match(robot, /data-spline-fallback="true"/);
+  assert.match(robot, /webglSupported === false \|\| failed/);
+  assert.match(robot, /dynamic\(\(\) => import\('\.\/SplineClient'\)/);
+  const splineClient = read('src/components/ui/SplineClient.tsx');
+  assert.match(splineClient, /from '\@splinetool\/react-spline'/);
+});
+
 test('sales assistant is deferred instead of hydrating with the critical page bundle', () => {
   assert.match(layout, /DeferredStoreAssistant/);
   assert.doesNotMatch(layout, /import StoreAssistant from/);

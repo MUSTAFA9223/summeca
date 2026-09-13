@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState, type MouseEvent as ReactMouseEvent } from 'react';
+import { useState, type MouseEvent as ReactMouseEvent } from 'react';
 import Link from 'next/link';
 import {
   ArrowRight,
@@ -15,8 +15,8 @@ import {
   Zap,
 } from 'lucide-react';
 import Product3DShowcase from '@/components/catalog/Product3DShowcase';
-import { createClient } from '@/lib/supabase/client';
 import { getEffectivePrice } from '@/lib/pricing';
+import type { PublicCatalogProduct } from '@/lib/catalog/publicCatalog';
 
 type BillingPeriod = 'one_time' | 'monthly' | 'yearly' | 'lifetime';
 type CatalogKind = 'all' | 'ai' | 'saas' | 'digital';
@@ -37,27 +37,14 @@ interface ProductPlan {
   sale_ends_at: string | null;
 }
 
-interface Product {
-  id: string;
-  name: string;
-  slug: string;
-  short_desc: string | null;
-  description: string | null;
-  category: string;
-  thumbnail_url: string | null;
-  tags: string[] | null;
-  metadata: Record<string, unknown> | null;
-  created_at: string;
-  plans?: ProductPlan[];
-  avg_rating?: number;
-  review_count?: number;
-}
+type Product = PublicCatalogProduct;
 
 interface CatalogClientProps {
   kind?: CatalogKind;
   title: string;
   description: string;
   eyebrow?: string;
+  initialProducts: PublicCatalogProduct[];
 }
 
 const AI_CATEGORIES = ['ai_tool', 'api', 'plugin'];
@@ -99,7 +86,7 @@ function lowestPlan(plans?: ProductPlan[]) {
   const active = (plans ?? []).filter((plan) => plan.is_active);
   if (!active.length) return null;
   return active.reduce((lowest, plan) =>
-    pricingFor(plan).finalPrice < pricingFor(lowest).finalPrice ? plan : lowest,
+    pricingFor(plan).finalPrice < pricingFor(lowest).finalPrice ? plan : lowest
   );
 }
 
@@ -172,7 +159,10 @@ function InteractiveProductCard({ product }: { product: Product }) {
             background: `radial-gradient(circle at ${glow.x}% ${glow.y}%, rgba(34,211,238,.13), transparent 31%), linear-gradient(135deg, rgba(255,255,255,.025), transparent 35%)`,
           }}
         />
-        <div aria-hidden="true" className="pointer-events-none absolute -right-20 -top-24 h-56 w-56 rounded-full bg-cyan-400/10 blur-3xl" />
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -right-20 -top-24 h-56 w-56 rounded-full bg-cyan-400/10 blur-3xl"
+        />
 
         <Product3DShowcase
           name={product.name}
@@ -202,12 +192,17 @@ function InteractiveProductCard({ product }: { product: Product }) {
           </div>
 
           <p className="mt-3 line-clamp-3 min-h-[63px] text-sm leading-5 text-slate-400">
-            {product.short_desc || product.description || 'Explore the complete product landing page, included assets and current offer.'}
+            {product.short_desc ||
+              product.description ||
+              'Explore the complete product landing page, included assets and current offer.'}
           </p>
 
           <div className="mt-4 flex flex-wrap items-center gap-2">
             {(product.tags ?? []).slice(0, 3).map((tag) => (
-              <span key={tag} className="rounded-full border border-white/[0.08] bg-white/[0.035] px-2.5 py-1 text-[10px] font-semibold text-slate-400">
+              <span
+                key={tag}
+                className="rounded-full border border-white/[0.08] bg-white/[0.035] px-2.5 py-1 text-[10px] font-semibold text-slate-400"
+              >
                 {tag}
               </span>
             ))}
@@ -222,7 +217,9 @@ function InteractiveProductCard({ product }: { product: Product }) {
 
           <div className="mt-auto flex items-end justify-between gap-4 border-t border-white/[0.08] pt-5">
             <div>
-              <p className="mb-1 text-[9px] font-black uppercase tracking-[0.16em] text-slate-500">Starting at</p>
+              <p className="mb-1 text-[9px] font-black uppercase tracking-[0.16em] text-slate-500">
+                Starting at
+              </p>
               {!plan || !price ? (
                 <span className="text-sm font-semibold text-slate-400">No active offer</span>
               ) : price.finalPrice === 0 ? (
@@ -230,11 +227,15 @@ function InteractiveProductCard({ product }: { product: Product }) {
               ) : (
                 <div className="flex flex-wrap items-baseline gap-1.5">
                   {price.onSale && (
-                    <span className="text-[11px] text-slate-500 line-through">{money(price.regularPrice, plan.currency)}</span>
+                    <span className="text-[11px] text-slate-500 line-through">
+                      {money(price.regularPrice, plan.currency)}
+                    </span>
                   )}
                   <span className="text-2xl font-black tracking-tight text-white">
                     {money(price.finalPrice, plan.currency)}
-                    <span className="ml-0.5 text-xs font-normal text-slate-500">{billingSuffix(plan.billing_period)}</span>
+                    <span className="ml-0.5 text-xs font-normal text-slate-500">
+                      {billingSuffix(plan.billing_period)}
+                    </span>
                   </span>
                 </div>
               )}
@@ -254,87 +255,30 @@ export default function CatalogClient({
   title,
   description,
   eyebrow = 'Catalog',
+  initialProducts,
 }: CatalogClientProps) {
-  const supabase = useMemo(() => createClient(), []);
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
   const [query, setQuery] = useState('');
   const [sort, setSort] = useState<SortMode>('featured');
   const [filter, setFilter] = useState<CatalogKind>(kind);
 
-  useEffect(() => {
-    let alive = true;
-
-    async function load() {
-      setLoading(true);
-      setError('');
-      const { data, error: productsError } = await supabase
-        .from('products')
-        .select(`
-          id, name, slug, short_desc, description, category, thumbnail_url,
-          tags, metadata, created_at,
-          plans:product_plans(
-            id, name, price, currency, billing_period, is_active, sort_order,
-            sale_price, sale_discount_type, sale_discount_value, sale_starts_at, sale_ends_at
-          )
-        `)
-        .eq('status', 'active')
-        .order('created_at', { ascending: false });
-
-      if (!alive) return;
-      if (productsError) {
-        console.error('Catalog load failed:', productsError.message);
-        setError('The catalog could not be loaded. Please try again.');
-        setProducts([]);
-        setLoading(false);
-        return;
-      }
-
-      const rows = (data ?? []) as Product[];
-      const productIds = rows.map((product) => product.id);
-      const ratingMap: Record<string, { sum: number; count: number }> = {};
-
-      if (productIds.length) {
-        const { data: reviews } = await supabase
-          .from('reviews')
-          .select('product_id, rating')
-          .in('product_id', productIds)
-          .eq('moderation_status', 'approved');
-
-        for (const review of reviews ?? []) {
-          if (!ratingMap[review.product_id]) ratingMap[review.product_id] = { sum: 0, count: 0 };
-          ratingMap[review.product_id].sum += Number(review.rating) || 0;
-          ratingMap[review.product_id].count += 1;
-        }
-      }
-
-      setProducts(rows.map((product) => ({
-        ...product,
-        avg_rating: ratingMap[product.id]
-          ? ratingMap[product.id].sum / ratingMap[product.id].count
-          : 0,
-        review_count: ratingMap[product.id]?.count ?? 0,
-      })));
-      setLoading(false);
-    }
-
-    void load();
-    return () => { alive = false; };
-  }, [supabase]);
+  const products: Product[] = initialProducts;
 
   const visible = products
     .filter((product) => {
       const effectiveFilter = kind === 'all' ? filter : kind;
-      if (effectiveFilter !== 'all' && kindForCategory(product.category) !== effectiveFilter) return false;
+      if (effectiveFilter !== 'all' && kindForCategory(product.category) !== effectiveFilter)
+        return false;
       const q = query.trim().toLowerCase();
       if (!q) return true;
-      return product.name.toLowerCase().includes(q)
-        || (product.short_desc ?? '').toLowerCase().includes(q)
-        || (product.tags ?? []).some((tag) => tag.toLowerCase().includes(q));
+      return (
+        product.name.toLowerCase().includes(q) ||
+        (product.short_desc ?? '').toLowerCase().includes(q) ||
+        (product.tags ?? []).some((tag) => tag.toLowerCase().includes(q))
+      );
     })
     .sort((a, b) => {
-      if (sort === 'newest') return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      if (sort === 'newest')
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
       if (sort === 'featured') {
         const featuredDelta = Number(isFeatured(b)) - Number(isFeatured(a));
         if (featuredDelta) return featuredDelta;
@@ -350,12 +294,16 @@ export default function CatalogClient({
   return (
     <main className="min-h-[75vh] bg-[#070b10] pt-[68px] text-white">
       <section className="relative overflow-hidden border-b border-white/[0.08]">
-        <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_74%_18%,rgba(34,211,238,.14),transparent_29%),radial-gradient(circle_at_14%_52%,rgba(20,184,166,.10),transparent_30%)]" />
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_74%_18%,rgba(34,211,238,.14),transparent_29%),radial-gradient(circle_at_14%_52%,rgba(20,184,166,.10),transparent_30%)]"
+        />
         <div
           aria-hidden="true"
           className="pointer-events-none absolute inset-0 opacity-[0.11]"
           style={{
-            backgroundImage: 'linear-gradient(rgba(34,211,238,.2) 1px, transparent 1px), linear-gradient(90deg, rgba(34,211,238,.2) 1px, transparent 1px)',
+            backgroundImage:
+              'linear-gradient(rgba(34,211,238,.2) 1px, transparent 1px), linear-gradient(90deg, rgba(34,211,238,.2) 1px, transparent 1px)',
             backgroundSize: '44px 44px',
             maskImage: 'linear-gradient(to bottom, black, transparent 82%)',
           }}
@@ -385,7 +333,10 @@ export default function CatalogClient({
                 </span>
               </div>
             </div>
-            <Link href="/pricing" className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-5 py-3 text-sm font-bold text-slate-200 transition hover:border-cyan-300/30 hover:text-cyan-200">
+            <Link
+              href="/pricing"
+              className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-5 py-3 text-sm font-bold text-slate-200 transition hover:border-cyan-300/30 hover:text-cyan-200"
+            >
               View published pricing <ArrowRight size={14} />
             </Link>
           </div>
@@ -395,7 +346,10 @@ export default function CatalogClient({
       <section className="mx-auto max-w-screen-xl px-6 py-10 lg:px-8 lg:py-16">
         <div className="mb-9 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div className="relative w-full md:max-w-md">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" size={16} />
+            <Search
+              className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500"
+              size={16}
+            />
             <input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
@@ -404,20 +358,27 @@ export default function CatalogClient({
             />
           </div>
           <div className="flex flex-wrap gap-2">
-            {kind === 'all' && (['all', 'ai', 'saas', 'digital'] as CatalogKind[]).map((value) => (
-              <button
-                key={value}
-                type="button"
-                onClick={() => setFilter(value)}
-                className={`rounded-xl px-3.5 py-2.5 text-xs font-bold transition ${
-                  filter === value
-                    ? 'bg-cyan-300 text-[#041014] shadow-[0_8px_24px_rgba(34,211,238,.18)]'
-                    : 'border border-white/10 bg-white/[0.035] text-slate-400 hover:border-cyan-300/25 hover:text-white'
-                }`}
-              >
-                {value === 'all' ? 'All' : value === 'ai' ? 'AI' : value === 'saas' ? 'SaaS' : 'Digital'}
-              </button>
-            ))}
+            {kind === 'all' &&
+              (['all', 'ai', 'saas', 'digital'] as CatalogKind[]).map((value) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => setFilter(value)}
+                  className={`rounded-xl px-3.5 py-2.5 text-xs font-bold transition ${
+                    filter === value
+                      ? 'bg-cyan-300 text-[#041014] shadow-[0_8px_24px_rgba(34,211,238,.18)]'
+                      : 'border border-white/10 bg-white/[0.035] text-slate-400 hover:border-cyan-300/25 hover:text-white'
+                  }`}
+                >
+                  {value === 'all'
+                    ? 'All'
+                    : value === 'ai'
+                      ? 'AI'
+                      : value === 'saas'
+                        ? 'SaaS'
+                        : 'Digital'}
+                </button>
+              ))}
             <select
               value={sort}
               onChange={(event) => setSort(event.target.value as SortMode)}
@@ -432,25 +393,20 @@ export default function CatalogClient({
           </div>
         </div>
 
-        {loading ? (
-          <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
-            {[0, 1, 2].map((item) => (
-              <div key={item} className="h-[500px] animate-pulse rounded-[32px] border border-white/[0.08] bg-white/[0.035]" />
-            ))}
-          </div>
-        ) : error ? (
-          <div className="rounded-3xl border border-red-400/15 bg-red-400/5 p-8 text-center text-sm text-red-200">{error}</div>
-        ) : visible.length === 0 ? (
+        {visible.length === 0 ? (
           <div className="rounded-[32px] border border-white/10 bg-white/[0.03] p-12 text-center">
             <Package className="mx-auto text-cyan-300" size={34} />
             <h2 className="mt-4 text-xl font-black text-white">No published offers yet</h2>
             <p className="mx-auto mt-2 max-w-lg text-sm leading-6 text-slate-400">
-              SUMMECA is preparing its next production products. Only active publishable offers appear here.
+              SUMMECA is preparing its next production products. Only active publishable offers
+              appear here.
             </p>
           </div>
         ) : (
           <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
-            {visible.map((product) => <InteractiveProductCard key={product.id} product={product} />)}
+            {visible.map((product) => (
+              <InteractiveProductCard key={product.id} product={product} />
+            ))}
           </div>
         )}
       </section>
