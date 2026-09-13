@@ -1,15 +1,27 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { AlertCircle, CheckCircle, ChevronLeft, ChevronRight, Download, FileKey, RefreshCw, Save, Search, UploadCloud, XCircle } from 'lucide-react';
+import { AlertCircle, CheckCircle, ChevronLeft, ChevronRight, FileKey, RefreshCw, Save, Search, UploadCloud, XCircle } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { toast } from 'sonner';
+
+type DeliveryKind = 'storage' | 'database' | 'generated' | 'saas' | 'missing';
+
+type DeliveryState = {
+  kind: DeliveryKind;
+  ready: boolean;
+  path: string;
+  name: string;
+  size: number;
+  detail: string;
+};
 
 type ProductDelivery = {
   id: string;
   name: string;
   slug: string;
   status: string;
+  delivery: DeliveryState;
   download: null | {
     bucket: string;
     path: string;
@@ -35,7 +47,7 @@ type Entitlement = {
 const PAGE_SIZE = 20;
 
 function formatBytes(bytes: number) {
-  if (!bytes) return 'Unknown size';
+  if (!bytes) return 'Generated on demand';
   const units = ['B', 'KB', 'MB', 'GB'];
   let value = bytes;
   let unit = 0;
@@ -55,6 +67,21 @@ function safeJson(response: Response) {
       return {} as Record<string, any>;
     }
   });
+}
+
+function deliveryLabel(delivery: DeliveryState) {
+  if (!delivery.ready) return '❌ Delivery issue';
+  if (delivery.kind === 'database') return '✅ File ready';
+  if (delivery.kind === 'generated') return '⚙️ Generated automatically';
+  if (delivery.kind === 'saas') return '🌐 SaaS — no download';
+  if (delivery.kind === 'storage') return '✅ Private file ready';
+  return '❌ File missing';
+}
+
+function deliveryTone(delivery: DeliveryState) {
+  if (!delivery.ready || delivery.kind === 'missing') return 'border-danger/20 bg-danger/5 text-danger';
+  if (delivery.kind === 'generated' || delivery.kind === 'saas') return 'border-primary/20 bg-primary/5 text-primary';
+  return 'border-success/20 bg-success/5 text-success';
 }
 
 export default function AdminEntitlementsPage() {
@@ -81,6 +108,21 @@ export default function AdminEntitlementsPage() {
     [products, selectedProductId]
   );
 
+  const deliverySummary = useMemo(() => {
+    const active = products.filter((product) => product.status === 'active');
+    return {
+      active: active.length,
+      ready: active.filter((product) => product.delivery.ready).length,
+      generated: active.filter((product) => product.delivery.kind === 'generated').length,
+      saas: active.filter((product) => product.delivery.kind === 'saas').length,
+      issues: active.filter((product) => !product.delivery.ready).length,
+    };
+  }, [products]);
+
+  const storageManagerVisible = Boolean(
+    selectedProduct && (selectedProduct.delivery.kind === 'storage' || selectedProduct.delivery.kind === 'missing')
+  );
+
   const fetchDeliveryConfig = useCallback(async () => {
     setConfigLoading(true);
     try {
@@ -101,6 +143,7 @@ export default function AdminEntitlementsPage() {
     if (!selectedProduct) return;
     setObjectPath(selectedProduct.download?.path ?? '');
     setDownloadName(selectedProduct.download?.name ?? '');
+    setSelectedFile(null);
   }, [selectedProduct]);
 
   const fetchEntitlements = useCallback(async () => {
@@ -249,7 +292,7 @@ export default function AdminEntitlementsPage() {
     <div className="space-y-6 fade-in">
       <div>
         <h1 className="text-2xl font-800 text-foreground">Download Entitlements</h1>
-        <p className="text-sm text-muted-foreground mt-1">Configure private product delivery and review customer download access.</p>
+        <p className="text-sm text-muted-foreground mt-1">See the real delivery method for every product and review customer download access.</p>
       </div>
 
       <section className="rounded-2xl border border-border bg-card p-5 space-y-4">
@@ -257,10 +300,10 @@ export default function AdminEntitlementsPage() {
           <div>
             <div className="flex items-center gap-2">
               <FileKey size={16} className="text-primary" />
-              <h2 className="text-sm font-800 text-foreground">Private product file</h2>
+              <h2 className="text-sm font-800 text-foreground">Product delivery status</h2>
             </div>
             <p className="text-xs text-muted-foreground mt-1 max-w-2xl">
-              Upload a product file securely here, or verify an existing object path in the private <span className="font-mono">downloads</span> bucket. Public URLs are rejected. Products without a configured file do not create fake download entitlements.
+              This view distinguishes private files, database assets, generated ZIP bundles, SaaS access, and genuinely missing delivery configuration.
             </p>
           </div>
           <button type="button" onClick={() => void fetchDeliveryConfig()} disabled={configLoading} className="inline-flex items-center gap-1.5 text-xs font-600 px-3 py-2 border border-border rounded-lg hover:bg-secondary disabled:opacity-50">
@@ -268,59 +311,117 @@ export default function AdminEntitlementsPage() {
           </button>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-[1.1fr_1.4fr_1fr] gap-3">
-          <div>
-            <label className="block text-xs font-700 text-muted-foreground mb-1.5">Product</label>
-            <select value={selectedProductId} onChange={(event) => setSelectedProductId(event.target.value)} disabled={configLoading} className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm">
-              {products.map((product) => (
-                <option key={product.id} value={product.id}>{product.name} ({product.status})</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs font-700 text-muted-foreground mb-1.5">Private object path</label>
-            <input value={objectPath} onChange={(event) => setObjectPath(event.target.value)} placeholder="products/example/file.zip" className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm font-mono" />
-          </div>
-          <div>
-            <label className="block text-xs font-700 text-muted-foreground mb-1.5">Customer filename</label>
-            <input value={downloadName} onChange={(event) => setDownloadName(event.target.value)} placeholder="product-file.zip" className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm" />
-          </div>
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-2">
+          <div className="rounded-xl border border-border bg-secondary/20 px-3 py-2.5"><div className="text-lg font-800 text-foreground">{deliverySummary.active}</div><div className="text-[11px] text-muted-foreground">Active products</div></div>
+          <div className="rounded-xl border border-success/20 bg-success/5 px-3 py-2.5"><div className="text-lg font-800 text-success">{deliverySummary.ready}</div><div className="text-[11px] text-muted-foreground">Ready to deliver</div></div>
+          <div className="rounded-xl border border-primary/20 bg-primary/5 px-3 py-2.5"><div className="text-lg font-800 text-primary">{deliverySummary.generated}</div><div className="text-[11px] text-muted-foreground">Generated ZIP</div></div>
+          <div className="rounded-xl border border-primary/20 bg-primary/5 px-3 py-2.5"><div className="text-lg font-800 text-primary">{deliverySummary.saas}</div><div className="text-[11px] text-muted-foreground">SaaS access</div></div>
+          <div className="rounded-xl border border-danger/20 bg-danger/5 px-3 py-2.5"><div className="text-lg font-800 text-danger">{deliverySummary.issues}</div><div className="text-[11px] text-muted-foreground">Active issues</div></div>
         </div>
 
-        {selectedProduct?.download && (
-          <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-xs text-muted-foreground rounded-xl bg-secondary/40 px-3 py-2.5">
-            <span className="inline-flex items-center gap-1 text-success"><CheckCircle size={12} /> Configured</span>
-            <span>Bucket: <span className="font-mono">{selectedProduct.download.bucket}</span></span>
-            <span>Size: {formatBytes(selectedProduct.download.size)}</span>
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2">
+          {products.map((product) => (
+            <button
+              key={product.id}
+              type="button"
+              onClick={() => setSelectedProductId(product.id)}
+              className={`text-left rounded-xl border px-3 py-3 transition-colors ${selectedProductId === product.id ? 'border-primary bg-primary/5' : 'border-border hover:bg-secondary/30'}`}
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <div className="text-xs font-700 text-foreground truncate">{product.name}</div>
+                  <div className="text-[11px] text-muted-foreground mt-0.5 capitalize">{product.status}</div>
+                </div>
+                <span className={`shrink-0 rounded-full border px-2 py-1 text-[10px] font-700 ${deliveryTone(product.delivery)}`}>{deliveryLabel(product.delivery)}</span>
+              </div>
+            </button>
+          ))}
+        </div>
+
+        <div>
+          <label className="block text-xs font-700 text-muted-foreground mb-1.5">Selected product</label>
+          <select value={selectedProductId} onChange={(event) => setSelectedProductId(event.target.value)} disabled={configLoading} className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm">
+            {products.map((product) => (
+              <option key={product.id} value={product.id}>{product.name} — {deliveryLabel(product.delivery)}</option>
+            ))}
+          </select>
+        </div>
+
+        {selectedProduct && (
+          <div className={`rounded-xl border px-4 py-3 ${deliveryTone(selectedProduct.delivery)}`}>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="text-sm font-800">{deliveryLabel(selectedProduct.delivery)}</span>
+              <span className="text-[11px] font-700 uppercase tracking-wide opacity-80">{selectedProduct.delivery.kind}</span>
+            </div>
+            <p className="text-xs mt-1.5 opacity-90">{selectedProduct.delivery.detail}</p>
+            {(selectedProduct.delivery.path || selectedProduct.delivery.name || selectedProduct.delivery.size > 0) && (
+              <div className="flex flex-wrap gap-x-5 gap-y-1 mt-2 text-[11px] opacity-80">
+                {selectedProduct.delivery.path && <span>Source: <span className="font-mono break-all">{selectedProduct.delivery.path}</span></span>}
+                {selectedProduct.delivery.name && <span>Customer file: <span className="font-mono">{selectedProduct.delivery.name}</span></span>}
+                {selectedProduct.delivery.kind !== 'saas' && <span>Size: {formatBytes(selectedProduct.delivery.size)}</span>}
+              </div>
+            )}
           </div>
         )}
 
-        <div className="rounded-xl border border-dashed border-border p-3 space-y-2">
-          <label className="block text-xs font-700 text-muted-foreground">Upload a new private file</label>
-          <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
-            <input
-              type="file"
-              onChange={(event) => setSelectedFile(event.target.files?.[0] ?? null)}
-              disabled={uploading || !selectedProductId}
-              className="block w-full text-xs text-muted-foreground file:mr-3 file:rounded-lg file:border-0 file:bg-secondary file:px-3 file:py-2 file:text-xs file:font-700 file:text-foreground"
-            />
-            <button type="button" onClick={uploadAndConfigure} disabled={uploading || !selectedProductId || !selectedFile} className="btn-primary inline-flex shrink-0 items-center justify-center gap-2 disabled:opacity-50">
-              <UploadCloud size={13} /> {uploading ? 'Uploading…' : 'Upload & Configure'}
-            </button>
-          </div>
-          <p className="text-[11px] text-muted-foreground">The upload uses a short-lived signed token and a unique object path; existing files are never overwritten.</p>
-        </div>
+        {storageManagerVisible ? (
+          <div className="space-y-4 rounded-xl border border-border bg-secondary/10 p-4">
+            <div>
+              <h3 className="text-xs font-800 text-foreground">Private Storage file manager</h3>
+              <p className="text-[11px] text-muted-foreground mt-1">Use this only for products delivered from the private downloads bucket. Public URLs are rejected.</p>
+            </div>
 
-        <div className="flex flex-wrap gap-2">
-          <button type="button" onClick={saveDelivery} disabled={configSaving || uploading || !selectedProductId || !objectPath.trim()} className="btn-primary inline-flex items-center gap-2 disabled:opacity-50">
-            <Save size={13} /> {configSaving ? 'Saving…' : 'Verify Existing Path & Save'}
-          </button>
-          {selectedProduct?.download && (
-            <button type="button" onClick={removeDelivery} disabled={configSaving} className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-danger/20 text-danger text-sm font-600 hover:bg-danger/5 disabled:opacity-50">
-              <XCircle size={13} /> Remove for future purchases
-            </button>
-          )}
-        </div>
+            <div className="grid grid-cols-1 lg:grid-cols-[1.4fr_1fr] gap-3">
+              <div>
+                <label className="block text-xs font-700 text-muted-foreground mb-1.5">Private object path</label>
+                <input value={objectPath} onChange={(event) => setObjectPath(event.target.value)} placeholder="products/example/file.zip" className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm font-mono" />
+              </div>
+              <div>
+                <label className="block text-xs font-700 text-muted-foreground mb-1.5">Customer filename</label>
+                <input value={downloadName} onChange={(event) => setDownloadName(event.target.value)} placeholder="product-file.zip" className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm" />
+              </div>
+            </div>
+
+            {selectedProduct?.download && (
+              <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-xs text-muted-foreground rounded-xl bg-secondary/40 px-3 py-2.5">
+                <span className="inline-flex items-center gap-1 text-success"><CheckCircle size={12} /> Configured</span>
+                <span>Bucket: <span className="font-mono">{selectedProduct.download.bucket}</span></span>
+                <span>Size: {formatBytes(selectedProduct.download.size)}</span>
+              </div>
+            )}
+
+            <div className="rounded-xl border border-dashed border-border p-3 space-y-2">
+              <label className="block text-xs font-700 text-muted-foreground">Upload a new private file</label>
+              <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
+                <input
+                  type="file"
+                  onChange={(event) => setSelectedFile(event.target.files?.[0] ?? null)}
+                  disabled={uploading || !selectedProductId}
+                  className="block w-full text-xs text-muted-foreground file:mr-3 file:rounded-lg file:border-0 file:bg-secondary file:px-3 file:py-2 file:text-xs file:font-700 file:text-foreground"
+                />
+                <button type="button" onClick={uploadAndConfigure} disabled={uploading || !selectedProductId || !selectedFile} className="btn-primary inline-flex shrink-0 items-center justify-center gap-2 disabled:opacity-50">
+                  <UploadCloud size={13} /> {uploading ? 'Uploading…' : 'Upload & Configure'}
+                </button>
+              </div>
+              <p className="text-[11px] text-muted-foreground">The upload uses a short-lived signed token and a unique object path; existing files are never overwritten.</p>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              <button type="button" onClick={saveDelivery} disabled={configSaving || uploading || !selectedProductId || !objectPath.trim()} className="btn-primary inline-flex items-center gap-2 disabled:opacity-50">
+                <Save size={13} /> {configSaving ? 'Saving…' : 'Verify Existing Path & Save'}
+              </button>
+              {selectedProduct?.download && (
+                <button type="button" onClick={removeDelivery} disabled={configSaving} className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-danger/20 text-danger text-sm font-600 hover:bg-danger/5 disabled:opacity-50">
+                  <XCircle size={13} /> Remove for future purchases
+                </button>
+              )}
+            </div>
+          </div>
+        ) : selectedProduct ? (
+          <div className="rounded-xl border border-border bg-secondary/20 px-4 py-3 text-xs text-muted-foreground">
+            This product does not require a private Storage object path. Its delivery method is already managed by the secure server flow shown above.
+          </div>
+        ) : null}
       </section>
 
       <section className="space-y-3">
