@@ -3,10 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import {
-  Brain,
   ChevronDown,
-  FileText,
-  GitCompare,
   LayoutDashboard,
   LogOut,
   Menu,
@@ -19,16 +16,10 @@ import AppLogo from '@/components/ui/AppLogo';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
 import { useAuth } from '@/contexts/AuthContext';
 
-const productLinks = [
-  { label: 'AI Tools', href: '/ai', icon: Brain, desc: 'Published AI tools, APIs, and plugins' },
-  { label: 'SaaS Apps', href: '/saas', icon: LayoutDashboard, desc: 'Published SaaS applications' },
-  { label: 'Digital Products', href: '/digital', icon: FileText, desc: 'Published templates, datasets, and files' },
-  { label: 'Compare Products', href: '/compare', icon: GitCompare, desc: 'Compare published product facts' },
-];
-
-const simpleLinks = [
+const navLinks = [
+  { label: 'Products', href: '/products' },
+  { label: 'SaaS Apps', href: '/saas' },
   { label: 'Pricing', href: '/pricing' },
-  { label: 'About', href: '/about' },
   { label: 'Support', href: '/support' },
 ];
 
@@ -36,7 +27,6 @@ export default function PublicNav() {
   const { user, loading, signOut } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  const [productsOpen, setProductsOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
   const accountMenuRef = useRef<HTMLDivElement>(null);
 
@@ -48,7 +38,7 @@ export default function PublicNav() {
   const displayName = rawDisplayName.length > 24 ? `${rawDisplayName.slice(0, 24)}…` : rawDisplayName;
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 16);
+    const onScroll = () => setScrolled(window.scrollY > 12);
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
@@ -72,43 +62,35 @@ export default function PublicNav() {
 
   return (
     <header data-public-nav="true" className={`fixed left-0 right-0 top-0 z-50 transition-all duration-300 ${scrolled ? 'border-b border-primary/8 bg-white/95 shadow-sm shadow-primary/5 backdrop-blur-xl' : 'bg-transparent'}`}>
-      <div className="mx-auto max-w-screen-xl px-6 lg:px-8">
-        <div className="flex h-[76px] items-center justify-between">
+      <div className="mx-auto max-w-screen-xl px-5 sm:px-6 lg:px-8">
+        <div className="flex h-[70px] items-center justify-between">
           <Link href="/" className="group flex shrink-0 items-center" aria-label="SUMMECA home">
-            <AppLogo variant="wordmark" size={50} className="transition-transform duration-200 group-hover:scale-[1.035]" />
+            <AppLogo variant="wordmark" size={46} className="transition-transform duration-200 group-hover:scale-[1.025]" />
           </Link>
 
-          <nav className="hidden items-center gap-0.5 lg:flex">
-            <div className="relative" onMouseEnter={() => setProductsOpen(true)} onMouseLeave={() => setProductsOpen(false)}>
-              <Link href="/products" className="flex items-center gap-1 rounded-lg px-3.5 py-2 text-sm font-medium text-secondary-foreground transition hover:bg-secondary/80 hover:text-foreground">
-                Products <ChevronDown size={13} className={`transition-transform ${productsOpen ? 'rotate-180 text-primary' : ''}`} />
+          <nav className="hidden items-center gap-1 lg:flex">
+            {navLinks.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className="block rounded-lg px-3.5 py-2 text-sm font-medium text-secondary-foreground transition hover:bg-secondary/80 hover:text-foreground"
+              >
+                {item.label}
               </Link>
-              {productsOpen && (
-                <div className="glass-card-premium absolute left-0 top-full mt-2 w-72 rounded-2xl p-2 shadow-xl">
-                  <div className="absolute left-4 right-4 top-0 h-0.5 rounded-full bg-gradient-to-r from-primary/60 to-accent/40" />
-                  {productLinks.map((item) => (
-                    <Link key={item.href} href={item.href} className="group mt-1 flex items-center gap-3 rounded-xl px-3 py-2.5 transition hover:bg-secondary/70">
-                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/8 transition group-hover:bg-gradient-teal"><item.icon size={15} className="text-primary transition-colors group-hover:text-white" /></div>
-                      <div><div className="text-sm font-semibold text-foreground">{item.label}</div><div className="text-xs text-muted-foreground">{item.desc}</div></div>
-                    </Link>
-                  ))}
-                </div>
-              )}
-            </div>
-            {simpleLinks.map((item) => <Link key={item.href} href={item.href} className="block rounded-lg px-3.5 py-2 text-sm font-medium text-secondary-foreground transition hover:bg-secondary/80 hover:text-foreground">{item.label}</Link>)}
+            ))}
           </nav>
 
           <div className="hidden items-center gap-2 lg:flex">
             <LanguageSwitcher compact />
             {loading ? (
-              <div className="h-9 w-28 animate-pulse rounded-lg bg-secondary/70" aria-label="Loading account" />
+              <div className="h-9 w-24 animate-pulse rounded-lg bg-secondary/70" aria-label="Loading account" />
             ) : user ? (
               <>
                 <div ref={accountMenuRef} className="relative">
                   <button
                     type="button"
                     onClick={() => setAccountOpen((open) => !open)}
-                    className="flex max-w-[220px] items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold text-secondary-foreground transition hover:bg-secondary/80 hover:text-foreground"
+                    className="flex max-w-[200px] items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold text-secondary-foreground transition hover:bg-secondary/80 hover:text-foreground"
                     aria-haspopup="menu"
                     aria-expanded={accountOpen}
                   >
@@ -136,12 +118,12 @@ export default function PublicNav() {
                     </div>
                   )}
                 </div>
-                <Link href="/user-dashboard" className="btn-primary flex items-center gap-1.5 rounded-xl px-5 py-2.5 text-sm"><LayoutDashboard size={13} />Dashboard</Link>
+                <Link href="/user-dashboard" className="btn-primary flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-sm"><LayoutDashboard size={13} />Dashboard</Link>
               </>
             ) : (
               <>
                 <Link href="/sign-up-login-screen" className="rounded-lg px-3 py-2 text-sm font-semibold text-secondary-foreground transition hover:bg-secondary/80 hover:text-foreground">Log in</Link>
-                <Link href="/sign-up-login-screen" className="btn-primary flex items-center gap-1.5 rounded-xl px-5 py-2.5 text-sm"><Sparkles size={13} />Get Started</Link>
+                <Link href="/sign-up-login-screen" className="btn-primary flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-sm"><Sparkles size={13} />Get Started</Link>
               </>
             )}
           </div>
@@ -158,10 +140,12 @@ export default function PublicNav() {
       {mobileOpen && (
         <div className="border-t border-border bg-white/98 shadow-xl backdrop-blur-xl lg:hidden">
           <div className="h-0.5 bg-gradient-to-r from-primary via-accent to-transparent" />
-          <div className="space-y-1 px-4 py-5">
-            <Link href="/products" className="block rounded-xl px-3 py-2.5 text-sm font-semibold text-foreground hover:bg-secondary" onClick={() => setMobileOpen(false)}>Products</Link>
-            {productLinks.map((item) => <Link key={item.href} href={item.href} className="block rounded-xl px-6 py-2 text-sm text-secondary-foreground hover:bg-secondary hover:text-foreground" onClick={() => setMobileOpen(false)}>{item.label}</Link>)}
-            {simpleLinks.map((item) => <Link key={item.href} href={item.href} className="block rounded-xl px-3 py-2.5 text-sm font-medium text-secondary-foreground hover:bg-secondary hover:text-foreground" onClick={() => setMobileOpen(false)}>{item.label}</Link>)}
+          <div className="space-y-1 px-4 py-4">
+            {navLinks.map((item) => (
+              <Link key={item.href} href={item.href} className="block rounded-xl px-3 py-2.5 text-sm font-medium text-secondary-foreground hover:bg-secondary hover:text-foreground" onClick={() => setMobileOpen(false)}>
+                {item.label}
+              </Link>
+            ))}
             <div className="mt-3 flex flex-col gap-2.5 border-t border-border pt-4">
               {loading ? (
                 <div className="h-10 animate-pulse rounded-xl bg-secondary/70" aria-label="Loading account" />

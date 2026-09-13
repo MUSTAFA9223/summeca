@@ -15,9 +15,10 @@ const deferredAssistant = read('src/components/DeferredStoreAssistant.tsx');
 test('homepage reserves a responsive touch-safe stage for the new 3D robot', () => {
   assert.match(hero, /SplineNexbotScene/);
   assert.match(hero, /grid-cols-1/);
-  assert.match(hero, /lg:grid-cols-\[45%_55%\]/);
-  assert.match(hero, /min-h-\[540px\]/);
-  assert.match(hero, /sm:min-h-\[620px\]/);
+  assert.match(hero, /lg:grid-cols-\[46%_54%\]/);
+  assert.match(hero, /min-h-\[430px\]/);
+  assert.match(hero, /sm:min-h-\[500px\]/);
+  assert.match(hero, /lg:min-h-\[590px\]/);
   assert.match(hero, /touch-pan-y/);
 });
 
