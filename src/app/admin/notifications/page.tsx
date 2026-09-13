@@ -1,7 +1,18 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Bell, Send, Users, CheckCircle, Clock, Megaphone, Loader2, AlertCircle, TrendingUp,  } from 'lucide-react';
+import {
+  Bell,
+  Send,
+  Users,
+  CheckCircle,
+  Clock,
+  Megaphone,
+  Loader2,
+  AlertCircle,
+  TrendingUp,
+  MessageCircle,
+} from 'lucide-react';
 
 interface DeliveryStats {
   total: number;
@@ -22,6 +33,10 @@ export default function AdminNotificationsPage() {
   const [stats, setStats] = useState<DeliveryStats | null>(null);
   const [recent, setRecent] = useState<RecentNotification[]>([]);
   const [loadingStats, setLoadingStats] = useState(true);
+  const [telegramConnected, setTelegramConnected] = useState(false);
+  const [telegramChats, setTelegramChats] = useState(0);
+  const [telegramLoading, setTelegramLoading] = useState(false);
+  const [telegramError, setTelegramError] = useState('');
 
   // Send form state
   const [title, setTitle] = useState('');
@@ -36,11 +51,20 @@ export default function AdminNotificationsPage() {
     const fetchStats = async () => {
       setLoadingStats(true);
       try {
-        const res = await fetch('/api/admin/notifications/send');
-        if (res.ok) {
-          const data = await res.json();
+        const [notificationRes, telegramRes] = await Promise.all([
+          fetch('/api/admin/notifications/send'),
+          fetch('/api/admin/telegram/setup'),
+        ]);
+
+        if (notificationRes.ok) {
+          const data = await notificationRes.json();
           setStats(data.stats);
           setRecent(data.recent || []);
+        }
+        if (telegramRes.ok) {
+          const data = await telegramRes.json();
+          setTelegramConnected(Boolean(data.connected));
+          setTelegramChats(Number(data.chats || 0));
         }
       } finally {
         setLoadingStats(false);
@@ -48,6 +72,24 @@ export default function AdminNotificationsPage() {
     };
     fetchStats();
   }, []);
+
+  const handleConnectTelegram = async () => {
+    setTelegramLoading(true);
+    setTelegramError('');
+    try {
+      const response = await fetch('/api/admin/telegram/setup', { method: 'POST' });
+      const data = await response.json();
+      if (!response.ok || !data.connectUrl) {
+        setTelegramError(data.error || 'Unable to create Telegram connection link.');
+        return;
+      }
+      window.location.assign(data.connectUrl);
+    } catch {
+      setTelegramError('Unable to connect Telegram right now.');
+    } finally {
+      setTelegramLoading(false);
+    }
+  };
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -66,7 +108,6 @@ export default function AdminNotificationsPage() {
         setTitle('');
         setMessage('');
         setActionUrl('');
-        // Refresh stats
         const statsRes = await fetch('/api/admin/notifications/send');
         if (statsRes.ok) {
           const statsData = await statsRes.json();
@@ -93,17 +134,15 @@ export default function AdminNotificationsPage() {
 
   return (
     <div className="p-6 max-w-5xl mx-auto">
-      {/* Header */}
       <div className="mb-6">
         <h1 className="text-2xl font-700 text-foreground flex items-center gap-2">
           <Bell size={22} className="text-primary" />
           Notification Center
         </h1>
-        <p className="text-sm text-muted-foreground mt-0.5">Send announcements and view delivery statistics</p>
+        <p className="text-sm text-muted-foreground mt-0.5">Send announcements and manage owner alerts</p>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         {[
           { label: 'Total Sent', value: stats?.total ?? '—', icon: Send, color: 'text-primary' },
           { label: 'Unread', value: stats?.unread ?? '—', icon: Bell, color: 'text-warning' },
@@ -124,8 +163,39 @@ export default function AdminNotificationsPage() {
         ))}
       </div>
 
+      <div className="mb-8 rounded-2xl border border-primary/20 bg-primary/5 p-5">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start gap-3">
+            <div className="mt-0.5 flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10">
+              <MessageCircle size={18} className="text-primary" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="text-sm font-700 text-foreground">Telegram visitor alerts</h2>
+                <span className={`h-2 w-2 rounded-full ${telegramConnected ? 'bg-success' : 'bg-muted-foreground/40'}`} />
+              </div>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {telegramConnected
+                  ? `Connected to ${telegramChats} admin chat${telegramChats === 1 ? '' : 's'}. One alert is sent per new 30-minute visitor session.`
+                  : 'Connect your private Telegram chat to receive one alert for each new visitor session.'}
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">Bot commands: /today · /week · /month</p>
+              {telegramError ? <p className="mt-2 text-xs text-danger">{telegramError}</p> : null}
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={handleConnectTelegram}
+            disabled={telegramLoading}
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-600 text-white transition-all hover:bg-primary/90 disabled:opacity-50"
+          >
+            {telegramLoading ? <Loader2 size={14} className="animate-spin" /> : <MessageCircle size={14} />}
+            {telegramConnected ? 'Reconnect Telegram' : 'Connect Telegram'}
+          </button>
+        </div>
+      </div>
+
       <div className="grid lg:grid-cols-2 gap-6">
-        {/* Send Notification Form */}
         <div className="bg-card border border-border rounded-2xl p-6">
           <h2 className="text-base font-600 text-foreground flex items-center gap-2 mb-5">
             <Megaphone size={16} className="text-primary" />
@@ -199,7 +269,8 @@ export default function AdminNotificationsPage() {
             {sendResult && (
               <div className={`flex items-center gap-2 p-3 rounded-lg text-sm ${
                 sendResult.success
-                  ? 'bg-success/10 text-success border border-success/20' :'bg-danger/10 text-danger border border-danger/20'
+                  ? 'bg-success/10 text-success border border-success/20'
+                  : 'bg-danger/10 text-danger border border-danger/20'
               }`}>
                 {sendResult.success ? <CheckCircle size={14} /> : <AlertCircle size={14} />}
                 {sendResult.message}
@@ -220,7 +291,6 @@ export default function AdminNotificationsPage() {
           </form>
         </div>
 
-        {/* Recent Notifications */}
         <div className="bg-card border border-border rounded-2xl p-6">
           <h2 className="text-base font-600 text-foreground flex items-center gap-2 mb-5">
             <TrendingUp size={16} className="text-primary" />
@@ -269,14 +339,13 @@ export default function AdminNotificationsPage() {
         </div>
       </div>
 
-      {/* Info */}
       <div className="mt-6 p-4 rounded-2xl bg-primary/5 border border-primary/20">
         <div className="flex items-start gap-3">
           <Users size={16} className="text-primary mt-0.5 flex-shrink-0" />
           <div>
             <p className="text-sm font-600 text-foreground">Notification Delivery</p>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Notifications are delivered in real-time via Supabase Realtime. Users see them instantly in their notification bell and the Notifications page. All notifications respect user RLS policies — users can only see their own.
+              Customer notifications are delivered through Supabase Realtime. Telegram owner alerts are private and use a short-lived authenticated pairing link.
             </p>
           </div>
         </div>
