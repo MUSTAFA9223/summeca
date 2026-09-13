@@ -15,7 +15,8 @@ import {
   LANGUAGE_STORAGE_KEY,
   type AppLanguage,
 } from '@/lib/i18n';
-import { translateUiText } from '@/lib/i18n-extra';
+import { translateComprehensiveText } from '@/lib/i18n-comprehensive';
+import { translateSiteText } from '@/lib/i18n-products';
 
 type LanguageContextValue = {
   language: AppLanguage;
@@ -40,16 +41,27 @@ const SKIP_SELECTOR = [
   'svg',
 ].join(',');
 
-const TRANSLATABLE_ATTRIBUTES = ['placeholder', 'aria-label', 'title'] as const;
+const TRANSLATABLE_ATTRIBUTES = [
+  'placeholder',
+  'aria-label',
+  'aria-description',
+  'title',
+  'alt',
+] as const;
 
 function shouldSkipElement(element: Element | null) {
   return Boolean(element?.closest(SKIP_SELECTOR));
 }
 
+function translateValue(value: string) {
+  const comprehensive = translateComprehensiveText(value);
+  return translateSiteText(comprehensive);
+}
+
 function translateTextNode(node: Text) {
   if (shouldSkipElement(node.parentElement)) return;
   const current = node.nodeValue ?? '';
-  const translated = translateUiText(current);
+  const translated = translateValue(current);
   if (translated !== current) node.nodeValue = translated;
 }
 
@@ -59,7 +71,7 @@ function translateElementAttributes(element: Element) {
   for (const attribute of TRANSLATABLE_ATTRIBUTES) {
     const current = element.getAttribute(attribute);
     if (!current) continue;
-    const translated = translateUiText(current);
+    const translated = translateValue(current);
     if (translated !== current) element.setAttribute(attribute, translated);
   }
 }
@@ -164,7 +176,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   );
 
   const t = useCallback(
-    (english: string) => (language === 'ar' ? translateUiText(english) : english),
+    (english: string) => (language === 'ar' ? translateValue(english) : english),
     [language],
   );
 
