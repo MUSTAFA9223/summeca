@@ -16,10 +16,10 @@ WITH CHECK (
   AND order_id IS NOT NULL
   AND EXISTS (
     SELECT 1
-    FROM public.orders o
-    WHERE o.id = order_id
+    FROM public.orders AS o
+    WHERE o.id = reviews.order_id
       AND o.user_id = auth.uid()
-      AND o.product_id = product_id
+      AND o.product_id = reviews.product_id
       AND o.status = 'completed'
       AND o.amount > 0
   )
@@ -41,10 +41,10 @@ WITH CHECK (
   AND order_id IS NOT NULL
   AND EXISTS (
     SELECT 1
-    FROM public.orders o
-    WHERE o.id = order_id
+    FROM public.orders AS o
+    WHERE o.id = reviews.order_id
       AND o.user_id = auth.uid()
-      AND o.product_id = product_id
+      AND o.product_id = reviews.product_id
       AND o.status = 'completed'
       AND o.amount > 0
   )
