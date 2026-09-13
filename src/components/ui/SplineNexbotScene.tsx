@@ -16,7 +16,7 @@ type SplineNexbotSceneProps = {
 export default function SplineNexbotScene({
   className = '',
   interactive = true,
-  pointerScopeSelector,
+  pointerScopeSelector = 'main',
 }: SplineNexbotSceneProps) {
   const [ready, setReady] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
