@@ -25,6 +25,7 @@ import {
   Gift,
   Bell,
   Shield,
+  Star,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -44,6 +45,7 @@ const navGroups = [
       { id: 'products', label: 'My Products', icon: Package, href: '/user-dashboard/products' },
       { id: 'subscriptions', label: 'Subscriptions', icon: CreditCard, href: '/user-dashboard/subscriptions' },
       { id: 'orders', label: 'Orders', icon: ShoppingBag, href: '/user-dashboard/orders' },
+      { id: 'reviews', label: 'Reviews', icon: Star, href: '/user-dashboard/reviews' },
       { id: 'downloads', label: 'Downloads', icon: Download, href: '/user-dashboard/downloads' },
       { id: 'wishlist', label: 'Wishlist', icon: Heart, href: '/user-dashboard/wishlist' },
       { id: 'referrals', label: 'Referrals', icon: Gift, href: '/user-dashboard/referrals' },
