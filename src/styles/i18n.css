@@ -16,10 +16,19 @@ html[dir='rtl'] .sidebar-link.active {
   border-right: 2px solid #0D9488;
 }
 
+html[dir='rtl'] input:not([type='email']):not([type='url']):not([type='tel']):not([type='number']):not([type='date']):not([type='datetime-local']):not([type='color']),
+html[dir='rtl'] textarea,
+html[dir='rtl'] select {
+  direction: rtl;
+  text-align: right;
+}
+
 html[dir='rtl'] input[type='email'],
 html[dir='rtl'] input[type='url'],
 html[dir='rtl'] input[type='tel'],
 html[dir='rtl'] input[type='number'],
+html[dir='rtl'] input[type='date'],
+html[dir='rtl'] input[type='datetime-local'],
 html[dir='rtl'] [data-ltr],
 html[dir='rtl'] code,
 html[dir='rtl'] pre,
@@ -31,8 +40,19 @@ html[dir='rtl'] .tabular-nums {
 html[dir='rtl'] input[type='email'],
 html[dir='rtl'] input[type='url'],
 html[dir='rtl'] input[type='tel'],
-html[dir='rtl'] input[type='number'] {
+html[dir='rtl'] input[type='number'],
+html[dir='rtl'] input[type='date'],
+html[dir='rtl'] input[type='datetime-local'] {
   text-align: left;
+}
+
+html[dir='rtl'] table {
+  direction: rtl;
+}
+
+html[dir='rtl'] th,
+html[dir='rtl'] td {
+  text-align: right;
 }
 
 html[dir='rtl'] .rtl-flip {
@@ -42,4 +62,43 @@ html[dir='rtl'] .rtl-flip {
 html[dir='rtl'] [data-language-switcher],
 html[dir='rtl'] [data-i18n-skip] {
   direction: ltr;
+}
+
+/* Customer and admin navigation live on the logical start edge. */
+html[dir='rtl'] [data-dashboard-sidebar],
+html[dir='rtl'] [data-admin-sidebar] {
+  left: auto !important;
+  right: 0 !important;
+  border-right-width: 0 !important;
+  border-left-width: 1px !important;
+}
+
+html[dir='rtl'] [data-mobile-sidebar='true'][data-open='false'] {
+  transform: translateX(100%) !important;
+}
+
+html[dir='rtl'] [data-mobile-sidebar='true'][data-open='true'] {
+  transform: translateX(0) !important;
+}
+
+@media (min-width: 1024px) {
+  html[dir='rtl'] [data-sidebar-offset] {
+    margin-left: 0 !important;
+  }
+
+  html[dir='rtl'] [data-sidebar-offset='dashboard'][data-sidebar-collapsed='false'] {
+    margin-right: 15rem !important;
+  }
+
+  html[dir='rtl'] [data-sidebar-offset='dashboard'][data-sidebar-collapsed='true'] {
+    margin-right: 4rem !important;
+  }
+
+  html[dir='rtl'] [data-sidebar-offset='admin'][data-sidebar-collapsed='false'] {
+    margin-right: 16rem !important;
+  }
+
+  html[dir='rtl'] [data-sidebar-offset='admin'][data-sidebar-collapsed='true'] {
+    margin-right: 4rem !important;
+  }
 }
