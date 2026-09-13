@@ -15,6 +15,7 @@ import {
   LANGUAGE_STORAGE_KEY,
   type AppLanguage,
 } from '@/lib/i18n';
+import { translateHomepageText } from '@/lib/i18n-homepage';
 import { translateSurfaceText } from '@/lib/i18n-surfaces';
 import { translateSiteText } from '@/lib/i18n-products';
 
@@ -53,7 +54,8 @@ function shouldSkipElement(element: Element | null) {
 }
 
 function translateValue(value: string) {
-  const surface = translateSurfaceText(value);
+  const homepage = translateHomepageText(value);
+  const surface = translateSurfaceText(homepage);
   return translateSiteText(surface);
 }
 
