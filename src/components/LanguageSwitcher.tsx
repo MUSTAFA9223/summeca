@@ -14,6 +14,7 @@ export default function LanguageSwitcher({ compact = false, className = '' }: La
   return (
     <div
       data-i18n-skip
+      data-language-switcher="true"
       dir="ltr"
       className={`inline-flex items-center gap-1 rounded-xl border border-slate-200/90 bg-white/95 p-1 text-xs font-semibold text-slate-600 shadow-sm backdrop-blur-xl ${className}`}
       aria-label="English / العربية"
@@ -24,6 +25,7 @@ export default function LanguageSwitcher({ compact = false, className = '' }: La
         onClick={() => setLanguage('en')}
         className={`rounded-lg px-2.5 py-1.5 transition ${language === 'en' ? 'bg-slate-950 text-white shadow-sm' : 'hover:bg-slate-100 hover:text-slate-950'}`}
         aria-pressed={language === 'en'}
+        title="English"
       >
         EN
       </button>
@@ -32,6 +34,7 @@ export default function LanguageSwitcher({ compact = false, className = '' }: La
         onClick={() => setLanguage('ar')}
         className={`rounded-lg px-2.5 py-1.5 transition ${language === 'ar' ? 'bg-teal-600 text-white shadow-sm' : 'hover:bg-teal-50 hover:text-teal-700'}`}
         aria-pressed={language === 'ar'}
+        title="العربية"
       >
         العربية
       </button>
