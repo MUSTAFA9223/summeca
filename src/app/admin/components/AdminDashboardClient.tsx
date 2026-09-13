@@ -2,7 +2,21 @@
 
 import React, { useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
-import { ShoppingBag, CheckCircle, Clock, Users, Package, Download, TrendingUp, Cpu, WalletCards } from 'lucide-react';
+import {
+  ShoppingBag,
+  CheckCircle,
+  Clock,
+  Users,
+  Package,
+  Download,
+  TrendingUp,
+  Cpu,
+  WalletCards,
+  Eye,
+  CalendarDays,
+  MousePointerClick,
+  Percent,
+} from 'lucide-react';
 import dynamic from 'next/dynamic';
 
 const Animated3DBackground = dynamic(() => import('@/components/ui/Animated3DBackground'), { ssr: false });
@@ -17,6 +31,12 @@ interface Stats {
   totalCustomers: number;
   totalProducts: number;
   totalDownloads: number;
+  visitsToday: number;
+  visitsWeek: number;
+  visitsMonth: number;
+  pageViewsToday: number;
+  completedOrdersMonth: number;
+  conversionMonth: number;
 }
 
 interface ChartPoint {
@@ -69,6 +89,15 @@ export default function AdminDashboardClient({ stats, initialChartData, topProdu
   const chartData = initialChartData.map((point) => ({ ...point, date: formatDate(point.date) }));
   const isEmpty = initialChartData.length === 0;
 
+  const trafficCards = [
+    { label: 'Visitors Today', value: stats.visitsToday.toLocaleString('en-US'), icon: Eye },
+    { label: 'Last 7 Days', value: stats.visitsWeek.toLocaleString('en-US'), icon: CalendarDays },
+    { label: 'Visitors This Month', value: stats.visitsMonth.toLocaleString('en-US'), icon: Users },
+    { label: 'Page Views Today', value: stats.pageViewsToday.toLocaleString('en-US'), icon: MousePointerClick },
+    { label: 'Purchases This Month', value: stats.completedOrdersMonth.toLocaleString('en-US'), icon: CheckCircle },
+    { label: 'Monthly Conversion', value: `${stats.conversionMonth.toFixed(2)}%`, icon: Percent },
+  ];
+
   return (
     <div className="space-y-6 fade-in">
       <div className="relative overflow-hidden rounded-2xl border border-border bg-white p-5">
@@ -82,7 +111,28 @@ export default function AdminDashboardClient({ stats, initialChartData, topProdu
             <span className="text-xs font-600 text-primary uppercase tracking-wide">Admin Control Center</span>
           </div>
           <h1 className="text-2xl font-800 text-foreground">Dashboard</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">Live commerce data from SUMMECA. Revenue is kept separate by currency.</p>
+          <p className="text-sm text-muted-foreground mt-0.5">Live traffic, conversion, orders and revenue from SUMMECA.</p>
+        </div>
+      </div>
+
+      <div className="rounded-2xl border border-border bg-card p-5">
+        <div className="mb-4 flex items-center gap-2">
+          <Eye size={17} className="text-primary" />
+          <div>
+            <h2 className="text-sm font-700 text-foreground">Traffic & conversion</h2>
+            <p className="text-xs text-muted-foreground">Visitor sessions use a 30-minute window and exclude known bots and admin pages.</p>
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-6">
+          {trafficCards.map((item) => (
+            <div key={item.label} className="rounded-xl border border-border bg-secondary/20 p-4">
+              <div className="mb-3 flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
+                <item.icon size={15} className="text-primary" />
+              </div>
+              <p className="text-xs font-600 text-muted-foreground">{item.label}</p>
+              <p className="mt-1 text-xl font-800 tabular-nums text-foreground">{item.value}</p>
+            </div>
+          ))}
         </div>
       </div>
 
