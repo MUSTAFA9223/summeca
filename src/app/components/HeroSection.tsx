@@ -37,9 +37,9 @@ export default function HeroSection() {
           </div>
 
           <h1 className="summeca-reveal summeca-reveal-2 max-w-[700px] uppercase font-black leading-[0.86] tracking-[-0.06em]">
-            <span className="block text-[clamp(3.1rem,5vw,5.8rem)] text-white">DIGITAL</span>
-            <span className="mt-1 block text-[clamp(2.55rem,4.15vw,4.75rem)] text-white">TOOLS &amp; SAAS</span>
-            <span className="mt-2 block text-[clamp(2.05rem,3.3vw,3.8rem)] text-slate-200">BUILT FOR FASTER</span>
+            <span className="summeca-outline-text block text-[clamp(3.1rem,5vw,5.8rem)]">DIGITAL</span>
+            <span className="summeca-outline-text mt-1 block text-[clamp(2.55rem,4.15vw,4.75rem)]">TOOLS &amp; SAAS</span>
+            <span className="summeca-outline-text mt-2 block text-[clamp(2.05rem,3.3vw,3.8rem)]">BUILT FOR FASTER</span>
             <span className="summeca-outline-text mt-2 block pb-2 text-[clamp(2.55rem,4.05vw,4.65rem)]">BUSINESS<span className="text-[#22d3ee]">.</span></span>
           </h1>
 
