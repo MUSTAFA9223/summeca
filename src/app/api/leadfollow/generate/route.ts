@@ -7,6 +7,7 @@ import { getSaasAccess } from '@/lib/saas/access';
 const PRODUCT_SLUG = 'summeca-leadfollow-ai' as const;
 const CHANNELS = new Set(['email', 'linkedin', 'whatsapp', 'sms', 'generic']);
 const STAGES = new Set(['first_contact', 'follow_up', 'objection', 'close', 'revive']);
+type ServiceClient = ReturnType<typeof createServiceClient>;
 
 function text(value: unknown, max = 800) {
   return typeof value === 'string' ? value.trim().slice(0, max) : '';
@@ -19,6 +20,16 @@ function plainOutput(value: string) {
     .replace(/<[^>]*>/g, '')
     .trim()
     .slice(0, 6000);
+}
+
+async function releaseReservedQuota(service: ServiceClient, userId: string, periodStart: string) {
+  const { error } = await service.rpc('release_leadfollow_ai_request', {
+    p_user_id: userId,
+    p_period_start: periodStart,
+  });
+  if (error) {
+    console.warn('[leadfollow/generate] quota release failed after unsuccessful draft:', error.message);
+  }
 }
 
 export async function POST(request: NextRequest) {
@@ -133,11 +144,15 @@ Write the final ${channel} draft now.`;
     result = await generateText(systemPrompt, userPrompt, { maxTokens: 700, temperature: 0.45 });
   } catch (error) {
     console.error('[leadfollow/generate] Workers AI generation failed:', error);
+    await releaseReservedQuota(service, user.id, periodKey);
     return NextResponse.json({ error: 'AI draft generation failed. Please try again.' }, { status: 502 });
   }
 
   const output = plainOutput(result.text);
-  if (!output) return NextResponse.json({ error: 'AI returned an empty draft.' }, { status: 502 });
+  if (!output) {
+    await releaseReservedQuota(service, user.id, periodKey);
+    return NextResponse.json({ error: 'AI returned an empty draft.' }, { status: 502 });
+  }
 
   const { data: message, error: saveError } = await service.from('leadfollow_messages').insert({
     user_id: user.id,
@@ -154,6 +169,7 @@ Write the final ${channel} draft now.`;
 
   if (saveError) {
     console.error('[leadfollow/generate] history save failed:', saveError.message);
+    await releaseReservedQuota(service, user.id, periodKey);
     return NextResponse.json({ error: 'Draft generated but could not be saved safely.' }, { status: 500 });
   }
 

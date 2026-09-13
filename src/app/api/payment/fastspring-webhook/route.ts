@@ -336,9 +336,11 @@ async function sendCompletionEmails(
 
     const [{ data: profile }, { data: product }] = await Promise.all([
       supabase.from('user_profiles').select('full_name').eq('id', order.user_id).maybeSingle(),
-      supabase.from('products').select('name').eq('id', order.product_id).maybeSingle(),
+      supabase.from('products').select('name, metadata').eq('id', order.product_id).maybeSingle(),
     ]);
     const productName = product?.name ?? 'Your Product';
+    const productMetadata = (product?.metadata ?? {}) as Record<string, unknown>;
+    const isSaasProduct = productMetadata.saas_product === true;
     const now = new Date();
 
     await sendPaymentReceipt(email, {
@@ -353,7 +355,7 @@ async function sendCompletionEmails(
       paidAt: now.toISOString(),
     });
 
-    if (['monthly', 'yearly', 'lifetime'].includes(plan.billing_period)) {
+    if (plan.billing_period === 'monthly' || plan.billing_period === 'yearly') {
       await sendSubscriptionActivated(email, {
         customerName: profile?.full_name ?? '',
         productName,
@@ -366,7 +368,9 @@ async function sendCompletionEmails(
       });
     }
 
-    if (plan.billing_period === 'one_time' || plan.billing_period === 'lifetime') {
+    // Lifetime SaaS grants application access in the dashboard. It is not a
+    // downloadable file, so never enter the download-email flow for SaaS.
+    if (!isSaasProduct && (plan.billing_period === 'one_time' || plan.billing_period === 'lifetime')) {
       const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL ?? 'https://summeca.com').replace(/\/$/, '');
       await sendDownloadLink(email, {
         customerName: profile?.full_name ?? '',

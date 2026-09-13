@@ -4,7 +4,9 @@ import { checkRateLimit, getRequestIdentity } from '@/lib/security/rateLimit';
 import { getSaasAccess } from '@/lib/saas/access';
 
 const PRODUCT_SLUG = 'summeca-leadfollow-ai' as const;
-const STATUSES = new Set(['new', 'contacted', 'replied', 'won', 'lost']);
+const STATUSES = ['new', 'contacted', 'replied', 'won', 'lost'] as const;
+const STATUS_SET = new Set(STATUSES);
+const LEAD_PAGE_SIZE = 100;
 
 function text(value: unknown, max = 240) {
   return typeof value === 'string' ? value.trim().slice(0, max) : '';
@@ -23,7 +25,13 @@ async function sessionUser() {
   return error ? null : user;
 }
 
-export async function GET() {
+function requestedPage(request: NextRequest) {
+  const raw = Number.parseInt(new URL(request.url).searchParams.get('page') || '1', 10);
+  if (!Number.isFinite(raw) || raw < 1) return 1;
+  return Math.min(raw, 1000);
+}
+
+export async function GET(request: NextRequest) {
   const user = await sessionUser();
   if (!user) return NextResponse.json({ error: 'Authentication required.' }, { status: 401 });
 
@@ -37,39 +45,88 @@ export async function GET() {
   periodStart.setUTCDate(1);
   periodStart.setUTCHours(0, 0, 0, 0);
   const periodKey = periodStart.toISOString().slice(0, 10);
+  const page = requestedPage(request);
+  const from = (page - 1) * LEAD_PAGE_SIZE;
+  const to = from + LEAD_PAGE_SIZE - 1;
+  const nowIso = new Date().toISOString();
 
-  const [profileResult, leadsResult, messagesResult, countResult, usageResult] = await Promise.all([
+  const pipelineQueries = STATUSES.map((status) =>
+    service
+      .from('leadfollow_leads')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+      .eq('status', status),
+  );
+
+  const [profileResult, leadsResult, countResult, dueResult, usageResult, ...pipelineResults] = await Promise.all([
     service.from('leadfollow_profiles').select('*').eq('user_id', user.id).maybeSingle(),
-    service.from('leadfollow_leads').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(500),
-    service.from('leadfollow_messages').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(100),
+    service
+      .from('leadfollow_leads')
+      .select('*', { count: 'exact' })
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .range(from, to),
     service.from('leadfollow_leads').select('id', { count: 'exact', head: true }).eq('user_id', user.id),
+    service
+      .from('leadfollow_leads')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+      .in('status', ['new', 'contacted', 'replied'])
+      .lte('next_follow_up_at', nowIso),
     service.from('leadfollow_usage').select('requests_count, tokens_used').eq('user_id', user.id).eq('period_start', periodKey).maybeSingle(),
+    ...pipelineQueries,
   ]);
 
-  const firstError = profileResult.error || leadsResult.error || messagesResult.error || countResult.error || usageResult.error;
+  const firstError =
+    profileResult.error ||
+    leadsResult.error ||
+    countResult.error ||
+    dueResult.error ||
+    usageResult.error ||
+    pipelineResults.find((result) => result.error)?.error;
   if (firstError) {
     console.error('[leadfollow] dashboard load failed:', firstError.message);
     return NextResponse.json({ error: 'Unable to load LeadFollow AI.' }, { status: 500 });
   }
 
   const leads = leadsResult.data ?? [];
-  const now = Date.now();
-  const due = leads.filter((lead) => {
-    if (!lead.next_follow_up_at || ['won', 'lost'].includes(lead.status)) return false;
-    return new Date(lead.next_follow_up_at).getTime() <= now;
-  }).length;
+  const leadIds = leads.map((lead) => lead.id);
+  const messagesResult = leadIds.length
+    ? await service
+        .from('leadfollow_messages')
+        .select('*')
+        .eq('user_id', user.id)
+        .in('lead_id', leadIds)
+        .order('created_at', { ascending: false })
+        .limit(600)
+    : { data: [], error: null };
 
-  const pipeline = ['new', 'contacted', 'replied', 'won', 'lost'].reduce<Record<string, number>>((acc, status) => {
-    acc[status] = leads.filter((lead) => lead.status === status).length;
+  if (messagesResult.error) {
+    console.error('[leadfollow] message history load failed:', messagesResult.error.message);
+    return NextResponse.json({ error: 'Unable to load LeadFollow AI.' }, { status: 500 });
+  }
+
+  const pipeline = STATUSES.reduce<Record<string, number>>((acc, status, index) => {
+    acc[status] = pipelineResults[index]?.count ?? 0;
     return acc;
   }, {});
+  const pageTotal = leadsResult.count ?? 0;
+  const totalPages = Math.max(1, Math.ceil(pageTotal / LEAD_PAGE_SIZE));
 
   return NextResponse.json({
     access,
     profile: profileResult.data,
     leads,
     messages: messagesResult.data ?? [],
-    counts: { leads: countResult.count ?? 0, due, pipeline },
+    counts: { leads: countResult.count ?? 0, due: dueResult.count ?? 0, pipeline },
+    pagination: {
+      page,
+      pageSize: LEAD_PAGE_SIZE,
+      total: pageTotal,
+      totalPages,
+      hasPrevious: page > 1,
+      hasNext: page < totalPages,
+    },
     usage: {
       used: usageResult.data?.requests_count ?? 0,
       tokens: usageResult.data?.tokens_used ?? 0,
@@ -162,7 +219,7 @@ export async function POST(request: NextRequest) {
 
     if (body.status !== undefined) {
       const status = text(body.status, 20);
-      if (!STATUSES.has(status)) return NextResponse.json({ error: 'Invalid lead status.' }, { status: 400 });
+      if (!STATUS_SET.has(status as typeof STATUSES[number])) return NextResponse.json({ error: 'Invalid lead status.' }, { status: 400 });
       patch.status = status;
       if (status === 'contacted') patch.last_contacted_at = new Date().toISOString();
     }
