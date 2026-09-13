@@ -37,7 +37,6 @@ const SKIP_SELECTOR = [
   'code',
   'pre',
   'noscript',
-  'textarea',
   'svg',
 ].join(',');
 
@@ -168,8 +167,6 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
       persistLanguage(nextLanguage);
       if (nextLanguage === language) return;
 
-      // Reloading gives React a clean source-language DOM before the Arabic
-      // localization bridge runs, so switching in either direction is reliable.
       window.location.reload();
     },
     [language],
