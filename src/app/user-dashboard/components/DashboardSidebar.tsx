@@ -107,6 +107,7 @@ export default function DashboardSidebar({
   return (
     <>
       <aside
+        data-dashboard-sidebar="desktop"
         className={`fixed left-0 top-0 bottom-0 z-40 hidden lg:flex flex-col bg-card border-r border-border transition-all duration-300 ${
           collapsed ? 'w-16' : 'w-60'
         }`}
@@ -156,7 +157,7 @@ export default function DashboardSidebar({
               </div>
               <div className="flex-1 min-w-0">
                 <div className="text-xs font-600 text-foreground truncate">{displayName}</div>
-                <div className="text-xs text-muted-foreground truncate">{user?.email || 'Loading...'}</div>
+                <div className="text-xs text-muted-foreground truncate" data-ltr>{user?.email || 'Loading...'}</div>
               </div>
             </div>
           )}
@@ -173,13 +174,16 @@ export default function DashboardSidebar({
             className="sidebar-link w-full justify-center mt-1"
             aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           >
-            {collapsed ? <ChevronRight size={15} /> : <ChevronLeft size={15} />}
+            {collapsed ? <ChevronRight size={15} className="rtl-flip" /> : <ChevronLeft size={15} className="rtl-flip" />}
             {!collapsed && <span className="text-xs">Collapse</span>}
           </button>
         </div>
       </aside>
 
       <aside
+        data-dashboard-sidebar="mobile"
+        data-mobile-sidebar="true"
+        data-open={mobileOpen ? 'true' : 'false'}
         className={`fixed left-0 top-0 bottom-0 z-40 lg:hidden flex flex-col bg-white border-r border-border w-64 transition-transform duration-300 shadow-xl ${
           mobileOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
@@ -189,6 +193,7 @@ export default function DashboardSidebar({
           <button
             onClick={onCloseMobile}
             className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary transition-all duration-150"
+            aria-label="Close"
           >
             ✕
           </button>
@@ -230,7 +235,7 @@ export default function DashboardSidebar({
             </div>
             <div className="flex-1 min-w-0">
               <div className="text-xs font-600 text-foreground truncate">{displayName}</div>
-              <div className="text-xs text-muted-foreground truncate">{user?.email || ''}</div>
+              <div className="text-xs text-muted-foreground truncate" data-ltr>{user?.email || ''}</div>
             </div>
           </div>
           <button
