@@ -10,6 +10,7 @@ const homepage = read('src/app/page.tsx');
 const hero = read('src/app/components/HeroSection.tsx');
 const authScreen = read('src/app/sign-up-login-screen/components/AuthScreen.tsx');
 const robot = read('src/components/ui/SplineNexbotScene.tsx');
+const splineClient = read('src/components/ui/SplineClient.tsx');
 const nextConfig = read('next.config.mjs');
 const cloudflareBuild = read('scripts/cloudflare-build.mjs');
 const cryptoStatus = read('src/app/api/payment/crypto-status/route.ts');
@@ -71,7 +72,7 @@ test('hero sends shoppers to public product and SaaS destinations', () => {
 
 test('new NEXBOT Spline scene is the only robot integration', () => {
   assert.match(robot, /BAodEVjHSYLR1KKy\/scene\.splinecode/);
-  assert.match(robot, /@splinetool\/react-spline/);
+  assert.match(splineClient, /@splinetool\/react-spline/);
   assert.match(robot, /scene=\{NEXBOT_SCENE_URL\}/);
   assert.match(hero, /SplineNexbotScene/);
   assert.match(authScreen, /SplineNexbotScene/);
