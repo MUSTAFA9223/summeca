@@ -8,6 +8,7 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import NotificationBell from '@/components/NotificationBell';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
+import { ThemeSwitcher } from '@/components/GlobalThemeSwitcher';
 
 interface DashboardTopbarProps {
   onOpenMobileSidebar: () => void;
@@ -35,7 +36,11 @@ export default function DashboardTopbar({ onOpenMobileSidebar }: DashboardTopbar
   };
 
   return (
-    <header data-language-switcher-host="true" className="h-14 border-b border-border bg-card flex items-center gap-3 px-5 lg:px-8 flex-shrink-0 sticky top-0 z-20">
+    <header
+      data-language-switcher-host="true"
+      data-theme-switcher-host="true"
+      className="h-14 border-b border-border bg-card flex items-center gap-3 px-5 lg:px-8 flex-shrink-0 sticky top-0 z-20"
+    >
       <button
         className="lg:hidden w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary transition-all duration-150"
         onClick={onOpenMobileSidebar}
@@ -51,6 +56,7 @@ export default function DashboardTopbar({ onOpenMobileSidebar }: DashboardTopbar
       </div>
 
       <div className="ml-auto flex items-center gap-2">
+        <ThemeSwitcher compact />
         <LanguageSwitcher compact />
         <NotificationBell />
 

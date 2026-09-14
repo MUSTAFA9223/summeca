@@ -1,5 +1,7 @@
 'use client';
 
+import { useEffect, useState } from 'react';
+import { usePathname } from 'next/navigation';
 import { Moon, Sun } from 'lucide-react';
 import { useTheme, type SiteTheme } from '@/contexts/ThemeContext';
 
@@ -8,13 +10,14 @@ const OPTIONS: Array<{ value: SiteTheme; label: string; icon: typeof Moon }> = [
   { value: 'light', label: 'Light', icon: Sun },
 ];
 
-export default function GlobalThemeSwitcher() {
+export function ThemeSwitcher({ compact = false }: { compact?: boolean }) {
   const { theme, setTheme } = useTheme();
 
   return (
     <div
-      className="fixed bottom-4 left-4 z-[115] flex items-center gap-1 rounded-full border border-border bg-card/90 p-1.5 shadow-[0_14px_40px_rgba(2,8,23,.16)] backdrop-blur-xl"
-      style={{ bottom: 'max(1rem, env(safe-area-inset-bottom))' }}
+      className={`flex items-center gap-1 rounded-full border border-border bg-card/90 shadow-[0_14px_40px_rgba(2,8,23,.16)] backdrop-blur-xl ${
+        compact ? 'p-1' : 'p-1.5'
+      }`}
       role="group"
       aria-label="Color theme"
       data-i18n-skip
@@ -27,18 +30,45 @@ export default function GlobalThemeSwitcher() {
             type="button"
             onClick={() => setTheme(value)}
             aria-pressed={selected}
+            aria-label={`${label} theme`}
             title={`${label} theme`}
-            className={`inline-flex h-9 items-center gap-2 rounded-full px-3 text-xs font-bold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
+            className={`inline-flex items-center justify-center rounded-full text-xs font-bold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
+              compact ? 'h-8 w-8 p-0' : 'h-9 gap-2 px-3'
+            } ${
               selected
                 ? 'bg-primary text-primary-foreground shadow-sm'
                 : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
             }`}
           >
             <Icon size={14} />
-            <span className="hidden sm:inline">{label}</span>
+            <span className={compact ? 'sr-only' : 'hidden sm:inline'}>{label}</span>
           </button>
         );
       })}
+    </div>
+  );
+}
+
+export default function GlobalThemeSwitcher() {
+  const pathname = usePathname();
+  const [hasHostedSwitcher, setHasHostedSwitcher] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => {
+      setHasHostedSwitcher(Boolean(document.querySelector('[data-theme-switcher-host="true"]')));
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, [pathname]);
+
+  if (hasHostedSwitcher !== false) return null;
+
+  return (
+    <div
+      className="fixed bottom-4 left-4 z-[115]"
+      style={{ bottom: 'max(1rem, env(safe-area-inset-bottom))' }}
+    >
+      <ThemeSwitcher />
     </div>
   );
 }
