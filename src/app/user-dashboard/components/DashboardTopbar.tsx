@@ -7,7 +7,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import NotificationBell from '@/components/NotificationBell';
-import LanguageSwitcher from '@/components/LanguageSwitcher';
+import CompactLanguageSwitcher from '@/components/CompactLanguageSwitcher';
 import { ThemeSwitcher } from '@/components/GlobalThemeSwitcher';
 
 interface DashboardTopbarProps {
@@ -57,7 +57,7 @@ export default function DashboardTopbar({ onOpenMobileSidebar }: DashboardTopbar
 
       <div className="ml-auto flex items-center gap-2">
         <ThemeSwitcher compact />
-        <LanguageSwitcher compact />
+        <CompactLanguageSwitcher />
         <NotificationBell />
 
         <div className="relative">
