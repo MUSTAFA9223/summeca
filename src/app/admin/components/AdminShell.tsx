@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import AdminSidebar from './AdminSidebar';
-import LanguageSwitcher from '@/components/LanguageSwitcher';
+import CompactLanguageSwitcher from '@/components/CompactLanguageSwitcher';
 import { ThemeSwitcher } from '@/components/GlobalThemeSwitcher';
 
 interface AdminShellProps {
@@ -59,7 +59,7 @@ export default function AdminShell({
           <div className="flex-1" />
           <div className="flex items-center gap-2">
             <ThemeSwitcher compact />
-            <LanguageSwitcher compact />
+            <CompactLanguageSwitcher />
             {adminEmail && <span className="text-xs font-600 text-muted-foreground hidden sm:block" data-ltr>{adminEmail}</span>}
             <div className="w-7 h-7 rounded-full bg-primary/20 flex items-center justify-center">
               <span className="text-xs font-700 text-primary">{adminName.charAt(0).toUpperCase()}</span>
