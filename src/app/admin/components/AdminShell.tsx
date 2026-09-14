@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import AdminSidebar from './AdminSidebar';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
+import { ThemeSwitcher } from '@/components/GlobalThemeSwitcher';
 
 interface AdminShellProps {
   children: React.ReactNode;
@@ -41,7 +42,11 @@ export default function AdminShell({
         data-sidebar-collapsed={sidebarCollapsed ? 'true' : 'false'}
         className={`flex-1 flex flex-col min-w-0 transition-all duration-300 ${sidebarCollapsed ? 'lg:ml-16' : 'lg:ml-64'}`}
       >
-        <header data-language-switcher-host="true" className="h-14 border-b border-border bg-card flex items-center px-4 lg:px-6 gap-3 sticky top-0 z-20">
+        <header
+          data-language-switcher-host="true"
+          data-theme-switcher-host="true"
+          className="h-14 border-b border-border bg-card flex items-center px-4 lg:px-6 gap-3 sticky top-0 z-20"
+        >
           <button
             onClick={() => setMobileSidebarOpen(true)}
             className="lg:hidden w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary transition-all"
@@ -53,6 +58,7 @@ export default function AdminShell({
           </button>
           <div className="flex-1" />
           <div className="flex items-center gap-2">
+            <ThemeSwitcher compact />
             <LanguageSwitcher compact />
             {adminEmail && <span className="text-xs font-600 text-muted-foreground hidden sm:block" data-ltr>{adminEmail}</span>}
             <div className="w-7 h-7 rounded-full bg-primary/20 flex items-center justify-center">
