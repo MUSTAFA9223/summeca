@@ -13,7 +13,7 @@ export default function LanguageSwitcher({ compact = false, className = '' }: La
 
   const optionClass = (selected: boolean) =>
     `inline-flex items-center justify-center rounded-full text-xs font-bold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
-      compact ? 'h-8 min-w-8 px-2 text-[10px] font-extrabold' : 'h-9 px-3'
+      compact ? 'h-8 w-8 p-0 text-[10px] font-extrabold' : 'h-9 px-3'
     } ${
       selected
         ? 'bg-primary text-primary-foreground shadow-sm'
@@ -60,7 +60,14 @@ export default function LanguageSwitcher({ compact = false, className = '' }: La
         title="العربية"
         className={optionClass(language === 'ar')}
       >
-        العربية
+        {compact ? (
+          <>
+            <span className="sr-only">العربية</span>
+            <span aria-hidden="true">AR</span>
+          </>
+        ) : (
+          <span>العربية</span>
+        )}
       </button>
     </div>
   );
