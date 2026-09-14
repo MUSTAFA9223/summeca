@@ -7,6 +7,8 @@ const themeSwitcher = fs.readFileSync('src/components/GlobalThemeSwitcher.tsx', 
 const layout = fs.readFileSync('src/app/layout.tsx', 'utf8');
 const hero = fs.readFileSync('src/app/components/HeroSection.tsx', 'utf8');
 const themeCss = fs.readFileSync('src/styles/site-theme.css', 'utf8');
+const adminShell = fs.readFileSync('src/app/admin/components/AdminShell.tsx', 'utf8');
+const dashboardTopbar = fs.readFileSync('src/app/user-dashboard/components/DashboardTopbar.tsx', 'utf8');
 
 test('site theme defaults to dark and persists the customer choice', () => {
   assert.match(layout, /data-site-theme="dark"/);
@@ -20,6 +22,15 @@ test('customer can explicitly choose dark or light premium', () => {
   assert.match(themeSwitcher, /value: 'light'/);
   assert.match(themeSwitcher, /aria-pressed=\{selected\}/);
   assert.match(layout, /<GlobalThemeSwitcher \/>/);
+});
+
+test('dashboard theme controls are hosted in top bars instead of covering sidebar logout actions', () => {
+  assert.match(themeSwitcher, /data-theme-switcher-host/);
+  assert.match(themeSwitcher, /hasHostedSwitcher/);
+  assert.match(adminShell, /data-theme-switcher-host="true"/);
+  assert.match(adminShell, /<ThemeSwitcher compact \/>/);
+  assert.match(dashboardTopbar, /data-theme-switcher-host="true"/);
+  assert.match(dashboardTopbar, /<ThemeSwitcher compact \/>/);
 });
 
 test('homepage keeps the cinematic hero while the rest follows the selected theme', () => {
