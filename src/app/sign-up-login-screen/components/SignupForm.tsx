@@ -6,6 +6,7 @@ import { Eye, EyeOff, Check, Mail } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { trackEvent } from '@/lib/analytics';
 import GoogleOAuthButton from './GoogleOAuthButton';
 
 interface SignupFormData {
@@ -57,11 +58,20 @@ export default function SignupForm({ onSwitchToLogin }: SignupFormProps) {
   const strength = getPasswordStrength(passwordValue);
 
   const onSubmit = async (data: SignupFormData) => {
+    trackEvent('signup_started', {
+      method: 'email',
+      referral_present: Boolean(referralCode),
+    });
     setIsLoading(true);
     try {
       const result = await signUp(data.email, data.password, {
         fullName: data.fullName,
         referralCode,
+      });
+      trackEvent('signup_completed', {
+        method: 'email',
+        confirmation_required: !result?.session,
+        referral_present: Boolean(referralCode),
       });
       if (result?.session) {
         toast.success('Account created! Welcome to SUMMECA.');
