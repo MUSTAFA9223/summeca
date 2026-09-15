@@ -6,6 +6,8 @@ type ProductSeo = {
   description: string;
   keywords: string[];
   image: string;
+  imageWidth?: number;
+  imageHeight?: number;
 };
 
 const PRODUCT_SEO: Record<string, ProductSeo> = {
@@ -20,7 +22,9 @@ const PRODUCT_SEO: Record<string, ProductSeo> = {
       'ecommerce SEO',
       'product page templates',
     ],
-    image: '/assets/products/ecommerce-product-page-conversion-kit.svg',
+    image: '/assets/products/ecommerce-product-page-conversion-kit-social.png',
+    imageWidth: 1200,
+    imageHeight: 630,
   },
   'ai-social-media-content-kit': {
     title: 'AI Social Media Content Kit | SUMMECA',
@@ -141,7 +145,12 @@ export async function generateMetadata({
       title: entry.title,
       description: entry.description,
       siteName: 'SUMMECA',
-      images: [{ url: image, width: 1200, height: 900, alt: entry.title }],
+      images: [{
+        url: image,
+        width: entry.imageWidth ?? 1200,
+        height: entry.imageHeight ?? 900,
+        alt: entry.title,
+      }],
     },
     twitter: {
       card: 'summary_large_image',
