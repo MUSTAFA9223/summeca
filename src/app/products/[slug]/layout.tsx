@@ -8,6 +8,7 @@ type ProductSeo = {
   image: string;
   imageWidth?: number;
   imageHeight?: number;
+  kind?: 'software' | 'digital';
 };
 
 const PRODUCT_SEO: Record<string, ProductSeo> = {
@@ -25,6 +26,7 @@ const PRODUCT_SEO: Record<string, ProductSeo> = {
     image: '/assets/products/ecommerce-product-page-conversion-kit-social.png',
     imageWidth: 1200,
     imageHeight: 630,
+    kind: 'digital',
   },
   'ai-social-media-content-kit': {
     title: 'AI Social Media Content Kit | SUMMECA',
@@ -38,6 +40,7 @@ const PRODUCT_SEO: Record<string, ProductSeo> = {
       'content marketing templates',
     ],
     image: '/assets/products/ai-social-media-content-kit.svg',
+    kind: 'digital',
   },
   'freelancer-client-management-kit': {
     title: 'Freelancer Client Management Kit | SUMMECA',
@@ -51,6 +54,7 @@ const PRODUCT_SEO: Record<string, ProductSeo> = {
       'freelance workflow templates',
     ],
     image: '/assets/products/freelancer-client-management-kit.svg',
+    kind: 'digital',
   },
   'summeca-invoiceflow': {
     title: 'SUMMECA InvoiceFlow | Invoicing Workspace',
@@ -64,6 +68,7 @@ const PRODUCT_SEO: Record<string, ProductSeo> = {
       'small business invoicing',
     ],
     image: '/assets/products/invoiceflow.svg',
+    kind: 'software',
   },
   'summeca-leadfollow-ai': {
     title: 'SUMMECA LeadFollow AI | Lead Follow-Up Workspace',
@@ -77,6 +82,7 @@ const PRODUCT_SEO: Record<string, ProductSeo> = {
       'outreach workflow',
     ],
     image: '/assets/products/leadfollow-ai.svg',
+    kind: 'software',
   },
   'conversion-rescue-kit-starter': {
     title: 'SUMMECA Conversion Rescue Kit — Starter',
@@ -89,6 +95,7 @@ const PRODUCT_SEO: Record<string, ProductSeo> = {
       'landing page optimization',
     ],
     image: '/assets/products/conversion-rescue-starter.svg',
+    kind: 'digital',
   },
   'conversion-rescue-kit-pro': {
     title: 'SUMMECA Conversion Rescue Kit — Pro',
@@ -101,6 +108,7 @@ const PRODUCT_SEO: Record<string, ProductSeo> = {
       'conversion scorecard',
     ],
     image: '/assets/products/conversion-rescue-pro.svg',
+    kind: 'digital',
   },
   'conversion-rescue-kit-ultimate': {
     title: 'SUMMECA Conversion Rescue Kit — Ultimate',
@@ -113,8 +121,17 @@ const PRODUCT_SEO: Record<string, ProductSeo> = {
       'landing page examples',
     ],
     image: '/assets/products/conversion-rescue-ultimate.svg',
+    kind: 'digital',
   },
 };
+
+function canonicalFor(slug: string) {
+  return `https://summeca.com/products/${encodeURIComponent(slug)}`;
+}
+
+function displayName(entry: ProductSeo) {
+  return entry.title.split(' | ')[0];
+}
 
 export async function generateMetadata({
   params,
@@ -127,11 +144,11 @@ export async function generateMetadata({
     return {
       title: { absolute: 'Product | SUMMECA' },
       description: 'Browse published digital products and software tools from SUMMECA.',
-      alternates: { canonical: `https://summeca.com/products/${encodeURIComponent(slug)}` },
+      alternates: { canonical: canonicalFor(slug) },
     };
   }
 
-  const canonical = `https://summeca.com/products/${encodeURIComponent(slug)}`;
+  const canonical = canonicalFor(slug);
   const image = `https://summeca.com${entry.image}`;
 
   return {
@@ -161,6 +178,88 @@ export async function generateMetadata({
   };
 }
 
-export default function ProductLayout({ children }: { children: ReactNode }) {
-  return children;
+export default async function ProductLayout({
+  children,
+  params,
+}: {
+  children: ReactNode;
+  params: Promise<{ slug: string }>;
+}) {
+  const { slug } = await params;
+  const entry = PRODUCT_SEO[slug];
+
+  if (!entry) return children;
+
+  const canonical = canonicalFor(slug);
+  const image = `https://summeca.com${entry.image}`;
+  const name = displayName(entry);
+  const mainEntity = entry.kind === 'software'
+    ? {
+        '@type': 'SoftwareApplication',
+        name,
+        description: entry.description,
+        url: canonical,
+        image,
+        applicationCategory: 'BusinessApplication',
+        operatingSystem: 'Web',
+        publisher: { '@id': 'https://summeca.com/#organization' },
+      }
+    : {
+        '@type': 'CreativeWork',
+        name,
+        description: entry.description,
+        url: canonical,
+        image,
+        publisher: { '@id': 'https://summeca.com/#organization' },
+      };
+
+  const structuredData = {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'WebPage',
+        '@id': `${canonical}#webpage`,
+        url: canonical,
+        name: entry.title,
+        description: entry.description,
+        isPartOf: { '@id': 'https://summeca.com/#website' },
+        mainEntity,
+      },
+      {
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+          {
+            '@type': 'ListItem',
+            position: 1,
+            name: 'SUMMECA',
+            item: 'https://summeca.com',
+          },
+          {
+            '@type': 'ListItem',
+            position: 2,
+            name: 'Products',
+            item: 'https://summeca.com/products',
+          },
+          {
+            '@type': 'ListItem',
+            position: 3,
+            name,
+            item: canonical,
+          },
+        ],
+      },
+    ],
+  };
+
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(structuredData).replace(/</g, '\\u003c'),
+        }}
+      />
+      {children}
+    </>
+  );
 }
