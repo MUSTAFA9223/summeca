@@ -77,8 +77,8 @@ function CheckoutSuccessInner() {
   useEffect(() => {
     if (!order || order.status !== 'completed' || !order.product_id) return;
 
+    const productId = order.product_id;
     const verifiedOrder = order;
-    const productId = verifiedOrder.product_id;
     const amount = Number(verifiedOrder.amount ?? NaN);
     if (!Number.isFinite(amount) || amount <= 0) return;
 
