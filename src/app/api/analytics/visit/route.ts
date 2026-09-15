@@ -1,3 +1,4 @@
+import { getCloudflareContext } from '@opennextjs/cloudflare';
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient, createServiceClient } from '@/lib/supabase/server';
 import { broadcastNewVisit } from '@/lib/telegram/server';
@@ -25,6 +26,86 @@ function detectSource(referrer: string, utmSource: string) {
   } catch {
     return 'Referral';
   }
+}
+
+function countryName(countryCode: string) {
+  const normalized = countryCode.trim().toUpperCase();
+  if (!normalized || normalized === 'XX') return 'Unknown';
+  if (normalized === 'T1') return 'Tor network';
+  if (!/^[A-Z]{2}$/.test(normalized)) return countryCode || 'Unknown';
+
+  try {
+    return new Intl.DisplayNames(['en'], { type: 'region' }).of(normalized) || normalized;
+  } catch {
+    return normalized;
+  }
+}
+
+function detectDevice(userAgent: string) {
+  let device = 'Desktop';
+  let os = 'Unknown OS';
+  let browser = 'Unknown browser';
+
+  if (/iPhone/i.test(userAgent)) {
+    device = 'iPhone';
+    const version = userAgent.match(/OS ([\d_]+)/i)?.[1]?.replaceAll('_', '.');
+    os = version ? `iOS ${version}` : 'iOS';
+  } else if (/iPad/i.test(userAgent)) {
+    device = 'iPad';
+    const version = userAgent.match(/OS ([\d_]+)/i)?.[1]?.replaceAll('_', '.');
+    os = version ? `iPadOS ${version}` : 'iPadOS';
+  } else if (/Android/i.test(userAgent)) {
+    const version = userAgent.match(/Android\s+([\d.]+)/i)?.[1];
+    const modelSegment = userAgent.match(/Android\s+[^;]+;\s*([^;)]+)/i)?.[1] || '';
+    const model = modelSegment.replace(/\s+Build\/.*/i, '').trim();
+    device = model && !/^wv$/i.test(model) ? model.slice(0, 60) : /Mobile/i.test(userAgent) ? 'Android phone' : 'Android tablet';
+    os = version ? `Android ${version}` : 'Android';
+  } else if (/Windows NT/i.test(userAgent)) {
+    device = 'Windows PC';
+    const windowsVersion = userAgent.match(/Windows NT\s+([\d.]+)/i)?.[1];
+    os = windowsVersion ? `Windows ${windowsVersion}` : 'Windows';
+  } else if (/Macintosh|Mac OS X/i.test(userAgent)) {
+    device = 'Mac';
+    const version = userAgent.match(/Mac OS X\s+([\d_]+)/i)?.[1]?.replaceAll('_', '.');
+    os = version ? `macOS ${version}` : 'macOS';
+  } else if (/Linux/i.test(userAgent)) {
+    device = 'Linux PC';
+    os = 'Linux';
+  }
+
+  if (/SamsungBrowser\//i.test(userAgent)) {
+    browser = 'Samsung Internet';
+  } else if (/EdgA?\//i.test(userAgent) || /EdgiOS\//i.test(userAgent)) {
+    browser = 'Edge';
+  } else if (/OPR\//i.test(userAgent) || /Opera/i.test(userAgent)) {
+    browser = 'Opera';
+  } else if (/CriOS\//i.test(userAgent) || /Chrome\//i.test(userAgent)) {
+    browser = 'Chrome';
+  } else if (/FxiOS\//i.test(userAgent) || /Firefox\//i.test(userAgent)) {
+    browser = 'Firefox';
+  } else if (/Safari\//i.test(userAgent)) {
+    browser = 'Safari';
+  }
+
+  return `${device} · ${os} · ${browser}`;
+}
+
+function detectLocation(req: NextRequest) {
+  let countryCode = cleanText(req.headers.get('cf-ipcountry'), 16);
+  let city = cleanText(req.headers.get('cf-ipcity'), 120);
+
+  try {
+    const { cf } = getCloudflareContext();
+    countryCode ||= cleanText(cf?.country, 16);
+    city ||= cleanText(cf?.city, 120);
+  } catch {
+    // Local development may not have a Cloudflare request context.
+  }
+
+  return {
+    country: countryName(countryCode),
+    city: city || 'Unknown',
+  };
 }
 
 export async function POST(req: NextRequest) {
@@ -57,6 +138,8 @@ export async function POST(req: NextRequest) {
 
     const service = createServiceClient();
     const source = detectSource(referrer, utmSource);
+    const { country, city } = detectLocation(req);
+    const device = detectDevice(userAgent);
     const now = new Date().toISOString();
     const { data: existing } = await service
       .from('analytics_visits')
@@ -98,13 +181,13 @@ export async function POST(req: NextRequest) {
       user_id: userId,
       event_type: 'page_view',
       path,
-      metadata: { source },
+      metadata: { source, country, city, device },
       created_at: now,
     });
 
     if (isNew) {
       try {
-        await broadcastNewVisit({ source, path, startedAt: now });
+        await broadcastNewVisit({ source, path, startedAt: now, country, city, device });
       } catch (error) {
         console.warn('[analytics] Telegram visit alert failed:', error);
       }
