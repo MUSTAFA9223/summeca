@@ -20,11 +20,10 @@ test('homepage keeps only three featured products and removes duplicate long-for
   assert.match(home, /Find your next tool/);
 });
 
-test('hero is intentionally shorter while keeping the interactive robot', () => {
+test('hero is intentionally shorter while showing real product workspace previews', () => {
   assert.match(hero, /min-h-\[620px\]/);
-  assert.match(hero, /SplineNexbotScene/);
-  assert.match(hero, /pointerScopeSelector="\.summeca-home-hero"/);
-  assert.doesNotMatch(hero, /Interactive 3D/);
+  assert.match(hero, /WorkspaceOverviewPreview/);
+  assert.doesNotMatch(hero, /SplineNexbotScene/);
 });
 
 test('public navigation exposes a small primary link set', () => {

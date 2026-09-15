@@ -2,6 +2,7 @@
 
 import dynamic from 'next/dynamic';
 import { useEffect, useState } from 'react';
+import { usePathname } from 'next/navigation';
 
 const StoreAssistant = dynamic(() => import('@/components/StoreAssistant'), {
   ssr: false,
@@ -22,7 +23,9 @@ type IdleWindow = Window & {
 };
 
 export default function DeferredStoreAssistant() {
+  const pathname = usePathname();
   const [ready, setReady] = useState(false);
+  const hiddenOnCurrentRoute = pathname === '/sign-up-login-screen' || pathname.startsWith('/reset-password');
 
   useEffect(() => {
     const win = window as IdleWindow;
@@ -37,5 +40,5 @@ export default function DeferredStoreAssistant() {
     return () => window.clearTimeout(timer);
   }, []);
 
-  return ready ? <StoreAssistant /> : null;
+  return ready && !hiddenOnCurrentRoute ? <StoreAssistant /> : null;
 }

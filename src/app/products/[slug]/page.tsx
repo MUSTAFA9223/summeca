@@ -409,7 +409,7 @@ export default function ProductDetailPage() {
               category={product.category}
               eyebrow={categoryLabel(product.category)}
               variant="hero"
-              badge="Pointer reactive"
+              badge="Actual product preview"
               className="relative z-10"
             />
           </div>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, type MouseEvent as ReactMouseEvent } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import {
   ArrowRight,
@@ -115,54 +115,17 @@ function isFeatured(product: Product) {
 }
 
 function InteractiveProductCard({ product }: { product: Product }) {
-  const [glow, setGlow] = useState({ x: 50, y: 40 });
-  const [active, setActive] = useState(false);
   const plan = lowestPlan(product.plans);
   const price = plan ? pricingFor(plan) : null;
   const type = kindForCategory(product.category);
   const Icon = type === 'ai' ? Zap : type === 'digital' ? FileText : LayoutDashboard;
 
-  function handleMove(event: ReactMouseEvent<HTMLAnchorElement>) {
-    if (typeof window !== 'undefined' && window.matchMedia('(hover: none)').matches) return;
-    const rect = event.currentTarget.getBoundingClientRect();
-    const x = Math.min(1, Math.max(0, (event.clientX - rect.left) / rect.width));
-    const y = Math.min(1, Math.max(0, (event.clientY - rect.top) / rect.height));
-    setGlow({ x: x * 100, y: y * 100 });
-    setActive(true);
-  }
-
-  function reset() {
-    setGlow({ x: 50, y: 40 });
-    setActive(false);
-  }
-
   return (
     <Link
       href={`/products/${product.slug}`}
-      onMouseMove={handleMove}
-      onMouseLeave={reset}
-      onBlur={reset}
-      className="group relative block h-full rounded-[32px] outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 focus-visible:ring-offset-4 focus-visible:ring-offset-[#070b10]"
-      style={{
-        transform: active ? 'translateY(-8px)' : 'translateY(0)',
-        transition: 'transform 260ms cubic-bezier(.2,.8,.2,1), filter 260ms ease',
-        filter: active
-          ? 'drop-shadow(0 34px 45px rgba(0,0,0,.48))'
-          : 'drop-shadow(0 18px 28px rgba(0,0,0,.28))',
-      }}
+      className="group relative block h-full rounded-[22px] outline-none transition duration-200 hover:-translate-y-1 focus-visible:ring-2 focus-visible:ring-cyan-300 focus-visible:ring-offset-4 focus-visible:ring-offset-[#0b1117] motion-reduce:transform-none"
     >
-      <article className="relative flex h-full min-h-[500px] flex-col overflow-hidden rounded-[32px] border border-white/10 bg-[#0b1117]/95 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,.04)] backdrop-blur-2xl transition-colors duration-300 group-hover:border-cyan-300/35">
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-0 opacity-90"
-          style={{
-            background: `radial-gradient(circle at ${glow.x}% ${glow.y}%, rgba(34,211,238,.13), transparent 31%), linear-gradient(135deg, rgba(255,255,255,.025), transparent 35%)`,
-          }}
-        />
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute -right-20 -top-24 h-56 w-56 rounded-full bg-cyan-400/10 blur-3xl"
-        />
+      <article className="relative flex h-full min-h-[480px] flex-col overflow-hidden rounded-[22px] border border-slate-700/80 bg-[#101820] p-4 shadow-[0_16px_42px_rgba(0,0,0,.24)] transition-colors duration-200 group-hover:border-cyan-300/35">
 
         <Product3DShowcase
           name={product.name}
@@ -185,7 +148,7 @@ function InteractiveProductCard({ product }: { product: Product }) {
               </h2>
             </div>
             {isFeatured(product) && (
-              <span className="shrink-0 rounded-full border border-cyan-300/20 bg-cyan-300/10 px-2.5 py-1 text-[9px] font-black uppercase tracking-wider text-cyan-200">
+              <span className="shrink-0 rounded-md border border-cyan-300/20 bg-cyan-300/10 px-2.5 py-1 text-[9px] font-black uppercase tracking-wider text-cyan-200">
                 Featured
               </span>
             )}
@@ -201,7 +164,7 @@ function InteractiveProductCard({ product }: { product: Product }) {
             {(product.tags ?? []).slice(0, 3).map((tag) => (
               <span
                 key={tag}
-                className="rounded-full border border-white/[0.08] bg-white/[0.035] px-2.5 py-1 text-[10px] font-semibold text-slate-400"
+                className="rounded-md border border-slate-700 bg-slate-800/60 px-2.5 py-1 text-[10px] font-semibold text-slate-400"
               >
                 {tag}
               </span>
@@ -240,8 +203,8 @@ function InteractiveProductCard({ product }: { product: Product }) {
                 </div>
               )}
             </div>
-            <span className="inline-flex min-h-11 items-center gap-2 rounded-full bg-gradient-to-r from-teal-500 via-cyan-500 to-cyan-300 px-5 text-xs font-black text-[#041014] shadow-[0_12px_30px_rgba(34,211,238,.18)] transition-all duration-300 group-hover:gap-3 group-hover:shadow-[0_18px_38px_rgba(34,211,238,.28)]">
-              View landing <ArrowRight size={14} />
+            <span className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-cyan-300 px-4 text-xs font-black text-[#062027] transition-colors duration-200 group-hover:bg-cyan-200">
+              View product <ArrowRight size={14} />
             </span>
           </div>
         </div>
@@ -323,7 +286,7 @@ export default function CatalogClient({
               </p>
               <div className="mt-7 flex flex-wrap gap-3 text-xs font-bold text-slate-300">
                 <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.035] px-3.5 py-2">
-                  <Boxes size={14} className="text-cyan-300" /> Deep 3D product previews
+                  <Boxes size={14} className="text-cyan-300" /> Actual product previews
                 </span>
                 <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.035] px-3.5 py-2">
                   <ShieldCheck size={14} className="text-cyan-300" /> Protected checkout
@@ -354,7 +317,7 @@ export default function CatalogClient({
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Search published products"
-              className="w-full rounded-2xl border border-white/10 bg-white/[0.035] py-3 pl-10 pr-4 text-sm text-white outline-none transition placeholder:text-slate-600 focus:border-cyan-300/40 focus:bg-white/[0.05]"
+              className="w-full rounded-lg border border-white/10 bg-white/[0.035] py-3 pl-10 pr-4 text-sm text-white outline-none transition placeholder:text-slate-600 focus:border-cyan-300/40 focus:bg-white/[0.05]"
             />
           </div>
           <div className="flex flex-wrap gap-2">
@@ -364,7 +327,7 @@ export default function CatalogClient({
                   key={value}
                   type="button"
                   onClick={() => setFilter(value)}
-                  className={`rounded-xl px-3.5 py-2.5 text-xs font-bold transition ${
+                  className={`rounded-lg px-3.5 py-2.5 text-xs font-bold transition ${
                     filter === value
                       ? 'bg-cyan-300 text-[#041014] shadow-[0_8px_24px_rgba(34,211,238,.18)]'
                       : 'border border-white/10 bg-white/[0.035] text-slate-400 hover:border-cyan-300/25 hover:text-white'
@@ -382,7 +345,7 @@ export default function CatalogClient({
             <select
               value={sort}
               onChange={(event) => setSort(event.target.value as SortMode)}
-              className="rounded-xl border border-white/10 bg-[#0b1117] px-3.5 py-2.5 text-xs font-bold text-slate-300 outline-none focus:border-cyan-300/35"
+              className="rounded-lg border border-white/10 bg-[#0b1117] px-3.5 py-2.5 text-xs font-bold text-slate-300 outline-none focus:border-cyan-300/35"
               aria-label="Sort products"
             >
               <option value="featured">Featured</option>

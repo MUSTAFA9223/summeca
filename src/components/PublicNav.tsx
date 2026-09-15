@@ -61,7 +61,11 @@ export default function PublicNav() {
   };
 
   return (
-    <header data-public-nav="true" className={`fixed left-0 right-0 top-0 z-50 transition-all duration-300 ${scrolled ? 'border-b border-primary/8 bg-white/95 shadow-sm shadow-primary/5 backdrop-blur-xl' : 'bg-transparent'}`}>
+    <header
+      data-public-nav="true"
+      className={`fixed left-0 right-0 z-50 transition-[top,background-color,box-shadow,border-color] duration-300 ${scrolled ? 'border-b border-primary/8 bg-white/95 shadow-sm shadow-primary/5 backdrop-blur-xl' : 'bg-transparent'}`}
+      style={{ top: 'var(--launch-offer-height, 0px)' }}
+    >
       <div className="mx-auto max-w-screen-xl px-5 sm:px-6 lg:px-8">
         <div className="flex h-[70px] items-center justify-between">
           <Link href="/" className="group flex shrink-0 items-center" aria-label="SUMMECA home">
