@@ -1,28 +1,108 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800" viewBox="0 0 1200 800" role="img" aria-labelledby="title desc">
-  <title id="title">SUMMECA LeadFollow AI</title>
-  <desc id="desc">Premium teal product artwork for the LeadFollow AI SaaS workspace.</desc>
+  <title id="title">SUMMECA LeadFollow AI interface preview</title>
+  <desc id="desc">A detailed sample of the real LeadFollow AI workspace with lead pipeline, due follow-ups and an AI draft editor.</desc>
   <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#03141f"/><stop offset="0.55" stop-color="#0a2730"/><stop offset="1" stop-color="#105f5a"/></linearGradient>
-    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#2fe0cd"/><stop offset="1" stop-color="#9dfff2"/></linearGradient>
-    <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="20" stdDeviation="27" flood-color="#000" flood-opacity=".32"/></filter>
+    <linearGradient id="shell" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#06151c"/>
+      <stop offset="0.6" stop-color="#0a2632"/>
+      <stop offset="1" stop-color="#123652"/>
+    </linearGradient>
+    <linearGradient id="cta" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#24dfc1"/>
+      <stop offset="1" stop-color="#55d8ff"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="150%"><feDropShadow dx="0" dy="28" stdDeviation="28" flood-color="#02090d" flood-opacity=".5"/></filter>
   </defs>
-  <rect width="1200" height="800" rx="48" fill="url(#bg)"/>
-  <circle cx="1040" cy="130" r="285" fill="#43e6d4" opacity=".08"/><circle cx="1010" cy="710" r="370" fill="#43e6d4" opacity=".05"/>
-  <rect x="70" y="70" width="1060" height="660" rx="38" fill="#fff" opacity=".045" stroke="#fff" stroke-opacity=".13"/>
-  <g transform="translate(100 108)">
-    <rect width="154" height="46" rx="23" fill="url(#accent)"/><text x="77" y="30" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="18" font-weight="800" fill="#03221f">SUMMECA SaaS</text>
-    <text x="0" y="132" font-family="Arial,Helvetica,sans-serif" font-size="64" font-weight="800" fill="#fff">LeadFollow AI</text>
-    <text x="0" y="182" font-family="Arial,Helvetica,sans-serif" font-size="26" fill="#c9dcdf">Never lose the next sales follow-up.</text>
-    <g transform="translate(0 292)" font-family="Arial,Helvetica,sans-serif" font-size="23" fill="#f3fffd">
-      <text y="0">Organize leads and next actions</text><text y="50">Generate factual AI follow-up drafts</text><text y="100">Email, LinkedIn, WhatsApp + SMS</text><text y="150">Pipeline status + message history</text>
+
+  <rect width="1200" height="800" rx="48" fill="url(#shell)"/>
+  <circle cx="1040" cy="90" r="320" fill="#55d8ff" opacity=".09"/>
+  <circle cx="100" cy="730" r="320" fill="#24dfc1" opacity=".07"/>
+
+  <g transform="translate(54 48)" filter="url(#shadow)" font-family="Arial,Helvetica,sans-serif">
+    <rect width="1092" height="704" rx="34" fill="#f7fbfc"/>
+    <rect width="1092" height="68" rx="34" fill="#0a2029"/><rect y="34" width="1092" height="34" fill="#0a2029"/>
+    <circle cx="31" cy="34" r="7" fill="#ff7d79"/><circle cx="54" cy="34" r="7" fill="#ffd45f"/><circle cx="77" cy="34" r="7" fill="#4de3bd"/>
+    <text x="112" y="41" font-size="18" font-weight="800" fill="#ebfffb">LeadFollow AI</text>
+    <rect x="900" y="18" width="162" height="34" rx="17" fill="url(#cta)"/><text x="981" y="40" text-anchor="middle" font-size="13" font-weight="800" fill="#06232a">+ Add lead</text>
+
+    <rect y="68" width="205" height="636" fill="#0d2a35"/>
+    <g font-size="15" font-weight="700">
+      <rect x="18" y="98" width="169" height="44" rx="13" fill="#24dfc1" opacity=".13"/>
+      <circle cx="42" cy="120" r="7" fill="#24dfc1"/><text x="60" y="126" fill="#9ff7e8">Pipeline</text>
+      <circle cx="42" cy="174" r="7" fill="#55d8ff" opacity=".75"/><text x="60" y="180" fill="#b7ced6">Follow-ups</text>
+      <circle cx="42" cy="228" r="7" fill="#55d8ff" opacity=".75"/><text x="60" y="234" fill="#b7ced6">AI drafts</text>
+      <circle cx="42" cy="282" r="7" fill="#55d8ff" opacity=".75"/><text x="60" y="288" fill="#b7ced6">History</text>
+      <circle cx="42" cy="336" r="7" fill="#55d8ff" opacity=".75"/><text x="60" y="342" fill="#b7ced6">Settings</text>
     </g>
-  </g>
-  <g transform="translate(790 235)" filter="url(#shadow)">
-    <rect width="310" height="365" rx="30" fill="#fff"/>
-    <circle cx="48" cy="51" r="20" fill="#d5f8f3"/><rect x="82" y="36" width="115" height="13" rx="6" fill="#0f766e"/><rect x="82" y="60" width="175" height="11" rx="5" fill="#bdd2d0"/>
-    <rect x="28" y="104" width="254" height="70" rx="16" fill="#f0fbf9"/><rect x="44" y="122" width="140" height="11" rx="5" fill="#0f766e"/><rect x="44" y="145" width="207" height="9" rx="4" fill="#bcd0ce"/>
-    <rect x="28" y="194" width="254" height="70" rx="16" fill="#f7f9fa"/><rect x="44" y="212" width="122" height="11" rx="5" fill="#223b40"/><rect x="44" y="235" width="190" height="9" rx="4" fill="#c5d3d2"/>
-    <rect x="28" y="286" width="98" height="38" rx="19" fill="#19b9a8"/><rect x="140" y="286" width="142" height="38" rx="19" fill="#e6f6f4"/>
-    <circle cx="264" cy="339" r="9" fill="#33dbc8"/>
+    <rect x="18" y="616" width="169" height="66" rx="16" fill="#0a2029" stroke="#2de4c6" stroke-opacity=".16"/>
+    <text x="34" y="642" font-size="11" font-weight="800" fill="#64e8d4">WORKSPACE</text><text x="34" y="664" font-size="13" font-weight="700" fill="#d9eef2">Sample account</text>
+
+    <g transform="translate(237 99)">
+      <text x="0" y="23" font-size="24" font-weight="800" fill="#102d38">Lead pipeline</text>
+      <text x="0" y="47" font-size="13" fill="#66828c">Sample data · review every AI draft before sending</text>
+
+      <g transform="translate(0 72)">
+        <rect width="184" height="94" rx="18" fill="#fff" stroke="#dbe8eb"/><text x="18" y="27" font-size="12" font-weight="700" fill="#78919a">OPEN LEADS</text><text x="18" y="63" font-size="28" font-weight="900" fill="#102d38">18</text><circle cx="158" cy="31" r="15" fill="#d9faf2"/><text x="158" y="36" text-anchor="middle" font-size="12" font-weight="900" fill="#139e86">↑</text>
+      </g>
+      <g transform="translate(200 72)">
+        <rect width="184" height="94" rx="18" fill="#fff" stroke="#dbe8eb"/><text x="18" y="27" font-size="12" font-weight="700" fill="#78919a">DUE TODAY</text><text x="18" y="63" font-size="28" font-weight="900" fill="#c57812">4</text><circle cx="158" cy="31" r="15" fill="#fff0cf"/><text x="158" y="36" text-anchor="middle" font-size="12" font-weight="900" fill="#c57812">!</text>
+      </g>
+      <g transform="translate(400 72)">
+        <rect width="184" height="94" rx="18" fill="#fff" stroke="#dbe8eb"/><text x="18" y="27" font-size="12" font-weight="700" fill="#78919a">REPLIED</text><text x="18" y="63" font-size="28" font-weight="900" fill="#287eaf">7</text><circle cx="158" cy="31" r="15" fill="#e3f5ff"/><text x="158" y="36" text-anchor="middle" font-size="12" font-weight="900" fill="#287eaf">↩</text>
+      </g>
+      <g transform="translate(600 72)">
+        <rect width="216" height="94" rx="18" fill="#fff" stroke="#dbe8eb"/><text x="18" y="27" font-size="12" font-weight="700" fill="#78919a">WON</text><text x="18" y="63" font-size="28" font-weight="900" fill="#7659d7">5</text><rect x="145" y="20" width="52" height="24" rx="12" fill="#f0ebff"/><text x="171" y="36" text-anchor="middle" font-size="10" font-weight="800" fill="#7659d7">MONTH</text>
+      </g>
+
+      <g transform="translate(0 190)">
+        <rect width="340" height="360" rx="20" fill="#fff" stroke="#dbe8eb"/>
+        <text x="20" y="32" font-size="15" font-weight="800" fill="#102d38">Opportunities</text><text x="314" y="32" text-anchor="end" font-size="11" font-weight="700" fill="#159e88">18 open</text>
+        <line x1="20" y1="50" x2="320" y2="50" stroke="#e7eff1"/>
+        <g transform="translate(18 67)">
+          <rect width="304" height="76" rx="15" fill="#eefbf8" stroke="#c7eee7"/>
+          <circle cx="28" cy="28" r="14" fill="#d4faf1"/><text x="28" y="33" text-anchor="middle" font-size="12" font-weight="900" fill="#159e88">S</text>
+          <text x="53" y="25" font-size="12" font-weight="900" fill="#173640">Sample Lead</text><text x="53" y="44" font-size="11" fill="#78919a">Demo Studio · Referral</text>
+          <rect x="222" y="17" width="66" height="23" rx="11" fill="#d8faf2"/><text x="255" y="32" text-anchor="middle" font-size="9" font-weight="900" fill="#159e88">REPLIED</text>
+          <text x="53" y="63" font-size="10" font-weight="700" fill="#526f79">Follow-up tomorrow 10:00</text>
+        </g>
+        <g transform="translate(18 155)">
+          <rect width="304" height="76" rx="15" fill="#fff" stroke="#e0eaed"/>
+          <circle cx="28" cy="28" r="14" fill="#e6f5ff"/><text x="28" y="33" text-anchor="middle" font-size="12" font-weight="900" fill="#287eaf">D</text>
+          <text x="53" y="25" font-size="12" font-weight="900" fill="#173640">Demo Inquiry</text><text x="53" y="44" font-size="11" fill="#78919a">Website form</text>
+          <rect x="239" y="17" width="49" height="23" rx="11" fill="#e7f5fc"/><text x="263" y="32" text-anchor="middle" font-size="9" font-weight="900" fill="#287eaf">NEW</text>
+          <text x="53" y="63" font-size="10" font-weight="700" fill="#526f79">Due today 14:30</text>
+        </g>
+        <g transform="translate(18 243)">
+          <rect width="304" height="76" rx="15" fill="#fff" stroke="#e0eaed"/>
+          <circle cx="28" cy="28" r="14" fill="#f0ebff"/><text x="28" y="33" text-anchor="middle" font-size="12" font-weight="900" fill="#7659d7">N</text>
+          <text x="53" y="25" font-size="12" font-weight="900" fill="#173640">Northwind Ops</text><text x="53" y="44" font-size="11" fill="#78919a">LinkedIn</text>
+          <rect x="220" y="17" width="68" height="23" rx="11" fill="#f0ebff"/><text x="254" y="32" text-anchor="middle" font-size="9" font-weight="900" fill="#7659d7">CONTACTED</text>
+          <text x="53" y="63" font-size="10" font-weight="700" fill="#526f79">Follow-up Friday</text>
+        </g>
+      </g>
+
+      <g transform="translate(360 190)">
+        <rect width="456" height="360" rx="20" fill="#fff" stroke="#dbe8eb"/>
+        <text x="22" y="32" font-size="11" font-weight="900" fill="#159e88">AI FOLLOW-UP STUDIO</text>
+        <text x="22" y="62" font-size="18" font-weight="900" fill="#102d38">Sample Lead</text>
+        <rect x="343" y="22" width="90" height="27" rx="13" fill="#e6f5ff"/><text x="388" y="39" text-anchor="middle" font-size="10" font-weight="900" fill="#287eaf">EMAIL</text>
+        <g transform="translate(22 87)">
+          <rect width="412" height="42" rx="12" fill="#f4f8fa" stroke="#e0eaed"/>
+          <text x="16" y="17" font-size="9" font-weight="800" fill="#78919a">TONE</text><text x="16" y="32" font-size="11" font-weight="800" fill="#173640">Professional</text>
+          <line x1="137" y1="9" x2="137" y2="33" stroke="#dde8ea"/>
+          <text x="153" y="17" font-size="9" font-weight="800" fill="#78919a">STAGE</text><text x="153" y="32" font-size="11" font-weight="800" fill="#173640">Replied</text>
+          <line x1="267" y1="9" x2="267" y2="33" stroke="#dde8ea"/>
+          <text x="283" y="17" font-size="9" font-weight="800" fill="#78919a">LANGUAGE</text><text x="283" y="32" font-size="11" font-weight="800" fill="#173640">English</text>
+        </g>
+        <rect x="22" y="146" width="412" height="132" rx="15" fill="#f1fbfa" stroke="#caeee8"/>
+        <text x="40" y="170" font-size="9" font-weight="900" fill="#159e88">AI DRAFT · REVIEW BEFORE SENDING</text>
+        <text x="40" y="199" font-size="12" font-weight="700" fill="#294954">Hi Sample Lead,</text>
+        <text x="40" y="224" font-size="12" fill="#526f79">I’m following up on the website automation notes we</text>
+        <text x="40" y="244" font-size="12" fill="#526f79">discussed. Would Tuesday or Wednesday work for a</text>
+        <text x="40" y="264" font-size="12" fill="#526f79">short next-step call?</text>
+        <rect x="283" y="298" width="151" height="38" rx="12" fill="url(#cta)"/><text x="358" y="322" text-anchor="middle" font-size="11" font-weight="900" fill="#06232a">Copy draft</text>
+        <rect x="161" y="298" width="108" height="38" rx="12" fill="#fff" stroke="#d9e7ea"/><text x="215" y="322" text-anchor="middle" font-size="11" font-weight="800" fill="#526f79">Regenerate</text>
+      </g>
+    </g>
   </g>
 </svg>

@@ -1,0 +1,89 @@
+/* Customer-feedback refresh: clearer navigation layering and a less grey, more distinctive SUMMECA palette. */
+
+:root {
+  --launch-offer-height: 0px;
+}
+
+header[data-public-nav='true'] {
+  top: var(--launch-offer-height, 0px) !important;
+  transition-property: top, background-color, border-color, box-shadow, backdrop-filter !important;
+}
+
+html[data-site-theme='dark'] {
+  --background: #06151c;
+  --foreground: #f3fffd;
+  --primary: #20d9bd;
+  --primary-foreground: #03231f;
+  --secondary: #0e2731;
+  --secondary-foreground: #d8f2f4;
+  --accent: #4bcdf6;
+  --accent-foreground: #04242d;
+  --muted: #0a2029;
+  --muted-foreground: #9abec8;
+  --card: #0b2029;
+  --card-foreground: #f3fffd;
+  --border: rgba(113, 222, 217, 0.14);
+  --input: rgba(115, 218, 220, 0.18);
+  --ring: #4bcdf6;
+}
+
+html[data-site-theme='dark'] body {
+  background: #06151c;
+}
+
+html[data-site-theme='dark'] .glass-card,
+html[data-site-theme='dark'] .glass-card-premium {
+  background: rgba(9, 31, 40, 0.94);
+  border-color: rgba(91, 228, 215, 0.14);
+  box-shadow: 0 22px 58px rgba(1, 12, 18, 0.34), inset 0 1px 0 rgba(154, 255, 239, 0.05);
+}
+
+html[data-site-theme='dark'] .glass-nav {
+  background: rgba(6, 21, 28, 0.91);
+  border-bottom-color: rgba(91, 228, 215, 0.12);
+}
+
+html[data-site-theme='light'] {
+  --background: #f4fbfa;
+  --foreground: #092832;
+  --primary: #0b9f91;
+  --primary-foreground: #ffffff;
+  --secondary: #e5f6f4;
+  --secondary-foreground: #244852;
+  --accent: #168fc0;
+  --accent-foreground: #ffffff;
+  --muted: #edf7f7;
+  --muted-foreground: #607e87;
+  --card: #ffffff;
+  --card-foreground: #092832;
+  --border: rgba(18, 111, 112, 0.14);
+  --input: rgba(18, 111, 112, 0.17);
+  --ring: #168fc0;
+}
+
+body.summeca-home-theme .summeca-home-hero {
+  background-color: #06151c !important;
+}
+
+body.summeca-home-theme .summeca-home-hero [class*='from-[#0d1116]'] {
+  --tw-gradient-from: #06151c var(--tw-gradient-from-position) !important;
+}
+
+/* Keep the refreshed palette visually consistent on dark catalog/product surfaces. */
+html[data-site-theme='dark'] [class~='bg-[#070b10]'] {
+  background-color: #06151c !important;
+}
+
+html[data-site-theme='dark'] [class~='bg-[#090e14]'] {
+  background-color: #081b24 !important;
+}
+
+html[data-site-theme='dark'] [class~='bg-[#0b1117]/95'] {
+  background-color: rgba(9, 31, 40, 0.96) !important;
+}
+
+@media (max-width: 640px) {
+  header[data-public-nav='true'] {
+    transition-duration: 180ms !important;
+  }
+}

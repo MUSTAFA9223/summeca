@@ -169,6 +169,19 @@ export default function SplineNexbotScene({
       const target = event.target;
       if (target instanceof Node && root.contains(target)) return;
 
+      // Keep the robot responsive near its visual stage, but ignore distant pointer
+      // movement over the hero copy and CTAs so it does not compete for attention.
+      const rootRect = root.getBoundingClientRect();
+      const xPad = Math.min(96, rootRect.width * 0.12);
+      const yPad = Math.min(64, rootRect.height * 0.1);
+      const withinVisualZone =
+        event.clientX >= rootRect.left - xPad &&
+        event.clientX <= rootRect.right + xPad &&
+        event.clientY >= rootRect.top - yPad &&
+        event.clientY <= rootRect.bottom + yPad;
+
+      if (!withinVisualZone) return;
+
       latestPointer = event;
       if (animationFrame === null) {
         animationFrame = window.requestAnimationFrame(dispatchMappedPointer);
