@@ -15,10 +15,11 @@ import {
 import AppLogo from '@/components/ui/AppLogo';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
 import { useAuth } from '@/contexts/AuthContext';
+import { trackEvent } from '@/lib/analytics';
 
 const navLinks = [
+  { label: 'For Stores', href: '/#solutions' },
   { label: 'Products', href: '/products' },
-  { label: 'SaaS Apps', href: '/saas' },
   { label: 'Pricing', href: '/pricing' },
   { label: 'Support', href: '/support' },
 ];
@@ -60,6 +61,14 @@ export default function PublicNav() {
     await signOut();
   };
 
+  const trackSignupCta = (placement: 'desktop_nav' | 'mobile_nav') => {
+    trackEvent('primary_cta_click', {
+      placement,
+      destination: 'signup',
+      audience: 'small_ecommerce',
+    });
+  };
+
   return (
     <header
       data-public-nav="true"
@@ -72,7 +81,7 @@ export default function PublicNav() {
             <AppLogo variant="wordmark" size={46} className="transition-transform duration-200 group-hover:scale-[1.025]" />
           </Link>
 
-          <nav className="hidden items-center gap-1 lg:flex">
+          <nav className="hidden items-center gap-1 lg:flex" aria-label="Primary navigation">
             {navLinks.map((item) => (
               <Link
                 key={item.href}
@@ -127,14 +136,14 @@ export default function PublicNav() {
             ) : (
               <>
                 <Link href="/sign-up-login-screen" className="rounded-lg px-3 py-2 text-sm font-semibold text-secondary-foreground transition hover:bg-secondary/80 hover:text-foreground">Log in</Link>
-                <Link href="/sign-up-login-screen" className="btn-primary flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-sm"><Sparkles size={13} />Get Started</Link>
+                <Link href="/sign-up-login-screen" onClick={() => trackSignupCta('desktop_nav')} className="btn-primary flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-sm"><Sparkles size={13} />Get Started</Link>
               </>
             )}
           </div>
 
           <div className="flex items-center gap-2 lg:hidden">
             <LanguageSwitcher compact />
-            <button className="flex h-9 w-9 items-center justify-center rounded-xl border border-border text-muted-foreground transition hover:border-primary/40 hover:bg-primary/5 hover:text-foreground" onClick={() => setMobileOpen((open) => !open)} aria-label="Toggle mobile menu">
+            <button className="flex h-9 w-9 items-center justify-center rounded-xl border border-border text-muted-foreground transition hover:border-primary/40 hover:bg-primary/5 hover:text-foreground" onClick={() => setMobileOpen((open) => !open)} aria-label="Toggle mobile menu" aria-expanded={mobileOpen}>
               {mobileOpen ? <X size={18} /> : <Menu size={18} />}
             </button>
           </div>
@@ -166,7 +175,16 @@ export default function PublicNav() {
               ) : (
                 <>
                   <Link href="/sign-up-login-screen" className="btn-secondary text-center text-sm" onClick={() => setMobileOpen(false)}>Log in</Link>
-                  <Link href="/sign-up-login-screen" className="btn-primary flex items-center justify-center gap-1.5 text-center text-sm" onClick={() => setMobileOpen(false)}><Sparkles size={13} />Get Started</Link>
+                  <Link
+                    href="/sign-up-login-screen"
+                    className="btn-primary flex items-center justify-center gap-1.5 text-center text-sm"
+                    onClick={() => {
+                      setMobileOpen(false);
+                      trackSignupCta('mobile_nav');
+                    }}
+                  >
+                    <Sparkles size={13} />Get Started
+                  </Link>
                 </>
               )}
             </div>
