@@ -3,9 +3,11 @@ import 'server-only';
 export type PublicCatalogPlan = {
   id: string;
   name: string;
+  description: string | null;
   price: number;
   currency: string;
   billing_period: 'one_time' | 'monthly' | 'yearly' | 'lifetime';
+  features: string[] | null;
   is_active: boolean;
   sort_order: number;
   sale_price: number | null;
@@ -39,7 +41,7 @@ type CatalogRow = Omit<PublicCatalogProduct, 'plans' | 'avg_rating' | 'review_co
 const SELECT = `
   id,name,slug,short_desc,description,category,thumbnail_url,tags,metadata,created_at,
   plans:product_plans!inner(
-    id,name,price,currency,billing_period,is_active,sort_order,
+    id,name,description,price,currency,billing_period,features,is_active,sort_order,
     sale_price,sale_discount_type,sale_discount_value,sale_starts_at,sale_ends_at
   ),
   reviews(rating)
@@ -88,7 +90,9 @@ export async function getPublicCatalog(): Promise<PublicCatalogProduct[]> {
         .filter((rating) => Number.isFinite(rating) && rating >= 1 && rating <= 5);
       return {
         ...product,
-        plans: (plans ?? []).filter((plan) => plan.is_active),
+        plans: (plans ?? [])
+          .filter((plan) => plan.is_active)
+          .sort((a, b) => a.sort_order - b.sort_order),
         avg_rating: ratings.length
           ? ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length
           : 0,
