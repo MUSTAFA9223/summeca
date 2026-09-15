@@ -77,10 +77,12 @@ function CheckoutSuccessInner() {
   useEffect(() => {
     if (!order || order.status !== 'completed' || !order.product_id) return;
 
-    const amount = Number(order.amount ?? NaN);
+    const verifiedOrder = order;
+    const productId = verifiedOrder.product_id;
+    const amount = Number(verifiedOrder.amount ?? NaN);
     if (!Number.isFinite(amount) || amount <= 0) return;
 
-    const storageKey = `summeca:ga4:purchase:${order.id}`;
+    const storageKey = `summeca:ga4:purchase:${verifiedOrder.id}`;
     try {
       if (window.localStorage.getItem(storageKey) === '1') return;
     } catch {
@@ -93,7 +95,7 @@ function CheckoutSuccessInner() {
       const { data: product } = await supabase
         .from('products')
         .select('id, name')
-        .eq('id', order.product_id)
+        .eq('id', productId)
         .maybeSingle();
 
       if (cancelled) return;
@@ -107,13 +109,13 @@ function CheckoutSuccessInner() {
       if (typeof window.gtag !== 'function' || cancelled) return;
 
       trackPurchase({
-        id: order.id,
+        id: verifiedOrder.id,
         productName: typeof product?.name === 'string' && product.name.trim()
           ? product.name
           : 'SUMMECA product',
-        productId: order.product_id,
+        productId,
         amount,
-        currency: order.currency || 'USD',
+        currency: verifiedOrder.currency || 'USD',
       });
 
       try {
