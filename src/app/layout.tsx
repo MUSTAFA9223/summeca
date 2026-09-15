@@ -25,7 +25,7 @@ const plusJakartaSans = Plus_Jakarta_Sans({
 });
 
 const siteDescription =
-  'Discover and access premium AI tools, SaaS applications, and digital products designed for modern knowledge workers and businesses.';
+  'Discover and access practical AI tools, SaaS applications, and digital products designed for modern businesses and knowledge workers.';
 
 const themeInitScript = `
 try {
@@ -36,6 +36,34 @@ try {
   }
 } catch (_) {}
 `;
+
+const structuredData = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'Organization',
+      '@id': 'https://summeca.com/#organization',
+      name: 'SUMMECA',
+      url: 'https://summeca.com',
+      logo: 'https://summeca.com/assets/images/app_logo.png',
+      description: siteDescription,
+      email: 'hello@summeca.com',
+      sameAs: [
+        'https://x.com/summeca_',
+        'https://www.producthunt.com/products/summeca',
+      ],
+    },
+    {
+      '@type': 'WebSite',
+      '@id': 'https://summeca.com/#website',
+      name: 'SUMMECA',
+      url: 'https://summeca.com',
+      description: siteDescription,
+      publisher: { '@id': 'https://summeca.com/#organization' },
+      inLanguage: 'en',
+    },
+  ],
+};
 
 export const viewport: Viewport = {
   width: 'device-width',
@@ -49,6 +77,19 @@ export const metadata: Metadata = {
     template: '%s | SUMMECA',
   },
   description: siteDescription,
+  keywords: [
+    'SUMMECA',
+    'AI tools',
+    'SaaS applications',
+    'digital products',
+    'business software',
+    'productivity tools',
+    'modern work tools',
+  ],
+  authors: [{ name: 'SUMMECA', url: 'https://summeca.com' }],
+  creator: 'SUMMECA',
+  publisher: 'SUMMECA',
+  category: 'technology',
   openGraph: {
     type: 'website',
     url: 'https://summeca.com',
@@ -60,7 +101,7 @@ export const metadata: Metadata = {
         url: '/assets/images/summeca-logo.png',
         width: 1200,
         height: 400,
-        alt: 'SUMMECA',
+        alt: 'SUMMECA — AI, SaaS and digital products',
       },
     ],
   },
@@ -92,6 +133,12 @@ export default function RootLayout({
     >
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(structuredData).replace(/</g, '\\u003c'),
+          }}
+        />
       </head>
       <body className={plusJakartaSans.className}>
         <Suspense fallback={null}>
