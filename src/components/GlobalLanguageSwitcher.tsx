@@ -21,8 +21,14 @@ export default function GlobalLanguageSwitcher() {
   if (hasHostedSwitcher !== false) return null;
 
   return (
-    <div className="fixed left-1/2 top-4 z-[120] -translate-x-1/2" data-i18n-skip>
-      <LanguageSwitcher />
+    <div
+      className="fixed left-1/2 z-[120] -translate-x-1/2 px-2 transition-[top] duration-300"
+      style={{
+        top: 'calc(var(--launch-offer-height, 0px) + max(1rem, env(safe-area-inset-top)))',
+      }}
+      data-i18n-skip
+    >
+      <LanguageSwitcher className="max-w-[calc(100vw-1rem)]" />
     </div>
   );
 }
