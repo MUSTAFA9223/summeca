@@ -1,5 +1,10 @@
+import { cache } from 'react';
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
+import { createClient as createSupabaseClient } from '@supabase/supabase-js';
+import { getEffectivePrice } from '@/lib/pricing';
+
+export const revalidate = 300;
 
 type ProductSeo = {
   title: string;
@@ -9,6 +14,47 @@ type ProductSeo = {
   imageWidth?: number;
   imageHeight?: number;
   kind?: 'software' | 'digital';
+};
+
+type PublishedProduct = {
+  id: string;
+  name: string;
+  slug: string;
+  short_desc: string | null;
+  description: string | null;
+  category: string;
+  thumbnail_url: string | null;
+  tags: string[] | null;
+};
+
+type PublishedPlan = {
+  id: string;
+  name: string;
+  price: number | string;
+  currency: string;
+  billing_period: string;
+  is_active: boolean;
+  sale_price: number | string | null;
+  sale_discount_type: 'percentage' | 'fixed_amount' | string | null;
+  sale_discount_value: number | string | null;
+  sale_starts_at: string | null;
+  sale_ends_at: string | null;
+};
+
+type PublicReview = {
+  id: string;
+  rating: number | string;
+  title: string | null;
+  body: string | null;
+  reviewer_name: string | null;
+  is_verified: boolean;
+  created_at: string;
+};
+
+type PublicProductSnapshot = {
+  product: PublishedProduct;
+  plans: PublishedPlan[];
+  reviews: PublicReview[];
 };
 
 const PRODUCT_SEO: Record<string, ProductSeo> = {
@@ -129,8 +175,124 @@ function canonicalFor(slug: string) {
   return `https://summeca.com/products/${encodeURIComponent(slug)}`;
 }
 
-function displayName(entry: ProductSeo) {
-  return entry.title.split(' | ')[0];
+function absoluteImage(image: string | null | undefined) {
+  if (!image) return 'https://summeca.com/assets/images/summeca-logo.png';
+  try {
+    return new URL(image).toString();
+  } catch {
+    return `https://summeca.com${image.startsWith('/') ? image : `/${image}`}`;
+  }
+}
+
+function displayName(entry: ProductSeo | null, product: PublishedProduct | null) {
+  if (product?.name) return product.name;
+  return entry?.title.split(' | ')[0] ?? 'SUMMECA Product';
+}
+
+function productKind(entry: ProductSeo | null, product: PublishedProduct | null) {
+  if (entry?.kind) return entry.kind;
+  if (product?.category === 'template' || product?.category === 'dataset') return 'digital';
+  if (product?.category === 'ai_tool' || product?.category === 'api' || product?.category === 'plugin') {
+    return 'software';
+  }
+  return 'digital';
+}
+
+const loadPublicProductSnapshot = cache(async (slug: string): Promise<PublicProductSnapshot | null> => {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const isCiPlaceholder = !supabaseUrl
+    || !anonKey
+    || supabaseUrl.includes('example.supabase.co')
+    || anonKey === 'test-anon-key';
+
+  if (isCiPlaceholder) return null;
+
+  try {
+    const supabase = createSupabaseClient(supabaseUrl, anonKey, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
+    const { data: product, error: productError } = await supabase
+      .from('products')
+      .select('id, name, slug, short_desc, description, category, thumbnail_url, tags')
+      .eq('slug', slug)
+      .eq('status', 'active')
+      .maybeSingle();
+
+    if (productError || !product) return null;
+
+    const [plansResult, reviewsResult] = await Promise.all([
+      supabase
+        .from('product_plans')
+        .select('id, name, price, currency, billing_period, is_active, sale_price, sale_discount_type, sale_discount_value, sale_starts_at, sale_ends_at')
+        .eq('product_id', product.id)
+        .eq('is_active', true)
+        .order('sort_order', { ascending: true }),
+      supabase
+        .from('reviews')
+        .select('id, rating, title, body, reviewer_name, is_verified, created_at')
+        .eq('product_id', product.id)
+        .eq('moderation_status', 'approved')
+        .order('created_at', { ascending: false })
+        .limit(12),
+    ]);
+
+    return {
+      product: product as PublishedProduct,
+      plans: (plansResult.data ?? []) as PublishedPlan[],
+      reviews: (reviewsResult.data ?? []) as PublicReview[],
+    };
+  } catch {
+    return null;
+  }
+});
+
+function effectivePlanPrice(plan: PublishedPlan) {
+  try {
+    return getEffectivePrice(plan).finalPrice;
+  } catch {
+    return Number(plan.price) || 0;
+  }
+}
+
+function aggregateRating(reviews: PublicReview[]) {
+  const ratings = reviews
+    .map((review) => Number(review.rating))
+    .filter((rating) => Number.isFinite(rating) && rating >= 1 && rating <= 5);
+  if (!ratings.length) return null;
+  const value = ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length;
+  return {
+    '@type': 'AggregateRating',
+    ratingValue: Number(value.toFixed(2)),
+    reviewCount: ratings.length,
+    bestRating: 5,
+    worstRating: 1,
+  };
+}
+
+function schemaReviews(reviews: PublicReview[]) {
+  return reviews
+    .filter((review) => {
+      const rating = Number(review.rating);
+      return Number.isFinite(rating) && rating >= 1 && rating <= 5;
+    })
+    .slice(0, 5)
+    .map((review) => ({
+      '@type': 'Review',
+      author: {
+        '@type': 'Person',
+        name: review.reviewer_name || 'SUMMECA customer',
+      },
+      datePublished: review.created_at,
+      ...(review.title ? { name: review.title } : {}),
+      ...(review.body ? { reviewBody: review.body } : {}),
+      reviewRating: {
+        '@type': 'Rating',
+        ratingValue: Number(review.rating),
+        bestRating: 5,
+        worstRating: 1,
+      },
+    }));
 }
 
 export async function generateMetadata({
@@ -139,40 +301,51 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const entry = PRODUCT_SEO[slug];
-  if (!entry) {
+  const entry = PRODUCT_SEO[slug] ?? null;
+  const snapshot = await loadPublicProductSnapshot(slug);
+  const product = snapshot?.product ?? null;
+  const canonical = canonicalFor(slug);
+
+  if (!entry && !product) {
     return {
       title: { absolute: 'Product | SUMMECA' },
       description: 'Browse published digital products and software tools from SUMMECA.',
-      alternates: { canonical: canonicalFor(slug) },
+      alternates: { canonical },
+      robots: { index: false, follow: true },
     };
   }
 
-  const canonical = canonicalFor(slug);
-  const image = `https://summeca.com${entry.image}`;
+  const title = entry?.title ?? `${product?.name ?? 'Product'} | SUMMECA`;
+  const description = entry?.description
+    ?? product?.short_desc
+    ?? product?.description
+    ?? 'Explore this published SUMMECA digital product or software tool.';
+  const image = absoluteImage(entry?.image ?? product?.thumbnail_url);
+  const keywords = entry?.keywords ?? product?.tags ?? undefined;
 
   return {
-    title: { absolute: entry.title },
-    description: entry.description,
-    keywords: entry.keywords,
+    title: { absolute: title },
+    description,
+    keywords,
     alternates: { canonical },
+    robots: { index: true, follow: true },
     openGraph: {
       type: 'website',
       url: canonical,
-      title: entry.title,
-      description: entry.description,
+      title,
+      description,
       siteName: 'SUMMECA',
       images: [{
         url: image,
-        width: entry.imageWidth ?? 1200,
-        height: entry.imageHeight ?? 900,
-        alt: entry.title,
+        ...(entry?.imageWidth ? { width: entry.imageWidth } : {}),
+        ...(entry?.imageHeight ? { height: entry.imageHeight } : {}),
+        alt: title,
       }],
     },
     twitter: {
       card: 'summary_large_image',
-      title: entry.title,
-      description: entry.description,
+      title,
+      description,
       images: [image],
     },
   };
@@ -186,44 +359,76 @@ export default async function ProductLayout({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const entry = PRODUCT_SEO[slug];
+  const entry = PRODUCT_SEO[slug] ?? null;
+  const snapshot = await loadPublicProductSnapshot(slug);
+  const product = snapshot?.product ?? null;
 
-  if (!entry) return children;
+  if (!entry && !product) return children;
 
   const canonical = canonicalFor(slug);
-  const image = `https://summeca.com${entry.image}`;
-  const name = displayName(entry);
-  const mainEntity = entry.kind === 'software'
+  const image = absoluteImage(entry?.image ?? product?.thumbnail_url);
+  const name = displayName(entry, product);
+  const description = entry?.description
+    ?? product?.short_desc
+    ?? product?.description
+    ?? 'Published SUMMECA product.';
+  const kind = productKind(entry, product);
+  const plans = snapshot?.plans ?? [];
+  const reviews = snapshot?.reviews ?? [];
+  const rating = aggregateRating(reviews);
+  const reviewItems = schemaReviews(reviews);
+  const offers = plans.map((plan) => ({
+    '@type': 'Offer',
+    name: plan.name,
+    url: canonical,
+    priceCurrency: plan.currency || 'USD',
+    price: effectivePlanPrice(plan),
+    availability: 'https://schema.org/InStock',
+    seller: { '@id': 'https://summeca.com/#organization' },
+  }));
+
+  const commonEntity = {
+    '@id': `${canonical}#product`,
+    name,
+    description,
+    url: canonical,
+    image,
+    publisher: { '@id': 'https://summeca.com/#organization' },
+    ...(product?.id ? { sku: product.id } : {}),
+    ...(offers.length ? { offers } : {}),
+    ...(rating ? { aggregateRating: rating } : {}),
+    ...(reviewItems.length ? { review: reviewItems } : {}),
+  };
+
+  const mainEntity = kind === 'software'
     ? {
         '@type': 'SoftwareApplication',
-        name,
-        description: entry.description,
-        url: canonical,
-        image,
+        ...commonEntity,
         applicationCategory: 'BusinessApplication',
         operatingSystem: 'Web',
-        publisher: { '@id': 'https://summeca.com/#organization' },
       }
     : {
-        '@type': 'CreativeWork',
-        name,
-        description: entry.description,
-        url: canonical,
-        image,
-        publisher: { '@id': 'https://summeca.com/#organization' },
+        '@type': 'Product',
+        ...commonEntity,
+        brand: {
+          '@type': 'Brand',
+          name: 'SUMMECA',
+        },
+        category: product?.category || 'Digital product',
       };
 
   const structuredData = {
     '@context': 'https://schema.org',
     '@graph': [
+      mainEntity,
       {
         '@type': 'WebPage',
         '@id': `${canonical}#webpage`,
         url: canonical,
-        name: entry.title,
-        description: entry.description,
+        name: entry?.title ?? `${name} | SUMMECA`,
+        description,
         isPartOf: { '@id': 'https://summeca.com/#website' },
-        mainEntity,
+        mainEntity: { '@id': `${canonical}#product` },
       },
       {
         '@type': 'BreadcrumbList',
