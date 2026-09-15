@@ -10,6 +10,28 @@ export const metadata: Metadata = {
   title: 'AI Tools',
   description:
     'Browse published SUMMECA AI tools, APIs, and plugins with pricing from active production plans.',
+  alternates: { canonical: '/ai' },
+  robots: { index: true, follow: true },
+  openGraph: {
+    type: 'website',
+    url: 'https://summeca.com/ai',
+    siteName: 'SUMMECA',
+    title: 'SUMMECA AI Tools',
+    description:
+      'Explore published SUMMECA AI tools, APIs, and plugins with active production offers and clear pricing.',
+    images: [{
+      url: 'https://summeca.com/assets/images/summeca-logo.png',
+      width: 1200,
+      height: 400,
+      alt: 'SUMMECA AI tools',
+    }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'SUMMECA AI Tools',
+    description: 'Explore published SUMMECA AI tools, APIs, and plugins.',
+    images: ['https://summeca.com/assets/images/summeca-logo.png'],
+  },
 };
 
 export default async function AiPage() {
