@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import Link from 'next/link';
-import { ArrowRight, Boxes } from 'lucide-react';
+import { ArrowRight, Boxes, LifeBuoy, LockKeyhole, ShieldCheck } from 'lucide-react';
 import SplineNexbotScene from '@/components/ui/SplineNexbotScene';
 import { useTheme } from '@/contexts/ThemeContext';
 
@@ -60,6 +60,24 @@ export default function HeroSection() {
               className="group inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-white/12 bg-white/[0.055] px-6 py-3 text-sm font-bold text-slate-100 backdrop-blur-xl transition duration-300 hover:-translate-y-0.5 hover:border-[#22d3ee]/45 hover:bg-[#22d3ee]/10 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#22d3ee] motion-reduce:transform-none motion-reduce:transition-none"
             >
               <Boxes size={15} className="text-[#22d3ee]" /> View SaaS Apps
+            </Link>
+          </div>
+
+          <div className="summeca-reveal summeca-reveal-4 mt-6 flex max-w-xl flex-wrap items-center gap-x-5 gap-y-2 border-t border-white/8 pt-4 text-[11px] font-semibold text-slate-400">
+            <span className="inline-flex items-center gap-1.5">
+              <ShieldCheck size={14} className="text-[#22d3ee]" /> Provider-confirmed payments
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <LockKeyhole size={14} className="text-[#22d3ee]" /> Protected digital delivery
+            </span>
+            <Link
+              href="/support"
+              className="inline-flex items-center gap-1.5 transition-colors hover:text-white"
+            >
+              <LifeBuoy size={14} className="text-[#22d3ee]" /> Customer support
+            </Link>
+            <Link href="/refunds" className="transition-colors hover:text-white hover:underline">
+              Refund policy
             </Link>
           </div>
         </div>
