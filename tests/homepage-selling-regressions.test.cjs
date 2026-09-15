@@ -9,10 +9,7 @@ const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
 const homepage = read('src/app/page.tsx');
 const hero = read('src/app/components/HeroSection.tsx');
 const authScreen = read('src/app/sign-up-login-screen/components/AuthScreen.tsx');
-const robot = read('src/components/ui/SplineNexbotScene.tsx');
-const splineClient = read('src/components/ui/SplineClient.tsx');
-const nextConfig = read('next.config.mjs');
-const cloudflareBuild = read('scripts/cloudflare-build.mjs');
+const productPreview = read('src/components/catalog/ProductProofPreview.tsx');
 const cryptoStatus = read('src/app/api/payment/crypto-status/route.ts');
 const publicCatalog = read('src/lib/catalog/publicCatalog.ts');
 const publicHomepageMarketing = `${homepage}\n${hero}`;
@@ -70,13 +67,13 @@ test('hero sends shoppers to public product and SaaS destinations', () => {
   assert.match(hero, /View SaaS Apps/);
 });
 
-test('new NEXBOT Spline scene is the only robot integration', () => {
-  assert.match(robot, /BAodEVjHSYLR1KKy\/scene\.splinecode/);
-  assert.match(splineClient, /@splinetool\/react-spline/);
-  assert.match(robot, /scene=\{NEXBOT_SCENE_URL\}/);
-  assert.match(hero, /SplineNexbotScene/);
-  assert.match(authScreen, /SplineNexbotScene/);
-  assert.doesNotMatch(`${hero}\n${authScreen}\n${robot}`, /H69K35LVSzZ9WcEG/);
-  assert.doesNotMatch(cloudflareBuild, /prepare-robot-model\.mjs|prepare-spline-scene\.mjs/);
-  assert.match(nextConfig, /https:\/\/prod\.spline\.design/);
+test('homepage and authentication show product evidence instead of a cursor-following robot', () => {
+  assert.match(hero, /WorkspaceOverviewPreview/);
+  assert.match(authScreen, /WorkspaceOverviewPreview/);
+  assert.doesNotMatch(hero, /SplineNexbotScene/);
+  assert.doesNotMatch(authScreen, /SplineNexbotScene/);
+  assert.match(productPreview, /InvoiceFlow workspace/);
+  assert.match(productPreview, /LeadFollow AI workspace/);
+  assert.match(productPreview, /Protected ZIP contents/);
+  assert.match(productPreview, /SAMPLE DATA/);
 });

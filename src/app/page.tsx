@@ -12,6 +12,7 @@ import {
 import PublicNav from '@/components/PublicNav';
 import PublicFooter from '@/components/PublicFooter';
 import HeroSection from '@/app/components/HeroSection';
+import ProductProofPreview from '@/components/catalog/ProductProofPreview';
 import { getEffectivePrice } from '@/lib/pricing';
 import { getPublicCatalog } from '@/lib/catalog/publicCatalog';
 
@@ -133,28 +134,14 @@ function ProductCard({ product }: { product: PublishedProduct }) {
   if (!plan) return null;
 
   const pricing = pricingFor(plan);
-  const kind = catalogKind(product.category);
-  const Icon = kind === 'ai' ? BrainCircuit : kind === 'digital' ? FileText : LayoutDashboard;
   const description =
     product.short_desc || product.description || 'Explore the product page for current details.';
 
   return (
     <article className="group flex h-full flex-col overflow-hidden rounded-[22px] border border-border bg-card shadow-sm transition duration-300 hover:-translate-y-1 hover:border-primary/35 hover:shadow-lg motion-reduce:transform-none motion-reduce:transition-none">
-      <div className="relative aspect-[16/8.5] overflow-hidden bg-gradient-to-br from-primary/10 via-secondary/50 to-background">
-        {product.thumbnail_url ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={product.thumbnail_url}
-            alt={product.name}
-            className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.02] motion-reduce:transform-none motion-reduce:transition-none"
-            loading="lazy"
-          />
-        ) : (
-          <div className="flex h-full items-center justify-center">
-            <Icon size={36} className="text-primary" />
-          </div>
-        )}
-        <span className="absolute left-3 top-3 rounded-full border border-white/60 bg-white/90 px-2.5 py-1 text-[9px] font-800 uppercase tracking-[0.14em] text-primary shadow-sm backdrop-blur">
+      <div className="relative overflow-hidden bg-[#0c1218] p-3">
+        <ProductProofPreview name={product.name} />
+        <span className="absolute left-5 top-5 rounded-md border border-white/15 bg-[#101820]/90 px-2.5 py-1 text-[9px] font-800 uppercase tracking-[0.14em] text-cyan-200 shadow-sm backdrop-blur">
           {categoryLabel(product.category)}
         </span>
       </div>

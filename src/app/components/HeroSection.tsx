@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 import Link from 'next/link';
 import { ArrowRight, Boxes, LifeBuoy, LockKeyhole, ShieldCheck } from 'lucide-react';
-import SplineNexbotScene from '@/components/ui/SplineNexbotScene';
+import { WorkspaceOverviewPreview } from '@/components/catalog/ProductProofPreview';
 import { useTheme } from '@/contexts/ThemeContext';
 
 export default function HeroSection() {
@@ -82,12 +82,10 @@ export default function HeroSection() {
           </div>
         </div>
 
-        <div className="relative min-h-[430px] self-stretch overflow-hidden sm:min-h-[500px] lg:min-h-[590px] lg:overflow-visible">
-          <div className="pointer-events-none absolute inset-[7%] rounded-[38px] border border-[#78e4df]/[0.08] bg-[#0c2731]/35 shadow-[inset_0_1px_0_rgba(164,255,244,0.05),0_42px_100px_rgba(0,0,0,0.22)] backdrop-blur-[2px] lg:inset-[7%_4%_6%_0%]" />
-          <div className="pointer-events-none absolute left-[50%] top-[48%] h-[48%] aspect-square -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#20d9bd]/12 blur-[82px]" />
-          <div className="absolute inset-0 z-10 min-h-[430px] touch-pan-y sm:min-h-[500px] lg:min-h-[590px]">
-            <SplineNexbotScene className="h-full w-full" pointerScopeSelector=".summeca-home-hero" />
-          </div>
+        <div className="relative flex min-h-[430px] items-center self-stretch overflow-hidden px-5 py-8 sm:min-h-[500px] sm:px-8 lg:min-h-[590px] lg:overflow-visible lg:pl-0 lg:pr-12 xl:pr-16">
+          <div className="pointer-events-none absolute inset-[10%] rounded-[28px] border border-[#78e4df]/[0.08] bg-[#0c2731]/35 shadow-[inset_0_1px_0_rgba(164,255,244,0.05),0_42px_100px_rgba(0,0,0,0.22)] backdrop-blur-[2px]" />
+          <div className="pointer-events-none absolute left-[50%] top-[48%] h-[48%] aspect-square -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#20d9bd]/10 blur-[82px]" />
+          <WorkspaceOverviewPreview className="relative z-10 w-full" />
         </div>
       </div>
 
