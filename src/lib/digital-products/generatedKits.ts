@@ -1,9 +1,11 @@
+import { CLIENT_PROJECT_TRACKER_XLSX, INVOICE_TEMPLATE_XLSX } from './generatedWorkbookAssets';
+
 type GeneratedKitKey =
   | 'ecommerce-product-page-conversion-kit'
   | 'ai-social-media-content-kit'
   | 'freelancer-client-management-kit';
 
-type ZipFile = { name: string; content: string };
+type ZipFile = { name: string; content: string | Uint8Array };
 
 const encoder = new TextEncoder();
 
@@ -45,7 +47,7 @@ function makeZip(files: ZipFile[]) {
 
   for (const file of files) {
     const name = encoder.encode(file.name);
-    const data = encoder.encode(file.content);
+    const data = typeof file.content === 'string' ? encoder.encode(file.content) : file.content;
     const crc = crc32(data);
 
     const localHeader = new Uint8Array(30);
@@ -128,7 +130,8 @@ function ecommerceFiles(): ZipFile[] {
     '[Size/Variant] [Product Type] — [Primary Use Case]', '[Product Type] for [Audience] — [Verified Differentiator]', '[Material] [Product Type] — [Verified Benefit]',
     '[Product Type]: [Feature] + [Feature]', '[Product Name] — Built for [Use Case]', '[Product Type] — [Compatibility Fact]', '[Product Type] — [Outcome phrased without guarantee]'
   ];
-  const titles = Array.from({ length: 50 }, (_, i) => [i + 1, titlePatterns[i % titlePatterns.length], `Variation ${Math.floor(i / titlePatterns.length) + 1}: keep the wording natural, specific, and fact-checked.`]);
+  const titleQualifiers = ['for [Audience]', 'for [Primary Use Case]', 'with [Verified Differentiator]', 'in [Size/Variant]', 'by [Brand]'];
+  const titles = titlePatterns.flatMap((pattern, i) => titleQualifiers.map((qualifier, j) => [i * titleQualifiers.length + j + 1, `${pattern} ${qualifier}`, 'Keep the wording natural, specific, and fact-checked; remove any placeholder that is not supported.']));
 
   const benefitFrames = [
     '[Verified feature] → helps the customer [practical benefit].', 'Designed for [use case], with [verified fact] for clearer everyday value.',
@@ -136,7 +139,11 @@ function ecommerceFiles(): ZipFile[] {
     'Compatible with [verified compatibility], helping customers confirm fit before ordering.', 'Includes [verified included item], so buyers know exactly what arrives.',
     '[Verified dimension/capacity] for [relevant use case].', 'Use [verified function] to [practical customer task].'
   ];
-  const benefits = Array.from({ length: 80 }, (_, i) => [i + 1, benefitFrames[i % benefitFrames.length], 'Replace every bracket with verified product information; remove the line if the fact is unavailable.']);
+  const benefitClosers = [
+    'Ideal for [audience/use case].', 'Available in [verified variant].', 'Sized for [verified fit or capacity].', 'Includes [verified included item].', 'Works with [verified compatibility].',
+    'Use it when [verified scenario].', 'Choose [verified option] to match [buyer need].', 'The [verified design detail] makes [specific task] clearer.', 'Review [verified specification] before ordering.', 'Built around [verified core function].',
+  ];
+  const benefits = benefitFrames.flatMap((frame, i) => benefitClosers.map((closer, j) => [i * benefitClosers.length + j + 1, `${frame} ${closer}`, 'Replace every bracket with verified product information; remove the line if the fact is unavailable.']));
 
   const ctaVerbs = ['Shop', 'Choose', 'Get', 'Explore', 'Add', 'Upgrade', 'Try', 'View', 'Select', 'Order'];
   const ctaEnds = ['Your Option', 'the Right Fit', 'Your Setup', 'the Details', 'Your Preferred Variant', 'with Confidence'];
@@ -183,11 +190,25 @@ function socialFiles(): ZipFile[] {
     'A useful template for [task]:', 'Try this when you are stuck on [problem]:', 'One small change that can improve clarity:', 'Use this prompt when you need to [task]:'
   ];
   const angles = ['Educational', 'Practical', 'Contrarian-but-grounded', 'Checklist', 'Problem/Solution'];
-  const hooks = hookPatterns.flatMap((pattern, i) => angles.map((angle, j) => [i * angles.length + j + 1, angle, pattern]));
+  const hookTreatments = [
+    (pattern: string) => `${pattern} Here is the clearest explanation.`,
+    (pattern: string) => `${pattern} Use this as your next practical step.`,
+    (pattern: string) => `The common advice misses something important. ${pattern}`,
+    (pattern: string) => `${pattern} Save this checklist for later.`,
+    (pattern: string) => `${pattern} Then fix the first gap you find.`,
+  ];
+  const hooks = hookPatterns.flatMap((pattern, i) => angles.map((angle, j) => [i * angles.length + j + 1, angle, hookTreatments[j](pattern)]));
 
   const ctaGoals = ['Save this post', 'Share with a teammate', 'Reply with your question', 'Visit the product page', 'Compare the options', 'Download the resource', 'Join the discussion', 'Read the full guide', 'Try the framework', 'Review the checklist', 'Follow for the next part', 'Send this to someone who needs it', 'Bookmark for later', 'Tell us your experience', 'See what is included', 'Choose your preferred option'];
   const tones = ['Direct', 'Friendly', 'Professional', 'Low-pressure', 'Action-oriented'];
-  const ctas = ctaGoals.flatMap((goal, i) => tones.map((tone, j) => [i * tones.length + j + 1, tone, goal]));
+  const ctaTreatments = [
+    (goal: string) => `${goal} now.`,
+    (goal: string) => `If this helped, ${goal.toLowerCase()}.`,
+    (goal: string) => `${goal} to continue.`,
+    (goal: string) => `When you are ready, ${goal.toLowerCase()}.`,
+    (goal: string) => `Next step: ${goal.toLowerCase()}.`,
+  ];
+  const ctas = ctaGoals.flatMap((goal, i) => tones.map((tone, j) => [i * tones.length + j + 1, tone, ctaTreatments[j](goal)]));
 
   const plannerRows = Array.from({ length: 30 }, (_, i) => [i + 1, '', ['Core Skill', 'Customer Problem', 'Process', 'Offer', 'Industry Insight'][i % 5], ['Educate', 'Build Trust', 'Discuss', 'Promote', 'Show Process'][i % 5], formats[i % formats.length], '', '', '', 'Idea', '', '']);
 
@@ -228,8 +249,8 @@ function freelancerFiles(): ZipFile[] {
     { name: 'REVISION_POLICY_TEMPLATE.txt', content: `REVISION POLICY TEMPLATE\n\nIncluded revision rounds: [NUMBER]\nRevision window after delivery: [NUMBER] calendar/business days\nIncluded revisions: adjustments within the agreed brief and scope.\nPotentially out-of-scope changes: new deliverables, new directions after approval, substantial new content, or requests that change the original project requirements.\n\nBefore publishing this policy, adapt it to your service and have any contractual language reviewed where appropriate.\n` },
     { name: 'CLIENT_EMAIL_SCRIPTS.txt', content: `CLIENT EMAIL SCRIPTS\n\nKICKOFF\nSubject: Project kickoff — [PROJECT]\nThanks for moving forward with [PROJECT]. To begin, please send [ASSETS/ACCESS] by [DATE]. I will confirm once everything required is available.\n\nMISSING INFORMATION\nSubject: Information needed for [PROJECT]\nTo keep the project moving, I still need: [LIST]. I will avoid making assumptions about these items until you confirm them.\n\nSTATUS UPDATE\nSubject: [PROJECT] — status update\nCompleted: [ ]. In progress: [ ]. Waiting on: [ ]. Next milestone: [DATE/STEP].\n\nDELIVERY\nSubject: [PROJECT] — delivery ready\nThe agreed deliverables are ready: [LINK/FILES]. Please review them against the approved scope and send any included revision requests by [DATE].\n\nFOLLOW-UP\nSubject: Following up — [PROJECT]\nJust following up on [ITEM]. Once I receive your confirmation, I can proceed with [NEXT STEP].\n` },
     { name: '100_AI_CLIENT_MANAGEMENT_PROMPTS.csv', content: csv(['#', 'Prompt'], prompts) },
-    { name: 'CLIENT_PROJECT_TRACKER.csv', content: csv(['Client', 'Company', 'Email', 'Service', 'Status', 'Start Date', 'Due Date', 'Project Fee', 'Amount Paid', 'Balance', 'Next Action'], Array.from({ length: 20 }, () => ['', '', '', '', 'Lead', '', '', '', '', '', ''])) },
-    { name: 'INVOICE_TEMPLATE.csv', content: csv(['Description', 'Qty', 'Rate', 'Tax %', 'Line Total', 'Notes'], Array.from({ length: 8 }, () => ['', '', '', '', '', ''])) },
+    { name: 'CLIENT_PROJECT_TRACKER.xlsx', content: CLIENT_PROJECT_TRACKER_XLSX },
+    { name: 'INVOICE_TEMPLATE.xlsx', content: INVOICE_TEMPLATE_XLSX },
     { name: 'DELIVERY_CHECKLIST.txt', content: `DELIVERY CHECKLIST\n\n[ ] Deliverables match the approved scope.\n[ ] Files open correctly and use clear names.\n[ ] Client-specific facts, names, dates, links, and prices were checked.\n[ ] Sensitive credentials are not included in ordinary deliverables.\n[ ] Required instructions are included.\n[ ] Revision window is stated if applicable.\n[ ] Invoice/payment status is recorded separately.\n[ ] Final client message explains the next action.\n` },
     { name: 'LICENSE.txt', content: LICENSE },
   ];
