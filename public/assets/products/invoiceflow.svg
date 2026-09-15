@@ -1,30 +1,111 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800" viewBox="0 0 1200 800" role="img" aria-labelledby="title desc">
-  <title id="title">SUMMECA InvoiceFlow</title>
-  <desc id="desc">Premium dark teal product artwork for the InvoiceFlow SaaS workspace.</desc>
+  <title id="title">SUMMECA InvoiceFlow interface preview</title>
+  <desc id="desc">A detailed sample of the real InvoiceFlow workspace with billing metrics, clients and an invoice editor.</desc>
   <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#041722"/><stop offset="0.6" stop-color="#0a3036"/><stop offset="1" stop-color="#0b6b65"/></linearGradient>
-    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#27d8c5"/><stop offset="1" stop-color="#86fff0"/></linearGradient>
-    <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="20" stdDeviation="26" flood-color="#000" flood-opacity=".3"/></filter>
+    <linearGradient id="shell" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#06151c"/>
+      <stop offset="0.58" stop-color="#0a2530"/>
+      <stop offset="1" stop-color="#0d3543"/>
+    </linearGradient>
+    <linearGradient id="cta" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#24dfc1"/>
+      <stop offset="1" stop-color="#55d8ff"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="150%">
+      <feDropShadow dx="0" dy="28" stdDeviation="28" flood-color="#02090d" flood-opacity=".5"/>
+    </filter>
   </defs>
-  <rect width="1200" height="800" rx="48" fill="url(#bg)"/>
-  <circle cx="1030" cy="120" r="280" fill="#49e3d2" opacity=".08"/><circle cx="1040" cy="730" r="350" fill="#49e3d2" opacity=".05"/>
-  <rect x="70" y="70" width="1060" height="660" rx="38" fill="#fff" opacity=".045" stroke="#fff" stroke-opacity=".13"/>
-  <g transform="translate(100 108)">
-    <rect width="154" height="46" rx="23" fill="url(#accent)"/><text x="77" y="30" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="18" font-weight="800" fill="#03221f">SUMMECA SaaS</text>
-    <text x="0" y="132" font-family="Arial,Helvetica,sans-serif" font-size="66" font-weight="800" fill="#fff">InvoiceFlow</text>
-    <text x="0" y="182" font-family="Arial,Helvetica,sans-serif" font-size="26" fill="#c7dadd">Professional invoicing without the clutter.</text>
-    <g transform="translate(0 292)" font-family="Arial,Helvetica,sans-serif" font-size="23" fill="#f3fffd">
-      <text y="0">Create and share professional invoices</text><text y="50">Track draft, sent and paid status</text><text y="100">Client management + PDF-ready views</text><text y="150">CSV export + payment reminders</text>
+
+  <rect width="1200" height="800" rx="48" fill="url(#shell)"/>
+  <circle cx="1080" cy="70" r="310" fill="#47d9ff" opacity=".08"/>
+  <circle cx="90" cy="760" r="300" fill="#24dfc1" opacity=".07"/>
+
+  <g transform="translate(54 48)" filter="url(#shadow)">
+    <rect width="1092" height="704" rx="34" fill="#f7fbfc"/>
+    <rect width="1092" height="68" rx="34" fill="#0a2029"/>
+    <rect y="34" width="1092" height="34" fill="#0a2029"/>
+    <circle cx="31" cy="34" r="7" fill="#ff7d79"/>
+    <circle cx="54" cy="34" r="7" fill="#ffd45f"/>
+    <circle cx="77" cy="34" r="7" fill="#4de3bd"/>
+    <text x="112" y="41" font-family="Arial,Helvetica,sans-serif" font-size="18" font-weight="800" fill="#ebfffb">InvoiceFlow</text>
+    <rect x="888" y="18" width="174" height="34" rx="17" fill="url(#cta)"/>
+    <text x="975" y="40" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="13" font-weight="800" fill="#06232a">+ New invoice</text>
+
+    <rect y="68" width="205" height="636" fill="#0d2a35"/>
+    <g font-family="Arial,Helvetica,sans-serif" font-size="15" font-weight="700">
+      <rect x="18" y="98" width="169" height="44" rx="13" fill="#24dfc1" opacity=".13"/>
+      <circle cx="42" cy="120" r="7" fill="#24dfc1"/>
+      <text x="60" y="126" fill="#9ff7e8">Overview</text>
+      <circle cx="42" cy="174" r="7" fill="#53d7ff" opacity=".75"/><text x="60" y="180" fill="#b7ced6">Invoices</text>
+      <circle cx="42" cy="228" r="7" fill="#53d7ff" opacity=".75"/><text x="60" y="234" fill="#b7ced6">Clients</text>
+      <circle cx="42" cy="282" r="7" fill="#53d7ff" opacity=".75"/><text x="60" y="288" fill="#b7ced6">Reports</text>
+      <circle cx="42" cy="336" r="7" fill="#53d7ff" opacity=".75"/><text x="60" y="342" fill="#b7ced6">Settings</text>
     </g>
-  </g>
-  <g transform="translate(790 235)" filter="url(#shadow)">
-    <rect width="310" height="365" rx="30" fill="#fff"/>
-    <rect x="26" y="28" width="116" height="18" rx="9" fill="#d8f8f3"/><rect x="26" y="66" width="210" height="18" rx="9" fill="#0f766e"/>
-    <rect x="26" y="118" width="258" height="1" fill="#e4eceb"/>
-    <rect x="26" y="145" width="164" height="13" rx="6" fill="#b8cecc"/><rect x="230" y="145" width="54" height="13" rx="6" fill="#0f766e"/>
-    <rect x="26" y="180" width="196" height="13" rx="6" fill="#b8cecc"/><rect x="230" y="180" width="54" height="13" rx="6" fill="#0f766e"/>
-    <rect x="26" y="215" width="138" height="13" rx="6" fill="#b8cecc"/><rect x="230" y="215" width="54" height="13" rx="6" fill="#0f766e"/>
-    <rect x="190" y="265" width="94" height="1" fill="#d4e1df"/><rect x="205" y="288" width="79" height="16" rx="8" fill="#25c9b7"/>
-    <rect x="180" y="325" width="104" height="20" rx="10" fill="#082a2d"/>
+    <rect x="18" y="616" width="169" height="66" rx="16" fill="#0a2029" stroke="#2de4c6" stroke-opacity=".16"/>
+    <text x="34" y="642" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="800" fill="#64e8d4">WORKSPACE</text>
+    <text x="34" y="664" font-family="Arial,Helvetica,sans-serif" font-size="13" font-weight="700" fill="#d9eef2">Sample account</text>
+
+    <g transform="translate(237 99)" font-family="Arial,Helvetica,sans-serif">
+      <text x="0" y="23" font-size="24" font-weight="800" fill="#102d38">Billing overview</text>
+      <text x="0" y="47" font-size="13" fill="#66828c">Sample data · current billing workspace</text>
+
+      <g transform="translate(0 72)">
+        <rect width="184" height="94" rx="18" fill="#ffffff" stroke="#dbe8eb"/>
+        <text x="18" y="27" font-size="12" font-weight="700" fill="#78919a">OUTSTANDING</text>
+        <text x="18" y="63" font-size="28" font-weight="900" fill="#102d38">$1,240</text>
+        <circle cx="158" cy="31" r="15" fill="#fff0cf"/><text x="158" y="36" text-anchor="middle" font-size="13" font-weight="900" fill="#bd7710">!</text>
+      </g>
+      <g transform="translate(200 72)">
+        <rect width="184" height="94" rx="18" fill="#ffffff" stroke="#dbe8eb"/>
+        <text x="18" y="27" font-size="12" font-weight="700" fill="#78919a">PAID</text>
+        <text x="18" y="63" font-size="28" font-weight="900" fill="#139e86">$3,860</text>
+        <circle cx="158" cy="31" r="15" fill="#d9faf2"/><text x="158" y="36" text-anchor="middle" font-size="13" font-weight="900" fill="#139e86">✓</text>
+      </g>
+      <g transform="translate(400 72)">
+        <rect width="184" height="94" rx="18" fill="#ffffff" stroke="#dbe8eb"/>
+        <text x="18" y="27" font-size="12" font-weight="700" fill="#78919a">INVOICES</text>
+        <text x="18" y="63" font-size="28" font-weight="900" fill="#267eb3">12</text>
+        <circle cx="158" cy="31" r="15" fill="#e4f5ff"/><text x="158" y="36" text-anchor="middle" font-size="13" font-weight="900" fill="#267eb3">#</text>
+      </g>
+      <g transform="translate(600 72)">
+        <rect width="216" height="94" rx="18" fill="#ffffff" stroke="#dbe8eb"/>
+        <text x="18" y="27" font-size="12" font-weight="700" fill="#78919a">CLIENTS</text>
+        <text x="18" y="63" font-size="28" font-weight="900" fill="#7659d7">6</text>
+        <rect x="145" y="20" width="52" height="24" rx="12" fill="#f0ebff"/><text x="171" y="36" text-anchor="middle" font-size="10" font-weight="800" fill="#7659d7">ACTIVE</text>
+      </g>
+
+      <g transform="translate(0 190)">
+        <rect width="315" height="360" rx="20" fill="#ffffff" stroke="#dbe8eb"/>
+        <text x="20" y="32" font-size="15" font-weight="800" fill="#102d38">Clients</text>
+        <text x="268" y="32" text-anchor="end" font-size="11" font-weight="700" fill="#159e88">View all</text>
+        <line x1="20" y1="50" x2="295" y2="50" stroke="#e7eff1"/>
+        <g font-size="12">
+          <circle cx="39" cy="86" r="14" fill="#d8faf2"/><text x="39" y="91" text-anchor="middle" font-weight="900" fill="#159e88">A</text><text x="64" y="82" font-weight="800" fill="#173640">Acme Studio</text><text x="64" y="101" fill="#7b949d">3 invoices</text>
+          <circle cx="39" cy="142" r="14" fill="#e4f5ff"/><text x="39" y="147" text-anchor="middle" font-weight="900" fill="#297aa9">N</text><text x="64" y="138" font-weight="800" fill="#173640">Northwind</text><text x="64" y="157" fill="#7b949d">2 invoices</text>
+          <circle cx="39" cy="198" r="14" fill="#f0ebff"/><text x="39" y="203" text-anchor="middle" font-weight="900" fill="#7558d2">B</text><text x="64" y="194" font-weight="800" fill="#173640">Bright Labs</text><text x="64" y="213" fill="#7b949d">1 invoice</text>
+        </g>
+        <rect x="20" y="248" width="275" height="88" rx="14" fill="#f1fbfa" stroke="#caeee8"/>
+        <text x="38" y="274" font-size="11" font-weight="800" fill="#159e88">NEXT ACTION</text>
+        <text x="38" y="299" font-size="13" font-weight="800" fill="#173640">2 unpaid invoices</text>
+        <text x="38" y="320" font-size="11" fill="#6f8992">Reminder copy is ready to review.</text>
+      </g>
+
+      <g transform="translate(335 190)">
+        <rect width="481" height="360" rx="20" fill="#ffffff" stroke="#dbe8eb"/>
+        <text x="22" y="32" font-size="11" font-weight="900" fill="#159e88">INVOICE PREVIEW</text>
+        <text x="22" y="61" font-size="23" font-weight="900" fill="#102d38">INV-2026-024</text>
+        <rect x="391" y="24" width="66" height="28" rx="14" fill="#fff0cf"/><text x="424" y="42" text-anchor="middle" font-size="11" font-weight="900" fill="#b6740f">SENT</text>
+        <text x="22" y="91" font-size="11" fill="#78919a">Billed to</text><text x="22" y="111" font-size="13" font-weight="800" fill="#173640">Acme Studio</text>
+        <text x="365" y="91" font-size="11" fill="#78919a">Due date</text><text x="365" y="111" font-size="13" font-weight="800" fill="#173640">Sep 28, 2026</text>
+        <line x1="22" y1="139" x2="459" y2="139" stroke="#e4edef"/>
+        <text x="22" y="164" font-size="10" font-weight="800" fill="#78919a">ITEM</text><text x="352" y="164" font-size="10" font-weight="800" fill="#78919a">QTY</text><text x="459" y="164" text-anchor="end" font-size="10" font-weight="800" fill="#78919a">TOTAL</text>
+        <text x="22" y="196" font-size="12" fill="#173640">Website workflow setup</text><text x="360" y="196" font-size="12" fill="#173640">1</text><text x="459" y="196" text-anchor="end" font-size="12" font-weight="800" fill="#173640">$1,200</text>
+        <text x="22" y="226" font-size="12" fill="#173640">Support package</text><text x="360" y="226" font-size="12" fill="#173640">1</text><text x="459" y="226" text-anchor="end" font-size="12" font-weight="800" fill="#173640">$40</text>
+        <line x1="282" y1="251" x2="459" y2="251" stroke="#e4edef"/>
+        <text x="282" y="278" font-size="11" fill="#78919a">Total</text><text x="459" y="278" text-anchor="end" font-size="20" font-weight="900" fill="#102d38">$1,240</text>
+        <rect x="282" y="303" width="177" height="36" rx="12" fill="url(#cta)"/>
+        <text x="370" y="326" text-anchor="middle" font-size="11" font-weight="900" fill="#06232a">Share / Save PDF</text>
+      </g>
+    </g>
   </g>
 </svg>
