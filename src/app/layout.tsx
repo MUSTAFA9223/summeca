@@ -6,6 +6,7 @@ import '../styles/tailwind.css';
 import '../styles/site-theme.css';
 import '../styles/summeca-home-dark.css';
 import '../styles/i18n.css';
+import '../styles/customer-feedback-refresh.css';
 import { Toaster } from 'sonner';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { LanguageProvider } from '@/contexts/LanguageContext';
