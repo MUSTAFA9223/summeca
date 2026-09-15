@@ -94,6 +94,9 @@ export async function broadcastNewVisit(input: {
   source: string;
   path: string;
   startedAt: string;
+  country?: string;
+  city?: string;
+  device?: string;
 }) {
   const time = new Intl.DateTimeFormat('en-GB', {
     timeZone: 'Asia/Aden',
@@ -102,13 +105,20 @@ export async function broadcastNewVisit(input: {
     hour12: true,
   }).format(new Date(input.startedAt));
 
+  const country = input.country || 'Unknown';
+  const city = input.city || 'Unknown';
+  const device = input.device || 'Unknown';
+
   await broadcastTelegramMessage(
     [
       '👤 New visitor on SUMMECA',
       '',
-      `Source: ${input.source}`,
-      `Page: ${input.path}`,
-      `Time: ${time} (Yemen)`,
+      `🌍 Country: ${country}`,
+      `🏙️ City: ${city}`,
+      `🔗 Source: ${input.source}`,
+      `📱 Device: ${device}`,
+      `📄 Page: ${input.path}`,
+      `🕒 Time: ${time} (Yemen)`,
     ].join('\n')
   );
 }
