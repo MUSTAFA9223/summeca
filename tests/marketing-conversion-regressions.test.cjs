@@ -9,6 +9,8 @@ const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
 const signup = read('src/app/sign-up-login-screen/components/SignupForm.tsx');
 const quickStart = read('src/app/user-dashboard/components/DashboardQuickStart.tsx');
 const dashboardPage = read('src/app/user-dashboard/page.tsx');
+const pricing = read('src/components/catalog/PricingCatalogClient.tsx');
+const translations = read('src/lib/i18n-homepage.ts');
 
 test('email signup records funnel milestones without sending identity fields to analytics', () => {
   assert.match(signup, /trackEvent\('signup_started'/);
@@ -30,4 +32,33 @@ test('dashboard includes a dismissible three-step quick start instead of a dead 
   assert.match(quickStart, /View pricing/);
   assert.match(quickStart, /Get help/);
   assert.match(quickStart, /localStorage/);
+});
+
+test('new pricing and quick-start copy stays covered by Arabic localization', () => {
+  const required = [
+    'Transparent Pricing',
+    'Pick the tool your store needs. See the price first.',
+    'Pricing is temporarily unavailable',
+    'Product details',
+    'Quick start',
+    'Get to your first useful workflow in three clear steps.',
+    'Choose one workflow',
+    'Browse products',
+    'Review the real offer',
+    'View pricing',
+    'Use your account dashboard',
+    'Get help',
+    'Dismiss quick start',
+  ];
+
+  for (const phrase of required) {
+    assert.ok(
+      pricing.includes(phrase) || quickStart.includes(phrase),
+      `conversion surface phrase moved or changed: ${phrase}`,
+    );
+    assert.ok(
+      translations.includes(`'${phrase}'`) || translations.includes(`\"${phrase}\"`),
+      `missing Arabic conversion translation: ${phrase}`,
+    );
+  }
 });
