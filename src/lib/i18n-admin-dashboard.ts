@@ -324,7 +324,6 @@ const ADMIN_AR: Record<string, string> = {
   'Create Campaign': 'إنشاء حملة',
   'Promo Codes': 'رموز الخصم',
   'Coupon Codes': 'رموز القسائم',
-  'Referral Program': 'برنامج الإحالة',
   'No campaigns found': 'لم يتم العثور على حملات',
   'Security Center': 'مركز الأمان',
   'Security Dashboard': 'لوحة الأمان',
