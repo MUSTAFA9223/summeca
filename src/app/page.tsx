@@ -18,9 +18,9 @@ import { getPublicCatalog } from '@/lib/catalog/publicCatalog';
 
 export const revalidate = 300;
 export const metadata = {
-  title: { absolute: 'SUMMECA — Digital Tools for Modern Work' },
+  title: { absolute: 'SUMMECA — Digital Tools for Small E-Commerce Stores' },
   description:
-    'Explore practical SUMMECA SaaS apps, AI tools, and ready-to-use digital products with pricing from active production offers.',
+    'Practical SUMMECA tools for small e-commerce stores: invoicing, customer follow-up, conversion workflows, and ready-to-use digital products with transparent production pricing.',
   alternates: { canonical: '/' },
 };
 
@@ -217,13 +217,13 @@ export default async function HomePage() {
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <p className="text-[11px] font-800 uppercase tracking-[0.18em] text-primary">
-                Featured products
+                Real products, real interfaces
               </p>
               <h2
                 id="featured-products-title"
                 className="mt-2 max-w-2xl text-2xl font-800 tracking-tight text-foreground sm:text-3xl"
               >
-                Start with a real tool for a real business workflow.
+                Start with the store workflow slowing you down today.
               </h2>
             </div>
             <Link
@@ -253,71 +253,69 @@ export default async function HomePage() {
         </section>
 
         <section
-          className="border-y border-border bg-secondary/25"
-          aria-labelledby="categories-title"
+          id="solutions"
+          className="scroll-mt-24 border-y border-border bg-secondary/25"
+          aria-labelledby="solutions-title"
         >
           <div className="mx-auto max-w-7xl px-6 py-12 sm:py-14">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
               <div>
                 <p className="text-[11px] font-800 uppercase tracking-[0.18em] text-primary">
-                  Browse by category
+                  Solutions for small stores
                 </p>
                 <h2
-                  id="categories-title"
-                  className="mt-2 text-2xl font-800 tracking-tight text-foreground sm:text-3xl"
+                  id="solutions-title"
+                  className="mt-2 max-w-2xl text-2xl font-800 tracking-tight text-foreground sm:text-3xl"
                 >
-                  Choose the type of tool you need.
+                  Choose the outcome you need, not a software category.
                 </h2>
               </div>
             </div>
 
             <div className="mt-7 grid gap-4 md:grid-cols-3">
               <Link
-                href="/saas"
+                href="/products/summeca-invoiceflow"
                 className="group rounded-2xl border border-border bg-card p-5 transition hover:-translate-y-0.5 hover:border-primary/35 hover:shadow-md motion-reduce:transform-none motion-reduce:transition-none"
               >
                 <div className="flex items-center gap-3">
                   <LayoutDashboard size={20} className="text-primary" />
-                  <h3 className="text-base font-800 text-foreground">SaaS Apps</h3>
+                  <h3 className="text-base font-800 text-foreground">Keep invoicing organized</h3>
                 </div>
                 <p className="mt-3 text-sm leading-6 text-muted-foreground">
-                  Focused software for recurring operational workflows such as invoicing and client
-                  management.
+                  Use a focused invoicing workflow instead of piecing together manual records across multiple tools.
                 </p>
                 <span className="mt-4 inline-flex min-h-10 items-center gap-2 text-sm font-700 text-primary">
-                  View SaaS Apps <ArrowRight size={13} />
+                  Explore InvoiceFlow <ArrowRight size={13} />
                 </span>
               </Link>
               <Link
-                href="/ai"
+                href="/products/summeca-leadfollow-ai"
                 className="group rounded-2xl border border-border bg-card p-5 transition hover:-translate-y-0.5 hover:border-primary/35 hover:shadow-md motion-reduce:transform-none motion-reduce:transition-none"
               >
                 <div className="flex items-center gap-3">
                   <BrainCircuit size={20} className="text-primary" />
-                  <h3 className="text-base font-800 text-foreground">AI Tools</h3>
+                  <h3 className="text-base font-800 text-foreground">Follow up consistently</h3>
                 </div>
                 <p className="mt-3 text-sm leading-6 text-muted-foreground">
-                  AI-assisted tools built around practical customer workflows rather than model-name
-                  marketing.
+                  Keep customer and lead follow-up moving with an AI-assisted workflow built around practical next actions.
                 </p>
                 <span className="mt-4 inline-flex min-h-10 items-center gap-2 text-sm font-700 text-primary">
-                  Browse AI Tools <ArrowRight size={13} />
+                  Explore LeadFollow <ArrowRight size={13} />
                 </span>
               </Link>
               <Link
-                href="/digital"
+                href="/products/conversion-rescue-kit-pro"
                 className="group rounded-2xl border border-border bg-card p-5 transition hover:-translate-y-0.5 hover:border-primary/35 hover:shadow-md motion-reduce:transform-none motion-reduce:transition-none"
               >
                 <div className="flex items-center gap-3">
                   <FileText size={20} className="text-primary" />
-                  <h3 className="text-base font-800 text-foreground">Digital Products</h3>
+                  <h3 className="text-base font-800 text-foreground">Improve conversion pages</h3>
                 </div>
                 <p className="mt-3 text-sm leading-6 text-muted-foreground">
-                  Ready-to-use kits, templates, and implementation assets you can apply to real
-                  work.
+                  Apply ready-to-use conversion assets and implementation guidance without starting every page from a blank screen.
                 </p>
                 <span className="mt-4 inline-flex min-h-10 items-center gap-2 text-sm font-700 text-primary">
-                  Explore Digital Products <ArrowRight size={13} />
+                  View Conversion Kit <ArrowRight size={13} />
                 </span>
               </Link>
             </div>
@@ -334,7 +332,7 @@ export default async function HomePage() {
                 id="trust-title"
                 className="mt-2 text-2xl font-800 tracking-tight text-foreground sm:text-3xl"
               >
-                Product value first. Trust built into the purchase flow.
+                See what you are buying before checkout.
               </h2>
             </div>
           </div>
@@ -344,8 +342,7 @@ export default async function HomePage() {
               <ShieldCheck size={18} className="text-primary" />
               <h3 className="mt-3 text-sm font-800 text-foreground">Verified checkout</h3>
               <p className="mt-1.5 text-xs leading-5 text-muted-foreground">
-                Paid access follows payment-provider confirmation rather than a browser redirect
-                alone.
+                Paid access follows payment-provider confirmation rather than a browser redirect alone.
               </p>
             </div>
             <div className="rounded-2xl border border-border bg-card p-4">
@@ -366,8 +363,7 @@ export default async function HomePage() {
               <WalletCards size={18} className="text-primary" />
               <h3 className="mt-3 text-sm font-800 text-foreground">Payment availability</h3>
               <p className="mt-1.5 text-xs leading-5 text-muted-foreground">
-                Checkout only shows payment methods that are currently available for the selected
-                order.
+                Checkout only shows payment methods that are currently available for the selected order.
               </p>
             </div>
           </div>
@@ -379,20 +375,23 @@ export default async function HomePage() {
               Find your next tool
             </p>
             <h2 className="mx-auto mt-2 max-w-3xl text-2xl font-800 tracking-tight text-foreground sm:text-3xl">
-              Choose the product that matches the workflow you want to improve.
+              Start with one workflow, then add only what your store needs.
             </h2>
+            <p className="mx-auto mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">
+              Create an account to access your dashboard, or review live production pricing before you decide.
+            </p>
             <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
               <Link
-                href="/products"
+                href="/sign-up-login-screen"
                 className="btn-primary inline-flex min-h-11 items-center justify-center gap-2 px-6 py-3"
               >
-                Explore Products <ArrowRight size={15} />
+                Get Started <ArrowRight size={15} />
               </Link>
               <Link
-                href="/support"
+                href="/pricing"
                 className="inline-flex min-h-11 items-center justify-center rounded-xl border border-border bg-card px-6 py-3 text-sm font-700 text-foreground transition hover:border-primary/35 hover:text-primary motion-reduce:transition-none"
               >
-                Contact Support
+                View Pricing
               </Link>
             </div>
           </div>
