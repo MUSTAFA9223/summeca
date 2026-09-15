@@ -12,6 +12,7 @@ const authScreen = read('src/app/sign-up-login-screen/components/AuthScreen.tsx'
 const productPreview = read('src/components/catalog/ProductProofPreview.tsx');
 const cryptoStatus = read('src/app/api/payment/crypto-status/route.ts');
 const publicCatalog = read('src/lib/catalog/publicCatalog.ts');
+const pricingCatalog = read('src/components/catalog/PricingCatalogClient.tsx');
 const publicHomepageMarketing = `${homepage}\n${hero}`;
 
 test('public homepage marketing never links to admin routes', () => {
@@ -52,6 +53,15 @@ test('featured homepage products and prices come from active production records'
   assert.doesNotMatch(homepage, /\$(?:29|49|59|79|89|99|129|149)(?:\b|\.)/);
 });
 
+test('pricing is server rendered from the same production catalog used by storefront pages', () => {
+  assert.match(pricingCatalog, /getPublicCatalog/);
+  assert.match(pricingCatalog, /getEffectivePrice/);
+  assert.doesNotMatch(pricingCatalog, /['"]use client['"]/);
+  assert.doesNotMatch(pricingCatalog, /createClient/);
+  assert.doesNotMatch(pricingCatalog, /useEffect|useState/);
+  assert.match(publicCatalog, /description,price,currency,billing_period,features/);
+});
+
 test('homepage does not advertise an unavailable payment provider as live', () => {
   assert.doesNotMatch(publicHomepageMarketing, /\bPayoneer payments available\b/i);
   assert.doesNotMatch(publicHomepageMarketing, /\bCrypto payments available\b/i);
@@ -60,11 +70,13 @@ test('homepage does not advertise an unavailable payment provider as live', () =
   assert.match(cryptoStatus, /const available = Boolean/);
 });
 
-test('hero sends shoppers to public product and SaaS destinations', () => {
+test('hero sends shoppers directly to signup or product discovery and records funnel intent', () => {
+  assert.match(hero, /href="\/sign-up-login-screen"/);
+  assert.match(hero, /Get Started/);
   assert.match(hero, /href="\/products"/);
-  assert.match(hero, /Explore Products/);
-  assert.match(hero, /href="\/saas"/);
-  assert.match(hero, /View SaaS Apps/);
+  assert.match(hero, /View Products/);
+  assert.match(hero, /homepage_view/);
+  assert.match(hero, /primary_cta_click/);
 });
 
 test('homepage and authentication show product evidence instead of a cursor-following robot', () => {
