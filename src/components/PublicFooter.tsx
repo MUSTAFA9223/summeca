@@ -55,6 +55,24 @@ export default function PublicFooter() {
               ))}
               <a href="mailto:hello@summeca.com?subject=SUMMECA%20General%20Inquiry" aria-label="Email SUMMECA general inquiries" title="hello@summeca.com" className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/8 text-slate-400 transition hover:bg-primary/30 hover:text-white"><Mail size={15} /></a>
             </div>
+            <a
+              href="https://www.producthunt.com/products/summeca?embed=true&utm_source=badge-featured&utm_medium=badge&utm_campaign=badge-summeca"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="View SUMMECA on Product Hunt"
+              className="mt-5 inline-flex max-w-full rounded-lg bg-white p-1 shadow-sm transition hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary motion-reduce:transition-none"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1249344&theme=light&t=1789457265017"
+                alt="SUMMECA — AI, SaaS and digital tools for faster business on Product Hunt"
+                width="250"
+                height="54"
+                loading="lazy"
+                decoding="async"
+                className="h-auto max-w-full"
+              />
+            </a>
           </div>
 
           {Object.entries(footerLinks).map(([section, links]) => (
