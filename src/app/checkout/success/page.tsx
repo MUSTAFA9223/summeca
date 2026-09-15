@@ -6,6 +6,7 @@ import { useSearchParams } from 'next/navigation';
 import PublicNav from '@/components/PublicNav';
 import PublicFooter from '@/components/PublicFooter';
 import { createClient } from '@/lib/supabase/client';
+import { trackPurchase } from '@/lib/analytics';
 import { AlertCircle, CheckCircle2, Info, Loader2, ShoppingBag } from 'lucide-react';
 
 type OrderState = {
@@ -13,7 +14,11 @@ type OrderState = {
   status: string;
   amount: number | string | null;
   currency: string | null;
+  product_id: string | null;
 };
+
+const ORDER_POLL_INTERVAL_MS = 5000;
+const ORDER_POLL_WINDOW_MS = 120000;
 
 function CheckoutSuccessInner() {
   const searchParams = useSearchParams();
@@ -25,6 +30,8 @@ function CheckoutSuccessInner() {
 
   useEffect(() => {
     let cancelled = false;
+    let pollTimer: ReturnType<typeof setTimeout> | null = null;
+    const startedAt = Date.now();
 
     async function loadOrder() {
       if (!orderId) {
@@ -35,7 +42,7 @@ function CheckoutSuccessInner() {
 
       const { data, error } = await supabase
         .from('orders')
-        .select('id, status, amount, currency')
+        .select('id, status, amount, currency, product_id')
         .eq('id', orderId)
         .maybeSingle();
 
@@ -43,16 +50,82 @@ function CheckoutSuccessInner() {
       if (error || !data) {
         setOrder(null);
         setLookupFailed(true);
-      } else {
-        setOrder(data as OrderState);
-        setLookupFailed(false);
+        setChecking(false);
+        return;
       }
+
+      const nextOrder = data as OrderState;
+      setOrder(nextOrder);
+      setLookupFailed(false);
       setChecking(false);
+
+      const terminal = nextOrder.status === 'completed'
+        || nextOrder.status === 'failed'
+        || nextOrder.status === 'cancelled';
+      if (!terminal && Date.now() - startedAt < ORDER_POLL_WINDOW_MS) {
+        pollTimer = setTimeout(() => void loadOrder(), ORDER_POLL_INTERVAL_MS);
+      }
     }
 
     void loadOrder();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+      if (pollTimer) clearTimeout(pollTimer);
+    };
   }, [orderId, supabase]);
+
+  useEffect(() => {
+    if (!order || order.status !== 'completed' || !order.product_id) return;
+
+    const amount = Number(order.amount ?? NaN);
+    if (!Number.isFinite(amount) || amount <= 0) return;
+
+    const storageKey = `summeca:ga4:purchase:${order.id}`;
+    try {
+      if (window.localStorage.getItem(storageKey) === '1') return;
+    } catch {
+      // Analytics may still run when storage is unavailable.
+    }
+
+    let cancelled = false;
+
+    async function sendVerifiedPurchase() {
+      const { data: product } = await supabase
+        .from('products')
+        .select('id, name')
+        .eq('id', order.product_id)
+        .maybeSingle();
+
+      if (cancelled) return;
+
+      // gtag is loaded after hydration. Give it a short window before sending
+      // so a verified purchase is not lost during a fast return redirect.
+      for (let attempt = 0; attempt < 20 && typeof window.gtag !== 'function'; attempt += 1) {
+        await new Promise((resolve) => setTimeout(resolve, 250));
+        if (cancelled) return;
+      }
+      if (typeof window.gtag !== 'function' || cancelled) return;
+
+      trackPurchase({
+        id: order.id,
+        productName: typeof product?.name === 'string' && product.name.trim()
+          ? product.name
+          : 'SUMMECA product',
+        productId: order.product_id,
+        amount,
+        currency: order.currency || 'USD',
+      });
+
+      try {
+        window.localStorage.setItem(storageKey, '1');
+      } catch {
+        // GA4 also deduplicates ecommerce purchases by transaction_id.
+      }
+    }
+
+    void sendVerifiedPurchase();
+    return () => { cancelled = true; };
+  }, [order, supabase]);
 
   const completed = order?.status === 'completed';
   const freeCompleted = completed && Number(order?.amount ?? NaN) === 0;
