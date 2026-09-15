@@ -30,7 +30,9 @@ test('dashboard language control matches the theme control visual system', () =>
   assert.match(compactLanguageSwitcher, /text-muted-foreground hover:bg-secondary hover:text-foreground/);
 });
 
-test('pages without a hosted topbar receive the fixed top fallback control', () => {
-  assert.match(globalSwitcher, /fixed left-1\/2 top-4/);
+test('pages without a hosted topbar receive the fixed fallback below the launch banner', () => {
+  assert.match(globalSwitcher, /fixed left-1\/2 z-\[120\] -translate-x-1\/2/);
+  assert.match(globalSwitcher, /--launch-offer-height/);
+  assert.match(globalSwitcher, /env\(safe-area-inset-top\)/);
   assert.match(globalSwitcher, /LanguageSwitcher/);
 });
