@@ -15,6 +15,7 @@ import GlobalLanguageSwitcher from '@/components/GlobalLanguageSwitcher';
 import GlobalThemeSwitcher from '@/components/GlobalThemeSwitcher';
 import GoogleAnalytics from '@/components/GoogleAnalytics';
 import VisitorTracker from '@/components/VisitorTracker';
+import LaunchOfferBanner from '@/components/LaunchOfferBanner';
 
 const plusJakartaSans = Plus_Jakarta_Sans({
   subsets: ['latin'],
@@ -99,7 +100,10 @@ export default function RootLayout({
         </Suspense>
         <ThemeProvider>
           <LanguageProvider>
-            <AuthProvider>{children}</AuthProvider>
+            <AuthProvider>
+              <LaunchOfferBanner />
+              {children}
+            </AuthProvider>
             <GlobalLanguageSwitcher />
             <DeferredStoreAssistant />
             <Toaster position="bottom-right" richColors closeButton />
