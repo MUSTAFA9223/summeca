@@ -14,6 +14,7 @@ import {
   Download,
   FileText,
   Activity,
+  Mail,
   Key,
   Settings,
   HelpCircle,
@@ -58,6 +59,7 @@ const navGroups = [
     items: [
       { id: 'invoiceflow', label: 'InvoiceFlow', icon: FileText, href: '/user-dashboard/invoiceflow' },
       { id: 'leadfollow', label: 'LeadFollow AI', icon: Activity, href: '/user-dashboard/leadfollow' },
+      { id: 'leadfollow-mailbox', label: 'Email Sender', icon: Mail, href: '/user-dashboard/leadfollow/mailbox' },
     ],
   },
   {
