@@ -2,7 +2,7 @@
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { BarChart3, Building2, CheckCircle2, Download, ExternalLink, FilePlus2, Mail, Plus, ReceiptText, RefreshCw, Send, Users, type LucideIcon } from 'lucide-react';
+import { BarChart3, Building2, CheckCircle2, Clock3, Download, ExternalLink, FilePlus2, Mail, Plus, ReceiptText, RefreshCw, Send, Users, type LucideIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import DashboardLayout from '@/app/user-dashboard/components/DashboardLayout';
 
@@ -23,6 +23,23 @@ function csvCell(value: unknown) {
   return `"${String(value ?? '').replaceAll('"', '""')}"`;
 }
 
+function localDateInDays(days: number) {
+  const date = new Date();
+  date.setDate(date.getDate() + days);
+  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
+  return local.toISOString().slice(0, 10);
+}
+
+function isInvoiceOverdue(invoice: Invoice) {
+  return invoice.status === 'sent'
+    && Boolean(invoice.due_date)
+    && new Date(`${invoice.due_date}T23:59:59`).getTime() < Date.now();
+}
+
+function invoiceDisplayStatus(invoice: Invoice) {
+  return isInvoiceOverdue(invoice) ? 'overdue' : invoice.status;
+}
+
 const emptyProfile: Profile = {
   business_name: '', legal_name: '', email: '', phone: '', website: '', address: '', logo_url: '', accent_hex: '#0f9f95', currency: 'USD', footer_note: 'Thank you for your business.',
 };
@@ -35,6 +52,7 @@ export default function InvoiceFlowPage() {
   const [profile, setProfile] = useState<Profile>(emptyProfile);
   const [showClientForm, setShowClientForm] = useState(false);
   const [showInvoiceForm, setShowInvoiceForm] = useState(false);
+  const [createInvoiceAfterClient, setCreateInvoiceAfterClient] = useState(false);
   const [clientForm, setClientForm] = useState({ name: '', company: '', email: '', phone: '', address: '', notes: '' });
   const [invoiceForm, setInvoiceForm] = useState({ clientId: '', dueDate: '', taxRate: '0', notes: '', terms: '' });
   const [items, setItems] = useState([{ description: '', quantity: 1, rate: 0 }]);
@@ -68,19 +86,37 @@ export default function InvoiceFlowPage() {
   useEffect(() => { void load(); }, [load]);
 
   const clientById = useMemo(() => Object.fromEntries((data?.clients ?? []).map((client) => [client.id, client])), [data?.clients]);
-  const overdueCount = useMemo(() => (data?.invoices ?? []).filter((invoice) => invoice.status === 'sent' && invoice.due_date && new Date(`${invoice.due_date}T23:59:59`).getTime() < Date.now()).length, [data?.invoices]);
+  const overdueCount = useMemo(() => (data?.invoices ?? []).filter(isInvoiceOverdue).length, [data?.invoices]);
   const metrics = useMemo<Metric[]>(() => data ? [
     ['Clients', data.counts.clients, Users],
     ['Invoices', data.counts.invoices, ReceiptText],
+    ['Overdue', overdueCount, Clock3],
     ['Outstanding', formatMoney(data.counts.outstanding, profile.currency), BarChart3],
     ['Paid', formatMoney(data.counts.paid, profile.currency), CheckCircle2],
-  ] : [], [data, profile.currency]);
+  ] : [], [data, overdueCount, profile.currency]);
 
   async function post(body: Record<string, unknown>) {
     const response = await fetch('/api/invoiceflow', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     const payload = await response.json();
     if (!response.ok) throw new Error(payload.error || 'InvoiceFlow action failed.');
     return payload;
+  }
+
+  function startInvoice() {
+    if (!data?.clients.length) {
+      setCreateInvoiceAfterClient(true);
+      setShowClientForm(true);
+      setShowInvoiceForm(false);
+      toast.info('Add your first client, then InvoiceFlow will take you straight to the invoice builder.');
+      return;
+    }
+    setCreateInvoiceAfterClient(false);
+    setInvoiceForm((current) => ({
+      ...current,
+      clientId: current.clientId || data.clients[0].id,
+      dueDate: current.dueDate || localDateInDays(7),
+    }));
+    setShowInvoiceForm(true);
   }
 
   async function saveProfile(event: FormEvent) {
@@ -95,9 +131,18 @@ export default function InvoiceFlowPage() {
   async function createClient(event: FormEvent) {
     event.preventDefault(); setSaving(true);
     try {
-      await post({ action: 'create_client', ...clientForm });
-      setClientForm({ name: '', company: '', email: '', phone: '', address: '', notes: '' }); setShowClientForm(false);
-      toast.success('Client added.'); await load();
+      const payload = await post({ action: 'create_client', ...clientForm });
+      setClientForm({ name: '', company: '', email: '', phone: '', address: '', notes: '' });
+      setShowClientForm(false);
+      if (createInvoiceAfterClient && payload.client?.id) {
+        setInvoiceForm((current) => ({ ...current, clientId: payload.client.id, dueDate: current.dueDate || localDateInDays(7) }));
+        setShowInvoiceForm(true);
+        setCreateInvoiceAfterClient(false);
+        toast.success('Client added. Your invoice is ready to complete.');
+      } else {
+        toast.success('Client added.');
+      }
+      await load();
     } catch (error) { toast.error(error instanceof Error ? error.message : 'Unable to add client.'); }
     finally { setSaving(false); }
   }
@@ -138,7 +183,7 @@ export default function InvoiceFlowPage() {
 
   function exportCsv() {
     if (!data?.invoices.length) { toast.error('There are no invoices to export.'); return; }
-    const rows = [['Invoice','Client','Status','Issue date','Due date','Subtotal','Tax','Total','Currency'], ...data.invoices.map((invoice) => [invoice.invoice_number, clientById[invoice.client_id]?.name || '', invoice.status, invoice.issue_date, invoice.due_date || '', invoice.subtotal, invoice.tax_amount, invoice.total, invoice.currency])];
+    const rows = [['Invoice','Client','Status','Issue date','Due date','Subtotal','Tax','Total','Currency'], ...data.invoices.map((invoice) => [invoice.invoice_number, clientById[invoice.client_id]?.name || '', invoiceDisplayStatus(invoice), invoice.issue_date, invoice.due_date || '', invoice.subtotal, invoice.tax_amount, invoice.total, invoice.currency])];
     const csv = rows.map((row) => row.map(csvCell).join(',')).join('\n');
     const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
     const anchor = document.createElement('a'); anchor.href = url; anchor.download = `invoiceflow-${new Date().toISOString().slice(0,10)}.csv`; anchor.click(); URL.revokeObjectURL(url);
@@ -155,8 +200,8 @@ export default function InvoiceFlowPage() {
           </div>
           <div className="h-10 w-40 animate-pulse rounded-xl bg-primary/10" />
         </header>
-        <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          {[0, 1, 2, 3].map((item) => <div key={item} className="h-24 animate-pulse rounded-2xl border border-border bg-card" />)}
+        <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+          {[0, 1, 2, 3, 4].map((item) => <div key={item} className="h-24 animate-pulse rounded-2xl border border-border bg-card" />)}
         </section>
         <section className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
           <div className="h-80 animate-pulse rounded-2xl border border-border bg-card" />
@@ -184,11 +229,11 @@ export default function InvoiceFlowPage() {
       <div className="space-y-7" aria-busy={loading}>
         <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div><div className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-primary"><ReceiptText size={15} /> SUMMECA SaaS</div><h1 className="mt-2 text-3xl font-black tracking-tight">InvoiceFlow</h1><p className="mt-2 text-sm text-muted-foreground">Create, track, share, print and export professional invoices from one workspace.</p></div>
-          <div className="flex flex-wrap gap-2"><span className="rounded-full bg-primary/10 px-3 py-2 text-xs font-bold text-primary">{data.access.planName} · Lifetime</span><button onClick={exportCsv} className="inline-flex items-center gap-2 rounded-xl border border-border bg-card px-4 py-2 text-sm font-semibold"><Download size={15} /> Export CSV</button><button onClick={() => setShowInvoiceForm(true)} className="btn-primary inline-flex items-center gap-2 px-4 py-2"><FilePlus2 size={15} /> New invoice</button></div>
+          <div className="flex flex-wrap gap-2"><span className="rounded-full bg-primary/10 px-3 py-2 text-xs font-bold text-primary">{data.access.planName} · Lifetime</span><button onClick={exportCsv} className="inline-flex items-center gap-2 rounded-xl border border-border bg-card px-4 py-2 text-sm font-semibold"><Download size={15} /> Export CSV</button><button onClick={startInvoice} className="btn-primary inline-flex items-center gap-2 px-4 py-2"><FilePlus2 size={15} /> New invoice</button></div>
         </header>
 
-        <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          {metrics.map(([label, value, Icon]) => <div key={label} className="rounded-2xl border border-border bg-card p-5"><div className="flex items-center justify-between"><span className="text-sm text-muted-foreground">{label}</span><Icon size={18} className="text-primary" /></div><div className="mt-2 text-2xl font-black">{value}</div></div>)}
+        <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+          {metrics.map(([label, value, Icon]) => <div key={label} className={`rounded-2xl border bg-card p-5 ${label === 'Overdue' && overdueCount > 0 ? 'border-destructive/30' : 'border-border'}`}><div className="flex items-center justify-between"><span className="text-sm text-muted-foreground">{label}</span><Icon size={18} className={label === 'Overdue' && overdueCount > 0 ? 'text-destructive' : 'text-primary'} /></div><div className={`mt-2 text-2xl font-black ${label === 'Overdue' && overdueCount > 0 ? 'text-destructive' : ''}`}>{value}</div></div>)}
         </section>
 
         <section className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
@@ -211,17 +256,17 @@ export default function InvoiceFlowPage() {
           </form>
 
           <div className="rounded-2xl border border-border bg-card p-6">
-            <div className="flex items-center justify-between"><div><h2 className="font-bold">Clients</h2><p className="mt-1 text-xs text-muted-foreground">{data.counts.clients} / {data.access.limits.maxClients ?? '—'} plan limit</p></div><button onClick={() => setShowClientForm((value) => !value)} className="inline-flex items-center gap-1 rounded-lg border border-border px-3 py-2 text-xs font-bold"><Plus size={14} /> Add client</button></div>
-            {showClientForm && <form onSubmit={createClient} className="mt-4 grid gap-2 rounded-xl bg-secondary/40 p-4 sm:grid-cols-2"><input required className="form-input" placeholder="Client name" value={clientForm.name} onChange={(e)=>setClientForm({...clientForm,name:e.target.value})}/><input className="form-input" placeholder="Company" value={clientForm.company} onChange={(e)=>setClientForm({...clientForm,company:e.target.value})}/><input className="form-input" placeholder="Email" value={clientForm.email} onChange={(e)=>setClientForm({...clientForm,email:e.target.value})}/><input className="form-input" placeholder="Phone" value={clientForm.phone} onChange={(e)=>setClientForm({...clientForm,phone:e.target.value})}/><textarea className="form-input sm:col-span-2" placeholder="Address" value={clientForm.address} onChange={(e)=>setClientForm({...clientForm,address:e.target.value})}/><button disabled={saving} className="btn-primary sm:col-span-2 py-2.5">Save client</button></form>}
-            <div className="mt-4 max-h-[410px] space-y-2 overflow-auto">{data.clients.length ? data.clients.map((client) => <div key={client.id} className="rounded-xl border border-border p-3"><div className="font-semibold">{client.name}</div><div className="text-xs text-muted-foreground">{client.company || 'No company'}{client.email ? ` · ${client.email}` : ''}</div></div>) : <div className="py-12 text-center text-sm text-muted-foreground">Add your first client to start invoicing.</div>}</div>
+            <div className="flex items-center justify-between"><div><h2 className="font-bold">Clients</h2><p className="mt-1 text-xs text-muted-foreground">{data.counts.clients} / {data.access.limits.maxClients ?? '—'} plan limit</p></div><button onClick={() => { setCreateInvoiceAfterClient(false); setShowClientForm((value) => !value); }} className="inline-flex items-center gap-1 rounded-lg border border-border px-3 py-2 text-xs font-bold"><Plus size={14} /> Add client</button></div>
+            {showClientForm && <form onSubmit={createClient} className="mt-4 grid gap-2 rounded-xl bg-secondary/40 p-4 sm:grid-cols-2"><input required className="form-input" placeholder="Client name" value={clientForm.name} onChange={(e)=>setClientForm({...clientForm,name:e.target.value})}/><input className="form-input" placeholder="Company" value={clientForm.company} onChange={(e)=>setClientForm({...clientForm,company:e.target.value})}/><input className="form-input" placeholder="Email" value={clientForm.email} onChange={(e)=>setClientForm({...clientForm,email:e.target.value})}/><input className="form-input" placeholder="Phone" value={clientForm.phone} onChange={(e)=>setClientForm({...clientForm,phone:e.target.value})}/><textarea className="form-input sm:col-span-2" placeholder="Address" value={clientForm.address} onChange={(e)=>setClientForm({...clientForm,address:e.target.value})}/>{createInvoiceAfterClient && <p className="sm:col-span-2 text-xs font-semibold text-primary">Quick start: after saving this client, the invoice builder will open automatically with a 7-day due date.</p>}<button disabled={saving} className="btn-primary sm:col-span-2 py-2.5">Save client</button></form>}
+            <div className="mt-4 max-h-[410px] space-y-2 overflow-auto">{data.clients.length ? data.clients.map((client) => <div key={client.id} className="rounded-xl border border-border p-3"><div className="font-semibold">{client.name}</div><div className="text-xs text-muted-foreground">{client.company || 'No company'}{client.email ? ` · ${client.email}` : ''}</div></div>) : <div className="py-12 text-center text-sm text-muted-foreground"><p>Add your first client to start invoicing.</p><button type="button" onClick={startInvoice} className="mt-3 text-xs font-bold text-primary hover:underline">Create my first invoice →</button></div>}</div>
           </div>
         </section>
 
-        {showInvoiceForm && <section className="rounded-2xl border border-primary/25 bg-card p-6"><div className="flex items-center justify-between"><div><h2 className="text-lg font-bold">Create invoice</h2><p className="text-xs text-muted-foreground">Totals are calculated again on the server before the invoice is saved.</p></div><button onClick={()=>setShowInvoiceForm(false)} className="text-sm text-muted-foreground">Close</button></div><form onSubmit={createInvoice} className="mt-5 space-y-4"><div className="grid gap-3 sm:grid-cols-3"><select required className="form-input" value={invoiceForm.clientId} onChange={(e)=>setInvoiceForm({...invoiceForm,clientId:e.target.value})}><option value="">Choose client</option>{data.clients.map((client)=><option key={client.id} value={client.id}>{client.name}{client.company ? ` — ${client.company}` : ''}</option>)}</select><input className="form-input" type="date" value={invoiceForm.dueDate} onChange={(e)=>setInvoiceForm({...invoiceForm,dueDate:e.target.value})}/><input className="form-input" type="number" min="0" max="100" step="0.01" placeholder="Tax %" value={invoiceForm.taxRate} onChange={(e)=>setInvoiceForm({...invoiceForm,taxRate:e.target.value})}/></div><div className="space-y-2">{items.map((item,index)=><div key={index} className="grid gap-2 sm:grid-cols-[1fr_110px_140px_40px]"><input required className="form-input" placeholder="Item description" value={item.description} onChange={(e)=>setItems(items.map((row,i)=>i===index?{...row,description:e.target.value}:row))}/><input required className="form-input" type="number" min="0.01" step="0.01" placeholder="Qty" value={item.quantity} onChange={(e)=>setItems(items.map((row,i)=>i===index?{...row,quantity:Number(e.target.value)}:row))}/><input required className="form-input" type="number" min="0" step="0.01" placeholder="Rate" value={item.rate} onChange={(e)=>setItems(items.map((row,i)=>i===index?{...row,rate:Number(e.target.value)}:row))}/><button type="button" disabled={items.length===1} onClick={()=>setItems(items.filter((_,i)=>i!==index))} className="rounded-lg border border-border text-muted-foreground">×</button></div>)}</div><button type="button" onClick={()=>setItems([...items,{description:'',quantity:1,rate:0}])} className="inline-flex items-center gap-1 text-xs font-bold text-primary"><Plus size={13}/> Add line item</button><div className="grid gap-3 sm:grid-cols-2"><textarea className="form-input" placeholder="Notes" value={invoiceForm.notes} onChange={(e)=>setInvoiceForm({...invoiceForm,notes:e.target.value})}/><textarea className="form-input" placeholder="Terms" value={invoiceForm.terms} onChange={(e)=>setInvoiceForm({...invoiceForm,terms:e.target.value})}/></div><div className="text-right text-sm font-bold">Draft total: {formatMoney(items.reduce((sum,item)=>sum+(Number(item.quantity)||0)*(Number(item.rate)||0),0)*(1+(Number(invoiceForm.taxRate)||0)/100),profile.currency)}</div><button disabled={saving || !data.clients.length} className="btn-primary px-6 py-3">Create invoice</button></form></section>}
+        {showInvoiceForm && <section className="rounded-2xl border border-primary/25 bg-card p-6"><div className="flex items-center justify-between"><div><h2 className="text-lg font-bold">Create invoice</h2><p className="text-xs text-muted-foreground">Client selected, 7-day due date suggested, and totals are verified again on the server before saving.</p></div><button onClick={()=>setShowInvoiceForm(false)} className="text-sm text-muted-foreground">Close</button></div><form onSubmit={createInvoice} className="mt-5 space-y-4"><div className="grid gap-3 sm:grid-cols-3"><select required aria-label="Invoice client" className="form-input" value={invoiceForm.clientId} onChange={(e)=>setInvoiceForm({...invoiceForm,clientId:e.target.value})}><option value="">Choose client</option>{data.clients.map((client)=><option key={client.id} value={client.id}>{client.name}{client.company ? ` — ${client.company}` : ''}</option>)}</select><input aria-label="Invoice due date" className="form-input" type="date" value={invoiceForm.dueDate} onChange={(e)=>setInvoiceForm({...invoiceForm,dueDate:e.target.value})}/><input aria-label="Invoice tax percent" className="form-input" type="number" min="0" max="100" step="0.01" placeholder="Tax %" value={invoiceForm.taxRate} onChange={(e)=>setInvoiceForm({...invoiceForm,taxRate:e.target.value})}/></div><div className="space-y-2">{items.map((item,index)=><div key={index} className="grid gap-2 sm:grid-cols-[1fr_110px_140px_40px]"><input required className="form-input" placeholder="Item description" value={item.description} onChange={(e)=>setItems(items.map((row,i)=>i===index?{...row,description:e.target.value}:row))}/><input required className="form-input" type="number" min="0.01" step="0.01" placeholder="Qty" value={item.quantity} onChange={(e)=>setItems(items.map((row,i)=>i===index?{...row,quantity:Number(e.target.value)}:row))}/><input required className="form-input" type="number" min="0" step="0.01" placeholder="Rate" value={item.rate} onChange={(e)=>setItems(items.map((row,i)=>i===index?{...row,rate:Number(e.target.value)}:row))}/><button type="button" disabled={items.length===1} onClick={()=>setItems(items.filter((_,i)=>i!==index))} className="rounded-lg border border-border text-muted-foreground">×</button></div>)}</div><button type="button" onClick={()=>setItems([...items,{description:'',quantity:1,rate:0}])} className="inline-flex items-center gap-1 text-xs font-bold text-primary"><Plus size={13}/> Add line item</button><div className="grid gap-3 sm:grid-cols-2"><textarea className="form-input" placeholder="Notes" value={invoiceForm.notes} onChange={(e)=>setInvoiceForm({...invoiceForm,notes:e.target.value})}/><textarea className="form-input" placeholder="Terms" value={invoiceForm.terms} onChange={(e)=>setInvoiceForm({...invoiceForm,terms:e.target.value})}/></div><div className="text-right text-sm font-bold">Draft total: {formatMoney(items.reduce((sum,item)=>sum+(Number(item.quantity)||0)*(Number(item.rate)||0),0)*(1+(Number(invoiceForm.taxRate)||0)/100),profile.currency)}</div><button disabled={saving || !data.clients.length} className="btn-primary px-6 py-3">Create invoice</button></form></section>}
 
         <section className="rounded-2xl border border-border bg-card p-6">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"><div><h2 className="font-bold">Invoices</h2><p className="mt-1 text-xs text-muted-foreground">{overdueCount} currently overdue among loaded invoices · {data.counts.invoices} / {data.access.limits.maxInvoices ?? '—'} plan limit</p></div></div>
-          <div className="mt-4 overflow-x-auto"><table className="w-full min-w-[850px] text-left text-sm"><thead className="border-b border-border text-xs uppercase text-muted-foreground"><tr><th className="py-3 pr-4">Invoice</th><th className="py-3 pr-4">Client</th><th className="py-3 pr-4">Due</th><th className="py-3 pr-4">Total</th><th className="py-3 pr-4">Status</th><th className="py-3">Actions</th></tr></thead><tbody>{data.invoices.map((invoice)=><tr key={invoice.id} className="border-b border-border/60"><td className="py-3 pr-4 font-semibold">{invoice.invoice_number}</td><td className="py-3 pr-4">{clientById[invoice.client_id]?.name || 'Client'}</td><td className="py-3 pr-4">{invoice.due_date || '—'}</td><td className="py-3 pr-4 font-bold">{formatMoney(Number(invoice.total),invoice.currency)}</td><td className="py-3 pr-4"><span className="rounded-full bg-secondary px-2.5 py-1 text-xs font-bold capitalize">{invoice.status}</span></td><td className="py-3"><div className="flex flex-wrap gap-2"><button onClick={()=>openShare(invoice)} className="inline-flex items-center gap-1 rounded-lg border border-border px-2.5 py-1.5 text-xs font-semibold"><ExternalLink size={12}/> View/PDF</button>{invoice.status!=='paid'&&<button onClick={()=>sendReminder(invoice)} className="inline-flex items-center gap-1 rounded-lg border border-border px-2.5 py-1.5 text-xs font-semibold"><Mail size={12}/> Reminder</button>}{invoice.status==='draft'&&<button onClick={()=>updateStatus(invoice.id,'sent')} className="inline-flex items-center gap-1 rounded-lg border border-border px-2.5 py-1.5 text-xs font-semibold"><Send size={12}/> Sent</button>}{invoice.status!=='paid'&&invoice.status!=='cancelled'&&<button onClick={()=>updateStatus(invoice.id,'paid')} className="rounded-lg bg-success/10 px-2.5 py-1.5 text-xs font-bold text-success">Mark paid</button>}</div></td></tr>)}</tbody></table>{!data.invoices.length&&<div className="py-12 text-center text-sm text-muted-foreground">No invoices yet. Create your first invoice above.</div>}</div>
+          <div className="mt-4 overflow-x-auto"><table className="w-full min-w-[850px] text-left text-sm"><thead className="border-b border-border text-xs uppercase text-muted-foreground"><tr><th className="py-3 pr-4">Invoice</th><th className="py-3 pr-4">Client</th><th className="py-3 pr-4">Due</th><th className="py-3 pr-4">Total</th><th className="py-3 pr-4">Status</th><th className="py-3">Actions</th></tr></thead><tbody>{data.invoices.map((invoice)=>{const overdue=isInvoiceOverdue(invoice); const displayStatus=invoiceDisplayStatus(invoice); return <tr key={invoice.id} className={`border-b border-border/60 ${overdue ? 'bg-destructive/[0.025]' : ''}`}><td className="py-3 pr-4 font-semibold">{invoice.invoice_number}</td><td className="py-3 pr-4">{clientById[invoice.client_id]?.name || 'Client'}</td><td className={`py-3 pr-4 ${overdue ? 'font-bold text-destructive' : ''}`}>{invoice.due_date || '—'}{overdue && <span className="ml-2 text-[10px] uppercase tracking-wide">Overdue</span>}</td><td className="py-3 pr-4 font-bold">{formatMoney(Number(invoice.total),invoice.currency)}</td><td className="py-3 pr-4"><span className={`rounded-full px-2.5 py-1 text-xs font-bold capitalize ${overdue ? 'bg-destructive/10 text-destructive' : 'bg-secondary'}`}>{displayStatus}</span></td><td className="py-3"><div className="flex flex-wrap gap-2"><button onClick={()=>openShare(invoice)} className="inline-flex items-center gap-1 rounded-lg border border-border px-2.5 py-1.5 text-xs font-semibold"><ExternalLink size={12}/> View/PDF</button>{invoice.status!=='paid'&&<button onClick={()=>sendReminder(invoice)} className="inline-flex items-center gap-1 rounded-lg border border-border px-2.5 py-1.5 text-xs font-semibold"><Mail size={12}/> Reminder</button>}{invoice.status==='draft'&&<button onClick={()=>updateStatus(invoice.id,'sent')} className="inline-flex items-center gap-1 rounded-lg border border-border px-2.5 py-1.5 text-xs font-semibold"><Send size={12}/> Sent</button>}{invoice.status!=='paid'&&invoice.status!=='cancelled'&&<button onClick={()=>updateStatus(invoice.id,'paid')} className="rounded-lg bg-success/10 px-2.5 py-1.5 text-xs font-bold text-success">Mark paid</button>}</div></td></tr>})}</tbody></table>{!data.invoices.length&&<div className="py-12 text-center text-sm text-muted-foreground">No invoices yet. Create your first invoice above.</div>}</div>
         </section>
       </div>
     </DashboardLayout>
