@@ -65,7 +65,7 @@ export default function GlobalThemeSwitcher() {
 
   return (
     <div
-      className="fixed bottom-4 left-4 z-[115]"
+      className="fixed bottom-4 left-4 z-[115] print:hidden"
       style={{ bottom: 'max(1rem, env(safe-area-inset-bottom))' }}
     >
       <ThemeSwitcher />

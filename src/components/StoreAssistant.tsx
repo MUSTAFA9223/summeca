@@ -138,7 +138,7 @@ export default function StoreAssistant() {
     <>
       {open && (
         <div
-          className={`fixed bottom-20 right-3 z-50 flex w-[calc(100vw-24px)] max-w-96 flex-col rounded-2xl border border-border bg-card shadow-2xl transition-all duration-200 sm:right-4 ${
+          className={`fixed bottom-20 right-3 z-50 flex w-[calc(100vw-24px)] max-w-96 flex-col rounded-2xl border border-border bg-card shadow-2xl transition-all duration-200 print:hidden sm:right-4 ${
             minimized ? 'h-14' : 'h-[min(520px,72vh)]'
           }`}
           dir="auto"
@@ -278,7 +278,7 @@ export default function StoreAssistant() {
           setOpen((previous) => !previous);
           setMinimized(false);
         }}
-        className="fixed bottom-4 right-4 z-50 flex h-12 w-12 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition-all hover:scale-105 hover:bg-primary/90"
+        className="fixed bottom-4 right-4 z-50 flex h-12 w-12 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition-all hover:scale-105 hover:bg-primary/90 print:hidden"
         aria-label="فتح موظف مبيعات SUMMECA"
       >
         {open ? <X size={20} /> : <MessageCircle size={20} />}
