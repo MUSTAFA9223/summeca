@@ -6,6 +6,7 @@ import * as HeroIconsSolid from '@heroicons/react/24/solid';
 import { QuestionMarkCircleIcon } from '@heroicons/react/24/outline';
 
 type IconVariant = 'outline' | 'solid';
+type HeroIconComponent = React.ComponentType<React.SVGProps<SVGSVGElement>>;
 
 interface IconProps extends Omit<React.SVGProps<SVGSVGElement>, 'name' | 'onClick'> {
     name: string;
@@ -26,7 +27,7 @@ function Icon({
     ...props
 }: IconProps) {
     const iconSet = variant === 'solid' ? HeroIconsSolid : HeroIcons;
-    const IconComponent = iconSet[name as keyof typeof iconSet] as React.ElementType;
+    const IconComponent = iconSet[name as keyof typeof iconSet] as unknown as HeroIconComponent | undefined;
 
     if (!IconComponent) {
         return (
