@@ -10,7 +10,7 @@ const fastSpringWebhook = fs.readFileSync('src/app/api/payment/fastspring-webhoo
 const releaseMigration = fs.readFileSync('supabase/migrations/20260913101500_leadfollow_ai_quota_release.sql', 'utf8');
 
 test('LeadFollow paginates large lead collections and keeps global counts server-side', () => {
-  assert.match(api, /const LEAD_PAGE_SIZE = 100/);
+  assert.match(api, /const LEAD_PAGE_SIZE = 50/);
   assert.match(api, /\.range\(from, to\)/);
   assert.match(api, /pagination:\s*\{/);
   assert.match(api, /select\('id', \{ count: 'exact', head: true \}\)/);

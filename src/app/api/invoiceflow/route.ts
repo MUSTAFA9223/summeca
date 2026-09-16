@@ -70,9 +70,23 @@ export async function GET(request: NextRequest) {
 
   const service = createServiceClient();
   const [profileResult, clientsResult, invoicesResult] = await Promise.all([
-    service.from('invoiceflow_profiles').select('*').eq('user_id', user.id).maybeSingle(),
-    service.from('invoiceflow_clients').select('*', { count: 'exact' }).eq('user_id', user.id).order('created_at', { ascending: false }).limit(300),
-    service.from('invoiceflow_invoices').select('*', { count: 'exact' }).eq('user_id', user.id).order('created_at', { ascending: false }).limit(300),
+    service
+      .from('invoiceflow_profiles')
+      .select('business_name, legal_name, email, phone, website, address, logo_url, accent_hex, currency, footer_note')
+      .eq('user_id', user.id)
+      .maybeSingle(),
+    service
+      .from('invoiceflow_clients')
+      .select('id, name, company, email, phone, address, notes, created_at', { count: 'exact' })
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(300),
+    service
+      .from('invoiceflow_invoices')
+      .select('id, client_id, invoice_number, issue_date, due_date, status, currency, items, subtotal, tax_rate, tax_amount, total, notes, terms, share_token, share_enabled, created_at', { count: 'exact' })
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(300),
   ]);
 
   const firstError = profileResult.error || clientsResult.error || invoicesResult.error;
