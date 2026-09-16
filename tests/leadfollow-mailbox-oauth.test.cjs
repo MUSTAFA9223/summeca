@@ -31,10 +31,13 @@ test('mailbox OAuth uses minimum send scopes and offline refresh access', () => 
   assert.match(helpers, /graph\.microsoft\.com\/v1\.0\/me\/sendMail/);
 });
 
-test('OAuth callback validates state and never returns refresh tokens to the browser', () => {
+test('OAuth callback validates user-bound state and never returns refresh tokens to the browser', () => {
   assert.match(start, /randomBytes\(32\)/);
+  assert.match(start, /`\$\{provider\}\.\$\{user\.id\}\.\$\{state\}`/);
   assert.match(start, /httpOnly: true/);
   assert.match(callback, /timingSafeEqual/);
+  assert.match(callback, /const expectedPrefix = `\$\{provider\}\.\$\{user\.id\}\.`/);
+  assert.match(callback, /expectedState\.startsWith\(expectedPrefix\)/);
   assert.match(callback, /encryptMailboxToken\(refreshToken\)/);
   assert.doesNotMatch(connections, /encrypted_refresh_token.*return/);
   assert.match(connections, /select\('provider, email, status, last_error, last_used_at, connected_at, updated_at'\)/);
