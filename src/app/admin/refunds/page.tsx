@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { AlertCircle, CheckCircle2, ChevronLeft, ChevronRight, Eye, Loader2, RefreshCw, RotateCcw, Search, X } from 'lucide-react';
+import { AlertCircle, ChevronLeft, ChevronRight, Eye, Loader2, RefreshCw, RotateCcw, Search, X } from 'lucide-react';
 import AdminShell from '@/app/admin/components/AdminShell';
 
 type RefundRow = {
