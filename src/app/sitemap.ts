@@ -16,6 +16,7 @@ const publicRoutes = [
   { path: '/contact', priority: 0.5, changeFrequency: 'monthly' as const },
   { path: '/status', priority: 0.4, changeFrequency: 'weekly' as const },
   { path: '/refunds', priority: 0.3, changeFrequency: 'monthly' as const },
+  { path: '/shipping', priority: 0.3, changeFrequency: 'monthly' as const },
   { path: '/privacy', priority: 0.3, changeFrequency: 'yearly' as const },
   { path: '/terms', priority: 0.3, changeFrequency: 'yearly' as const },
   { path: '/cookies', priority: 0.2, changeFrequency: 'yearly' as const },
