@@ -1,0 +1,267 @@
+/* SUMMECA light premium system — clean SaaS surfaces with deep navy text and turquoise accents. */
+html[data-site-theme='light'] {
+  --background: #f3fafa;
+  --foreground: #062b35;
+  --primary: #00a9a5;
+  --primary-foreground: #ffffff;
+  --secondary: #e9f7f7;
+  --secondary-foreground: #173f48;
+  --accent: #20c7c3;
+  --accent-foreground: #062b35;
+  --muted: #edf6f6;
+  --muted-foreground: #5d7f86;
+  --card: #ffffff;
+  --card-foreground: #062b35;
+  --border: #d5e7e8;
+  --input: #d5e7e8;
+  --ring: #00a9a5;
+  color-scheme: light;
+}
+
+html[data-site-theme='light'] body {
+  background:
+    radial-gradient(circle at 12% 8%, rgba(32, 199, 195, 0.06), transparent 24rem),
+    radial-gradient(circle at 88% 20%, rgba(0, 169, 165, 0.045), transparent 26rem),
+    #f3fafa;
+  color: #062b35;
+}
+
+html[data-site-theme='light'] .glass-nav {
+  background: rgba(243, 250, 250, 0.9);
+  border-bottom-color: rgba(0, 169, 165, 0.12);
+  box-shadow: 0 10px 34px rgba(6, 43, 53, 0.06);
+  backdrop-filter: blur(20px) saturate(125%);
+  -webkit-backdrop-filter: blur(20px) saturate(125%);
+}
+
+html[data-site-theme='light'] .glass-card,
+html[data-site-theme='light'] .glass-card-premium {
+  background: rgba(255, 255, 255, 0.94);
+  border-color: rgba(0, 169, 165, 0.14);
+  box-shadow: 0 20px 55px rgba(6, 43, 53, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+html[data-site-theme='light'] .btn-primary {
+  background: linear-gradient(135deg, #009f9b 0%, #00b8b3 100%);
+  color: #ffffff;
+  box-shadow: 0 10px 26px rgba(0, 169, 165, 0.22);
+}
+
+html[data-site-theme='light'] .btn-primary:hover {
+  background: linear-gradient(135deg, #008f8c 0%, #00aaa6 100%);
+  box-shadow: 0 14px 32px rgba(0, 169, 165, 0.3);
+}
+
+html[data-site-theme='light'] .btn-secondary {
+  background: rgba(255, 255, 255, 0.92);
+  color: #062b35;
+  border-color: #cfe3e4;
+  box-shadow: 0 6px 18px rgba(6, 43, 53, 0.04);
+}
+
+html[data-site-theme='light'] .btn-secondary:hover {
+  background: #e9f7f7;
+  color: #008f8c;
+  border-color: rgba(0, 169, 165, 0.35);
+}
+
+html[data-site-theme='light'] .text-gradient-primary {
+  background: linear-gradient(135deg, #008f8c 0%, #00aaa6 55%, #149bb3 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+html[data-site-theme='light'] .bg-gradient-hero {
+  background:
+    radial-gradient(circle at 78% 28%, rgba(0, 169, 165, 0.11), transparent 28rem),
+    linear-gradient(145deg, #f7fcfc 0%, #f1f9f9 48%, #eaf6f7 100%);
+}
+
+html[data-site-theme='light'] .bg-gradient-section {
+  background: linear-gradient(180deg, #f8fcfc 0%, #edf7f7 100%);
+}
+
+html[data-site-theme='light'] .hero-mockup {
+  background: linear-gradient(145deg, #ffffff 0%, #eef8f8 100%);
+  border-color: rgba(0, 169, 165, 0.16);
+  box-shadow: 0 32px 80px rgba(6, 43, 53, 0.1), 0 8px 24px rgba(0, 169, 165, 0.08);
+}
+
+html[data-site-theme='light'] .price-card-featured {
+  background: linear-gradient(145deg, #008f8c 0%, #00aaa6 100%);
+  box-shadow: 0 18px 46px rgba(0, 169, 165, 0.28);
+}
+
+/* Homepage: override the legacy always-dark presentation when Light Premium is selected. */
+html[data-site-theme='light'] body.summeca-home-theme {
+  --background: #f3fafa;
+  --foreground: #062b35;
+  --primary: #00a9a5;
+  --primary-foreground: #ffffff;
+  --secondary: #e9f7f7;
+  --secondary-foreground: #173f48;
+  --accent: #20c7c3;
+  --accent-foreground: #062b35;
+  --muted: #edf6f6;
+  --muted-foreground: #5d7f86;
+  --card: #ffffff;
+  --card-foreground: #062b35;
+  --border: #d5e7e8;
+  --input: #d5e7e8;
+  --ring: #00a9a5;
+  background: #f3fafa;
+  color: #062b35;
+  color-scheme: light;
+}
+
+html[data-site-theme='light'] body.summeca-home-theme main {
+  background:
+    radial-gradient(circle at 12% 16%, rgba(0, 169, 165, 0.075), transparent 24rem),
+    radial-gradient(circle at 88% 50%, rgba(32, 199, 195, 0.06), transparent 28rem),
+    #f3fafa;
+}
+
+html[data-site-theme='light'] body.summeca-home-theme main > section:not(.summeca-home-hero)::before {
+  background-image:
+    linear-gradient(rgba(0, 169, 165, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 169, 165, 0.035) 1px, transparent 1px);
+}
+
+html[data-site-theme='light'] body.summeca-home-theme header,
+html[data-site-theme='light'] body.summeca-home-light-theme header[class*='bg-transparent'] {
+  background: rgba(243, 250, 250, 0.9) !important;
+  border-bottom: 1px solid rgba(0, 169, 165, 0.12) !important;
+  box-shadow: 0 12px 36px rgba(6, 43, 53, 0.06) !important;
+  backdrop-filter: blur(22px) saturate(125%);
+  -webkit-backdrop-filter: blur(22px) saturate(125%);
+}
+
+html[data-site-theme='light'] body.summeca-home-theme header [class*='bg-white'] {
+  background-color: rgba(255, 255, 255, 0.97) !important;
+}
+
+html[data-site-theme='light'] body.summeca-home-theme header .text-secondary-foreground,
+html[data-site-theme='light'] body.summeca-home-theme header .text-muted-foreground,
+html[data-site-theme='light'] body.summeca-home-theme header .text-foreground,
+html[data-site-theme='light'] body.summeca-home-light-theme header[class*='bg-transparent'] .text-secondary-foreground,
+html[data-site-theme='light'] body.summeca-home-light-theme header[class*='bg-transparent'] .text-muted-foreground,
+html[data-site-theme='light'] body.summeca-home-light-theme header[class*='bg-transparent'] .text-foreground {
+  color: #173f48 !important;
+}
+
+html[data-site-theme='light'] body.summeca-home-theme .glass-card-premium {
+  background: rgba(255, 255, 255, 0.95);
+  border-color: rgba(0, 169, 165, 0.14);
+  box-shadow: 0 24px 60px rgba(6, 43, 53, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.92);
+}
+
+html[data-site-theme='light'] body.summeca-home-theme .btn-secondary {
+  background: rgba(255, 255, 255, 0.94);
+  color: #062b35;
+  border-color: #d5e7e8;
+}
+
+html[data-site-theme='light'] body.summeca-home-theme .btn-secondary:hover {
+  background: #e9f7f7;
+  color: #008f8c;
+  border-color: rgba(0, 169, 165, 0.34);
+}
+
+html[data-site-theme='light'] body.summeca-home-theme .btn-primary {
+  background: linear-gradient(135deg, #009f9b 0%, #00b8b3 100%);
+  color: #ffffff;
+  box-shadow: 0 12px 30px rgba(0, 169, 165, 0.22);
+}
+
+html[data-site-theme='light'] body.summeca-home-theme main article,
+html[data-site-theme='light'] body.summeca-home-theme main a[class*='rounded-2xl'][class*='bg-card'],
+html[data-site-theme='light'] body.summeca-home-theme main div[class*='rounded-2xl'][class*='bg-card'] {
+  background-image: linear-gradient(145deg, rgba(255, 255, 255, 0.96), rgba(236, 248, 248, 0.92));
+  border-color: rgba(0, 169, 165, 0.12);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.95), 0 18px 48px rgba(6, 43, 53, 0.07);
+}
+
+html[data-site-theme='light'] body.summeca-home-theme main article:hover,
+html[data-site-theme='light'] body.summeca-home-theme main a[class*='rounded-2xl'][class*='bg-card']:hover,
+html[data-site-theme='light'] body.summeca-home-theme main div[class*='rounded-2xl'][class*='bg-card']:hover {
+  border-color: rgba(0, 169, 165, 0.3);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.98), 0 28px 70px rgba(6, 43, 53, 0.1), 0 0 34px rgba(0, 169, 165, 0.05);
+}
+
+html[data-site-theme='light'] .summeca-home-hero {
+  background:
+    radial-gradient(circle at 72% 38%, rgba(0, 169, 165, 0.11), transparent 28rem),
+    radial-gradient(circle at 24% 78%, rgba(32, 199, 195, 0.055), transparent 22rem),
+    linear-gradient(145deg, #f8fcfc 0%, #f2f9f9 48%, #eaf6f7 100%);
+}
+
+html[data-site-theme='light'] .summeca-hero-grid {
+  opacity: 0.7;
+  background-image:
+    linear-gradient(rgba(0, 169, 165, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 169, 165, 0.04) 1px, transparent 1px);
+}
+
+html[data-site-theme='light'] .summeca-hero-noise {
+  opacity: 0.022;
+  background-image: radial-gradient(rgba(6, 43, 53, 0.65) 0.55px, transparent 0.55px);
+}
+
+html[data-site-theme='light'] .summeca-hero-orb-a {
+  background: rgba(0, 169, 165, 0.28);
+}
+
+html[data-site-theme='light'] .summeca-hero-orb-b {
+  background: rgba(20, 155, 179, 0.18);
+}
+
+html[data-site-theme='light'] .summeca-outline-text {
+  color: transparent;
+  -webkit-text-stroke: 1.5px rgba(0, 169, 165, 0.68);
+  text-shadow: 0 0 26px rgba(0, 169, 165, 0.08);
+}
+
+/* Light-mode remaps for product/SaaS sections that use fixed utility colors. */
+html[data-site-theme='light'] [class~='bg-[#070b10]'],
+html[data-site-theme='light'] [class~='bg-[#090e14]'] {
+  background-color: #f3fafa !important;
+  color: #062b35 !important;
+}
+
+html[data-site-theme='light'] [class~='bg-[#070b10]'] [class*='bg-[#070b10]'],
+html[data-site-theme='light'] [class~='bg-[#070b10]'] [class*='bg-[#090e14]'],
+html[data-site-theme='light'] [class~='bg-[#090e14]'] [class*='bg-[#070b10]'],
+html[data-site-theme='light'] [class~='bg-[#090e14]'] [class*='bg-[#090e14]'] {
+  background-color: rgba(255, 255, 255, 0.96) !important;
+}
+
+html[data-site-theme='light'] [class~='bg-[#070b10]'] .text-white,
+html[data-site-theme='light'] [class~='bg-[#090e14]'] .text-white {
+  color: #062b35 !important;
+}
+
+html[data-site-theme='light'] [class~='bg-[#070b10]'] .text-slate-200,
+html[data-site-theme='light'] [class~='bg-[#070b10]'] .text-slate-300,
+html[data-site-theme='light'] [class~='bg-[#090e14]'] .text-slate-200,
+html[data-site-theme='light'] [class~='bg-[#090e14]'] .text-slate-300 {
+  color: #315b63 !important;
+}
+
+html[data-site-theme='light'] [class~='bg-[#070b10]'] .text-slate-400,
+html[data-site-theme='light'] [class~='bg-[#090e14]'] .text-slate-400 {
+  color: #5d7f86 !important;
+}
+
+html[data-site-theme='light'] [class~='bg-[#070b10]'] [class*='border-white/'],
+html[data-site-theme='light'] [class~='bg-[#090e14]'] [class*='border-white/'] {
+  border-color: rgba(0, 169, 165, 0.14) !important;
+}
+
+@media (max-width: 1023px) {
+  html[data-site-theme='light'] .summeca-home-hero {
+    background:
+      radial-gradient(circle at 50% 72%, rgba(0, 169, 165, 0.1), transparent 24rem),
+      #f3fafa;
+  }
+}
