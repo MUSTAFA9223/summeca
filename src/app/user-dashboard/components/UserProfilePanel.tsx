@@ -33,8 +33,8 @@ export default function UserProfilePanel() {
     try {
       await updateProfile({ full_name: fullName });
       toast.success('Profile updated successfully');
-    } catch (error: any) {
-      toast.error(error?.message || 'Failed to update profile');
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : 'Failed to update profile');
     } finally {
       setIsSavingProfile(false);
     }
@@ -64,7 +64,10 @@ export default function UserProfilePanel() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ currentPassword, newPassword }),
       });
-      const result = await response.json().catch(() => ({}));
+      const result = await response.json().catch(() => ({})) as {
+        error?: string;
+        emailNotificationSent?: boolean;
+      };
       if (!response.ok) throw new Error(result.error || 'Failed to update password');
       toast.success(result.emailNotificationSent
         ? 'Password updated and confirmation email sent'
@@ -72,8 +75,8 @@ export default function UserProfilePanel() {
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
-    } catch (error: any) {
-      toast.error(error?.message || 'Failed to update password');
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : 'Failed to update password');
     } finally {
       setIsSavingPassword(false);
     }
@@ -84,7 +87,6 @@ export default function UserProfilePanel() {
 
   return (
     <div className="space-y-7 max-w-2xl">
-      {/* Header */}
       <div>
         <h1 className="text-2xl font-700 text-foreground">Profile & Settings</h1>
         <p className="text-sm text-muted-foreground mt-0.5">
@@ -92,9 +94,7 @@ export default function UserProfilePanel() {
         </p>
       </div>
 
-      {/* Profile Card */}
       <div className="bg-card border border-border rounded-2xl p-6">
-        {/* Avatar */}
         <div className="flex items-center gap-4 mb-6 pb-6 border-b border-border">
           <div className="w-16 h-16 rounded-2xl bg-primary/20 flex items-center justify-center flex-shrink-0">
             <User size={28} className="text-primary" />
@@ -109,7 +109,6 @@ export default function UserProfilePanel() {
           </div>
         </div>
 
-        {/* Profile form */}
         <form onSubmit={handleSaveProfile} className="space-y-4">
           <h3 className="text-sm font-700 text-foreground mb-3">Personal Information</h3>
 
@@ -167,7 +166,6 @@ export default function UserProfilePanel() {
         </form>
       </div>
 
-      {/* Password Card */}
       <div className="bg-card border border-border rounded-2xl p-6">
         <h3 className="text-sm font-700 text-foreground mb-4 flex items-center gap-2">
           <Lock size={15} className="text-primary" />
@@ -267,7 +265,6 @@ export default function UserProfilePanel() {
         </form>
       </div>
 
-      {/* Account Info */}
       <div className="bg-card border border-border rounded-2xl p-6">
         <h3 className="text-sm font-700 text-foreground mb-4">Account Details</h3>
         <div className="space-y-3">
