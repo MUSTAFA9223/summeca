@@ -1,16 +1,22 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { getChatCompletion, getStreamingChatCompletion } from '@/lib/ai/chatCompletion';
+import {
+  getChatCompletion,
+  getStreamingChatCompletion,
+  type ChatChunk,
+  type ChatCompletionResult,
+  type ChatMessage,
+} from '@/lib/ai/chatCompletion';
 
 export function useChat(provider: string, model: string, streaming: boolean = true) {
   const [response, setResponse] = useState('');
-  const [fullResponse, setFullResponse] = useState<any>(null);
+  const [fullResponse, setFullResponse] = useState<ChatCompletionResult | ChatChunk[] | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
   const sendMessage = useCallback(
-    async (messages: object[], parameters: object = {}) => {
+    async (messages: ChatMessage[], parameters: Record<string, unknown> = {}) => {
       setResponse('');
       setFullResponse(streaming ? [] : null);
       setIsLoading(true);
@@ -23,8 +29,8 @@ export function useChat(provider: string, model: string, streaming: boolean = tr
             model,
             messages,
             (chunk) => {
-              setFullResponse((prev: any[]) => [...prev, chunk]);
-              const content = chunk?.choices?.[0]?.delta?.content;
+              setFullResponse((prev) => [...(Array.isArray(prev) ? prev : []), chunk]);
+              const content = chunk.choices?.[0]?.delta?.content;
               if (content) setResponse((prev) => prev + content);
             },
             () => setIsLoading(false),
@@ -37,7 +43,7 @@ export function useChat(provider: string, model: string, streaming: boolean = tr
         } else {
           const result = await getChatCompletion(provider, model, messages, parameters);
           setFullResponse(result);
-          setResponse(result?.choices?.[0]?.message?.content || '');
+          setResponse(result.choices?.[0]?.message?.content || '');
           setIsLoading(false);
         }
       } catch (err) {
