@@ -135,7 +135,8 @@ export function sanitizeGeneratedContent(value: unknown): unknown {
       trimmed.startsWith('{') ||
       trimmed.startsWith('[') ||
       trimmed.startsWith('```') ||
-      /```json/i.test(trimmed)
+      /```json/i.test(trimmed) ||
+      extractJsonEnvelope(trimmed) !== null
     ) {
       const parsed = parseJsonCandidate(value);
       if (parsed !== undefined && parsed !== value) {
