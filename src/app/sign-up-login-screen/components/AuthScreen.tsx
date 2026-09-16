@@ -77,7 +77,7 @@ export default function AuthScreen() {
               </div>
             ))}
           </div>
-          <div className="w-full rounded-[2rem] border border-white/[0.09] bg-[#0b0f0e]/80 p-5 shadow-[0_30px_100px_rgba(0,0,0,.45)] backdrop-blur-2xl sm:p-8">
+          <div className="w-full rounded-[2rem] border border-white/[0.09] bg-[#0b0f0e]/80 p-5 shadow-[0_30px_100px_rgba(0,0,0,.45)] backdrop-blur-lg sm:p-8 sm:backdrop-blur-2xl">
             <div className="mb-7 lg:hidden">
               <p className="text-center text-xs font-semibold uppercase tracking-[0.18em] text-teal-300/80">Welcome to SUMMECA</p>
             </div>
@@ -136,7 +136,7 @@ export default function AuthScreen() {
           z-index: 1;
           transform-style: preserve-3d;
           backface-visibility: hidden;
-          will-change: transform, opacity, filter;
+          will-change: transform, opacity;
         }
 
         .auth-content-left {
@@ -185,17 +185,14 @@ export default function AuthScreen() {
           0% {
             opacity: 0.48;
             transform: translate3d(24px, 0, -70px) rotateY(5deg) scale(0.985);
-            filter: blur(2px);
           }
           45% {
             opacity: 0.82;
             transform: translate3d(8px, 0, -24px) rotateY(2deg) scale(0.994);
-            filter: blur(0.7px);
           }
           100% {
             opacity: 1;
             transform: translate3d(0, 0, 0) rotateY(0deg) scale(1);
-            filter: blur(0);
           }
         }
 
@@ -203,17 +200,14 @@ export default function AuthScreen() {
           0% {
             opacity: 0.48;
             transform: translate3d(-24px, 0, -70px) rotateY(-5deg) scale(0.985);
-            filter: blur(2px);
           }
           45% {
             opacity: 0.82;
             transform: translate3d(-8px, 0, -24px) rotateY(-2deg) scale(0.994);
-            filter: blur(0.7px);
           }
           100% {
             opacity: 1;
             transform: translate3d(0, 0, 0) rotateY(0deg) scale(1);
-            filter: blur(0);
           }
         }
 
