@@ -10,9 +10,11 @@ import {
   ChevronRight,
   Clipboard,
   ExternalLink,
+  Mail,
   MessageSquareText,
   Plus,
   RefreshCw,
+  Send,
   Sparkles,
   Target,
   Users,
@@ -36,6 +38,17 @@ const statusOptions: LeadStatus[] = ['new', 'contacted', 'replied', 'won', 'lost
 function draftLanguageAttributes(language: string) {
   const isArabic = language.trim().toLowerCase() === 'arabic';
   return { dir: isArabic ? 'rtl' as const : 'ltr' as const, lang: isArabic ? 'ar' : undefined };
+}
+
+function emailDraftParts(value: string, language = 'English') {
+  const normalized = value.replace(/\r\n/g, '\n').trim();
+  const lines = normalized.split('\n');
+  const subjectPattern = language.trim().toLowerCase() === 'arabic'
+    ? /^\s*(?:الموضوع|subject)\s*:\s*(.+)\s*$/i
+    : /^\s*(?:subject|الموضوع)\s*:\s*(.+)\s*$/i;
+  const match = lines[0]?.match(subjectPattern);
+  if (!match) return { subject: '', body: normalized };
+  return { subject: match[1].trim().slice(0, 180), body: lines.slice(1).join('\n').trim() };
 }
 
 function localInputDate(value: string | null) {
@@ -65,6 +78,7 @@ export default function LeadFollowPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const [sendingEmail, setSendingEmail] = useState(false);
   const [forbidden, setForbidden] = useState<Access | null>(null);
   const [profile, setProfile] = useState<Profile>(emptyProfile);
   const [showLeadForm, setShowLeadForm] = useState(false);
@@ -74,6 +88,12 @@ export default function LeadFollowPage() {
   const [draftForm, setDraftForm] = useState({ channel: 'email', stage: 'follow_up', tone: 'professional', language: 'English', extraContext: '' });
   const [latestDraft, setLatestDraft] = useState('');
   const [latestDraftLanguage, setLatestDraftLanguage] = useState('English');
+  const [latestDraftChannel, setLatestDraftChannel] = useState('');
+  const [latestMessageId, setLatestMessageId] = useState('');
+  const [latestLeadId, setLatestLeadId] = useState('');
+  const [emailSubject, setEmailSubject] = useState('');
+  const [emailPermissionConfirmed, setEmailPermissionConfirmed] = useState(false);
+  const [emailSentAt, setEmailSentAt] = useState('');
   const [followUpValue, setFollowUpValue] = useState('');
 
   const load = useCallback(async (page: number) => {
@@ -181,6 +201,10 @@ export default function LeadFollowPage() {
     }
     setGenerating(true);
     setLatestDraft('');
+    setLatestMessageId('');
+    setEmailSubject('');
+    setEmailPermissionConfirmed(false);
+    setEmailSentAt('');
     try {
       const response = await fetch('/api/leadfollow/generate', {
         method: 'POST',
@@ -189,7 +213,13 @@ export default function LeadFollowPage() {
       });
       const payload = await response.json();
       if (!response.ok) throw new Error(payload.error || 'AI generation failed.');
-      setLatestDraft(payload.output || '');
+      const rawDraft = payload.output || '';
+      const parts = draftForm.channel === 'email' ? emailDraftParts(rawDraft, draftForm.language) : { subject: '', body: rawDraft };
+      setLatestDraft(parts.body);
+      setEmailSubject(parts.subject);
+      setLatestMessageId(payload.message?.id || '');
+      setLatestLeadId(selectedLeadId);
+      setLatestDraftChannel(draftForm.channel);
       setLatestDraftLanguage(draftForm.language);
       toast.success('Draft generated and saved to history.');
       await load(leadPage);
@@ -197,6 +227,57 @@ export default function LeadFollowPage() {
       toast.error(error instanceof Error ? error.message : 'AI generation failed.');
     } finally {
       setGenerating(false);
+    }
+  }
+
+  async function sendLatestEmail() {
+    if (!selectedLead || latestLeadId !== selectedLead.id) {
+      toast.error('Generate an email draft for the selected lead first.');
+      return;
+    }
+    if (latestDraftChannel !== 'email' || !latestMessageId) {
+      toast.error('Only an Email-channel draft can be sent by email.');
+      return;
+    }
+    if (!selectedLead.email?.trim()) {
+      toast.error('This lead does not have an email address.');
+      return;
+    }
+    if (!emailSubject.trim()) {
+      toast.error('Add an email subject before sending.');
+      return;
+    }
+    if (!latestDraft.trim()) {
+      toast.error('Email body cannot be empty.');
+      return;
+    }
+    if (!emailPermissionConfirmed) {
+      toast.error('Confirm that you have permission or a lawful basis to email this lead.');
+      return;
+    }
+
+    setSendingEmail(true);
+    try {
+      const response = await fetch('/api/leadfollow/send-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messageId: latestMessageId,
+          subject: emailSubject,
+          body: latestDraft,
+          confirmed: true,
+        }),
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || 'Email could not be sent.');
+      setEmailSentAt(payload.sentAt || new Date().toISOString());
+      setEmailPermissionConfirmed(false);
+      toast.success(`Email sent to ${selectedLead.email}.`);
+      await load(leadPage);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Email could not be sent.');
+    } finally {
+      setSendingEmail(false);
     }
   }
 
@@ -219,7 +300,7 @@ export default function LeadFollowPage() {
       <div className="mx-auto max-w-3xl py-16 text-center">
         <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 text-primary"><Bot size={30} /></div>
         <h1 className="mt-6 text-3xl font-black">Unlock LeadFollow AI</h1>
-        <p className="mx-auto mt-3 max-w-xl text-sm leading-7 text-muted-foreground">Purchase a lifetime plan, then manage your leads and create AI-assisted follow-up drafts from your SUMMECA account.</p>
+        <p className="mx-auto mt-3 max-w-xl text-sm leading-7 text-muted-foreground">Purchase a lifetime plan, then manage leads, create AI-assisted follow-ups, and send reviewed email drafts from your SUMMECA account.</p>
         <Link href={forbidden.purchasePath || '/products/summeca-leadfollow-ai'} className="btn-primary mt-7 inline-flex items-center gap-2 px-6 py-3">View LeadFollow AI plans <ExternalLink size={15}/></Link>
       </div>
     </DashboardLayout>
@@ -234,7 +315,7 @@ export default function LeadFollowPage() {
           <div>
             <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-primary"><Sparkles size={15}/> SUMMECA SaaS</div>
             <h1 className="mt-2 text-3xl font-black tracking-tight">LeadFollow AI</h1>
-            <p className="mt-2 text-sm text-muted-foreground">Keep every lead organized and turn verified business context into ready-to-edit follow-up drafts.</p>
+            <p className="mt-2 text-sm text-muted-foreground">Keep every lead organized, generate grounded follow-ups, and send reviewed email drafts directly from SUMMECA.</p>
           </div>
           <div className="flex flex-wrap gap-2">
             <span className="rounded-full bg-primary/10 px-3 py-2 text-xs font-bold text-primary">{data.access.planName} · Lifetime</span>
@@ -262,7 +343,7 @@ export default function LeadFollowPage() {
               <input required className="form-input" placeholder="Lead name" value={leadForm.name} onChange={(e) => setLeadForm({ ...leadForm, name: e.target.value })}/>
               <input className="form-input" placeholder="Company" value={leadForm.company} onChange={(e) => setLeadForm({ ...leadForm, company: e.target.value })}/>
               <input className="form-input" placeholder="Source" value={leadForm.source} onChange={(e) => setLeadForm({ ...leadForm, source: e.target.value })}/>
-              <input className="form-input" placeholder="Email" value={leadForm.email} onChange={(e) => setLeadForm({ ...leadForm, email: e.target.value })}/>
+              <input className="form-input" type="email" placeholder="Email" value={leadForm.email} onChange={(e) => setLeadForm({ ...leadForm, email: e.target.value })}/>
               <input className="form-input" placeholder="Phone" value={leadForm.phone} onChange={(e) => setLeadForm({ ...leadForm, phone: e.target.value })}/>
               <input className="form-input" type="datetime-local" lang="en" dir="ltr" value={leadForm.nextFollowUpAt} onChange={(e) => setLeadForm({ ...leadForm, nextFollowUpAt: e.target.value })}/>
               <textarea className="form-input sm:col-span-2 lg:col-span-3" placeholder="Factual notes: need, objection, last conversation, requested information..." value={leadForm.notes} onChange={(e) => setLeadForm({ ...leadForm, notes: e.target.value })}/>
@@ -289,7 +370,7 @@ export default function LeadFollowPage() {
 
           <form onSubmit={generateDraft} className="rounded-2xl border border-primary/25 bg-gradient-to-br from-primary/[0.05] to-card p-6">
             <div className="flex items-center gap-2"><Bot size={19} className="text-primary"/><h2 className="font-bold">AI follow-up studio</h2></div>
-            <p className="mt-1 text-xs text-muted-foreground">Generate a draft, review it, edit as needed, then send it yourself through your normal channel.</p>
+            <p className="mt-1 text-xs text-muted-foreground">Generate and review the draft first. Email-channel drafts can then be sent directly from SUMMECA; other channels remain copy-and-send.</p>
             <div className="mt-5 grid gap-3 sm:grid-cols-2">
               <select required className="form-input sm:col-span-2" value={selectedLeadId} onChange={(e) => setSelectedLeadId(e.target.value)}>
                 <option value="">Choose a lead</option>
@@ -304,8 +385,47 @@ export default function LeadFollowPage() {
             <button disabled={generating || !selectedLeadId || data.usage.used >= data.usage.limit} className="btn-primary mt-4 inline-flex items-center gap-2 px-5 py-2.5 disabled:opacity-50"><Sparkles size={15}/>{generating ? 'Generating...' : 'Generate draft'}</button>
             {latestDraft && (
               <div className="mt-5 rounded-xl border border-primary/20 bg-background p-4">
-                <div className="flex items-center justify-between"><span className="text-xs font-bold uppercase tracking-wider text-primary">Latest draft</span><button type="button" onClick={() => copyDraft()} className="inline-flex items-center gap-1 text-xs font-bold text-primary"><Clipboard size={13}/> Copy</button></div>
-                <pre {...draftLanguageAttributes(latestDraftLanguage)} className="mt-3 whitespace-pre-wrap font-sans text-sm leading-6 text-foreground">{latestDraft}</pre>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="text-xs font-bold uppercase tracking-wider text-primary">Latest draft</span>
+                  <button type="button" onClick={() => copyDraft(latestDraftChannel === 'email' ? `${emailSubject ? `Subject: ${emailSubject}\n\n` : ''}${latestDraft}` : latestDraft)} className="inline-flex items-center gap-1 text-xs font-bold text-primary"><Clipboard size={13}/> Copy</button>
+                </div>
+
+                {latestDraftChannel === 'email' && (
+                  <div className="mt-4 space-y-3 rounded-xl border border-border bg-card p-4">
+                    <div className="flex items-center gap-2 text-xs font-bold text-primary"><Mail size={14}/> Direct email delivery</div>
+                    <div className="text-xs text-muted-foreground">To: <span dir="ltr" className="font-semibold text-foreground">{selectedLead?.email || 'No email on this lead'}</span></div>
+                    <input
+                      className="form-input w-full"
+                      value={emailSubject}
+                      maxLength={180}
+                      placeholder="Email subject"
+                      onChange={(event) => setEmailSubject(event.target.value)}
+                    />
+                    <textarea
+                      {...draftLanguageAttributes(latestDraftLanguage)}
+                      className="form-input min-h-44 w-full"
+                      value={latestDraft}
+                      maxLength={8000}
+                      onChange={(event) => setLatestDraft(event.target.value)}
+                    />
+                    <label className="flex items-start gap-2 text-xs leading-5 text-muted-foreground">
+                      <input type="checkbox" className="mt-1" checked={emailPermissionConfirmed} onChange={(event) => setEmailPermissionConfirmed(event.target.checked)} />
+                      <span>I confirm I have permission or a lawful basis to email this lead. The message will be sent through SUMMECA and replies will go to my SUMMECA account email.</span>
+                    </label>
+                    <button
+                      type="button"
+                      onClick={sendLatestEmail}
+                      disabled={sendingEmail || Boolean(emailSentAt) || !selectedLead?.email || !emailSubject.trim() || !latestDraft.trim() || !emailPermissionConfirmed}
+                      className="btn-primary inline-flex items-center gap-2 px-5 py-2.5 disabled:opacity-50"
+                    >
+                      {sendingEmail ? <RefreshCw size={15} className="animate-spin"/> : emailSentAt ? <Check size={15}/> : <Send size={15}/>} 
+                      {sendingEmail ? 'Sending...' : emailSentAt ? 'Email sent' : 'Send email'}
+                    </button>
+                    {emailSentAt && <div className="text-xs font-semibold text-success">Sent successfully at <time dir="ltr">{displayDateTime(emailSentAt)}</time>.</div>}
+                  </div>
+                )}
+
+                {latestDraftChannel !== 'email' && <pre {...draftLanguageAttributes(latestDraftLanguage)} className="mt-3 whitespace-pre-wrap font-sans text-sm leading-6 text-foreground">{latestDraft}</pre>}
               </div>
             )}
           </form>
@@ -334,7 +454,7 @@ export default function LeadFollowPage() {
                     <td className="py-3 pr-4 text-muted-foreground">{lead.source || '—'}</td>
                     <td className="py-3 pr-4"><select className="rounded-lg border border-border bg-background px-2 py-1.5 text-xs font-semibold capitalize" value={lead.status} onChange={(e) => updateLead(lead.id, { status: e.target.value }, 'Lead status updated.')} disabled={saving}>{statusOptions.map((status) => <option key={status} value={status}>{status}</option>)}</select></td>
                     <td className="py-3 pr-4"><time dir="ltr" className="inline-block whitespace-nowrap tabular-nums" dateTime={lead.next_follow_up_at ?? undefined}>{displayDateTime(lead.next_follow_up_at)}</time></td>
-                    <td className="py-3"><div className="flex gap-2"><button onClick={() => { setSelectedLeadId(lead.id); setDraftForm({ ...draftForm, stage: 'follow_up' }); }} className="rounded-lg border border-border px-2.5 py-1.5 text-xs font-semibold">Draft follow-up</button>{lead.status !== 'won' && <button onClick={() => updateLead(lead.id, { status: 'won' }, 'Lead marked won.')} className="rounded-lg bg-success/10 px-2.5 py-1.5 text-xs font-bold text-success">Won</button>}</div></td>
+                    <td className="py-3"><div className="flex gap-2"><button onClick={() => { setSelectedLeadId(lead.id); setDraftForm({ ...draftForm, stage: 'follow_up', channel: 'email' }); }} className="rounded-lg border border-border px-2.5 py-1.5 text-xs font-semibold">Email follow-up</button>{lead.status !== 'won' && <button onClick={() => updateLead(lead.id, { status: 'won' }, 'Lead marked won.')} className="rounded-lg bg-success/10 px-2.5 py-1.5 text-xs font-bold text-success">Won</button>}</div></td>
                   </tr>
                 ))}
               </tbody>
