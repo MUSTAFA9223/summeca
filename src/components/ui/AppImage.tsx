@@ -62,7 +62,7 @@ const AppImage = memo(function AppImage({
     const [hasError, setHasError] = useState(false);
 
     const isExternalUrl = useMemo(
-        () => typeof imageSrc === 'string' && imageSrc.startsWith('http'),
+        () => imageSrc.startsWith('http'),
         [imageSrc]
     );
     const resolvedUnoptimized = unoptimized || isExternalUrl;
@@ -107,6 +107,7 @@ const AppImage = memo(function AppImage({
             <div className="relative" style={{ width: '100%', height: '100%' }}>
                 <Image
                     {...commonProps}
+                    alt={alt}
                     fill
                     sizes={sizes || '(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw'}
                     style={{ objectFit: 'cover' }}
@@ -119,6 +120,7 @@ const AppImage = memo(function AppImage({
     return (
         <Image
             {...commonProps}
+            alt={alt}
             width={width || 400}
             height={height || 300}
             sizes={sizes}
