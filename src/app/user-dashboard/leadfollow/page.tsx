@@ -33,6 +33,11 @@ type Metric = [label: string, value: number, icon: LucideIcon];
 const emptyProfile: Profile = { business_name: '', offer: '', target_audience: '', value_proposition: '', default_tone: 'professional' };
 const statusOptions: LeadStatus[] = ['new', 'contacted', 'replied', 'won', 'lost'];
 
+function draftLanguageAttributes(language: string) {
+  const isArabic = language.trim().toLowerCase() === 'arabic';
+  return { dir: isArabic ? 'rtl' as const : 'ltr' as const, lang: isArabic ? 'ar' : undefined };
+}
+
 function localInputDate(value: string | null) {
   if (!value) return '';
   const date = new Date(value);
@@ -68,6 +73,7 @@ export default function LeadFollowPage() {
   const [selectedLeadId, setSelectedLeadId] = useState('');
   const [draftForm, setDraftForm] = useState({ channel: 'email', stage: 'follow_up', tone: 'professional', language: 'English', extraContext: '' });
   const [latestDraft, setLatestDraft] = useState('');
+  const [latestDraftLanguage, setLatestDraftLanguage] = useState('English');
   const [followUpValue, setFollowUpValue] = useState('');
 
   const load = useCallback(async (page: number) => {
@@ -184,6 +190,7 @@ export default function LeadFollowPage() {
       const payload = await response.json();
       if (!response.ok) throw new Error(payload.error || 'AI generation failed.');
       setLatestDraft(payload.output || '');
+      setLatestDraftLanguage(draftForm.language);
       toast.success('Draft generated and saved to history.');
       await load(leadPage);
     } catch (error) {
@@ -292,13 +299,13 @@ export default function LeadFollowPage() {
               <select className="form-input" value={draftForm.stage} onChange={(e) => setDraftForm({ ...draftForm, stage: e.target.value })}><option value="first_contact">First contact</option><option value="follow_up">Follow-up</option><option value="objection">Objection response</option><option value="close">Close / next step</option><option value="revive">Revive old lead</option></select>
               <select className="form-input" value={draftForm.tone} onChange={(e) => setDraftForm({ ...draftForm, tone: e.target.value })}><option>professional</option><option>friendly</option><option>concise</option><option>consultative</option><option>warm</option></select>
               <select className="form-input" value={draftForm.language} onChange={(e) => setDraftForm({ ...draftForm, language: e.target.value })}><option>English</option><option>Arabic</option><option>Spanish</option><option>French</option><option>German</option></select>
-              <textarea className="form-input sm:col-span-2" placeholder="Additional factual context for this specific message (optional)" value={draftForm.extraContext} onChange={(e) => setDraftForm({ ...draftForm, extraContext: e.target.value })}/>
+              <textarea {...draftLanguageAttributes(draftForm.language)} className="form-input sm:col-span-2" placeholder="Additional factual context for this specific message (optional)" value={draftForm.extraContext} onChange={(e) => setDraftForm({ ...draftForm, extraContext: e.target.value })}/>
             </div>
             <button disabled={generating || !selectedLeadId || data.usage.used >= data.usage.limit} className="btn-primary mt-4 inline-flex items-center gap-2 px-5 py-2.5 disabled:opacity-50"><Sparkles size={15}/>{generating ? 'Generating...' : 'Generate draft'}</button>
             {latestDraft && (
               <div className="mt-5 rounded-xl border border-primary/20 bg-background p-4">
                 <div className="flex items-center justify-between"><span className="text-xs font-bold uppercase tracking-wider text-primary">Latest draft</span><button type="button" onClick={() => copyDraft()} className="inline-flex items-center gap-1 text-xs font-bold text-primary"><Clipboard size={13}/> Copy</button></div>
-                <pre className="mt-3 whitespace-pre-wrap font-sans text-sm leading-6 text-foreground">{latestDraft}</pre>
+                <pre {...draftLanguageAttributes(latestDraftLanguage)} className="mt-3 whitespace-pre-wrap font-sans text-sm leading-6 text-foreground">{latestDraft}</pre>
               </div>
             )}
           </form>
@@ -350,7 +357,7 @@ export default function LeadFollowPage() {
                 {data.messages.filter((message) => message.lead_id === selectedLead.id).slice(0, 6).map((message) => (
                   <div key={message.id} className="rounded-xl border border-border p-4">
                     <div className="flex items-center justify-between gap-3"><span className="text-xs font-bold uppercase text-primary">{message.channel} · {message.stage}</span><button onClick={() => copyDraft(message.output_text)} className="text-xs font-semibold text-primary">Copy</button></div>
-                    <p className="mt-2 line-clamp-4 whitespace-pre-line text-sm leading-6 text-muted-foreground">{message.output_text}</p>
+                    <p {...draftLanguageAttributes(message.language)} className="mt-2 line-clamp-4 whitespace-pre-line text-sm leading-6 text-muted-foreground">{message.output_text}</p>
                     <time dir="ltr" className="mt-2 block text-[11px] tabular-nums text-muted-foreground" dateTime={message.created_at}>{displayDateTime(message.created_at)}</time>
                   </div>
                 ))}
