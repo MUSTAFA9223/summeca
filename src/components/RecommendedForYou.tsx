@@ -1,12 +1,13 @@
 'use client';
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { trackEvent } from '@/lib/analytics';
-import { Brain, Sparkles, ArrowRight, Zap, LayoutDashboard, FileText, Package, Star } from 'lucide-react';
+import { Brain, Sparkles, ArrowRight, Zap, LayoutDashboard, FileText, Package, Star, type LucideIcon } from 'lucide-react';
 import WishlistButton from '@/components/WishlistButton';
+import AppImage from '@/components/ui/AppImage';
 
 interface ProductPlan {
   price: number;
@@ -28,7 +29,7 @@ interface RecommendedProduct {
   review_count?: number;
 }
 
-const TYPE_ICON: Record<string, React.ComponentType<any>> = {
+const TYPE_ICON: Record<string, LucideIcon> = {
   ai_tool: Zap, api: Zap, plugin: Zap,
   template: FileText, dataset: FileText,
   course: LayoutDashboard, other: LayoutDashboard,
@@ -72,12 +73,13 @@ export default function RecommendedForYou({
   const { user } = useAuth();
   const [products, setProducts] = useState<RecommendedProduct[]>([]);
   const [loading, setLoading] = useState(true);
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
+  const currentProductId = context.currentProductId;
+  const currentCategory = context.currentCategory;
 
   const fetchRecommendations = useCallback(async () => {
     setLoading(true);
     try {
-      // Get user's wishlist for personalization
       let wishlistCategories: string[] = [];
       if (user) {
         const { data: wishlistData } = await supabase
@@ -97,7 +99,8 @@ export default function RecommendedForYou({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          ...context,
+          currentProductId,
+          currentCategory,
           userInterests: wishlistCategories,
         }),
       });
@@ -106,7 +109,6 @@ export default function RecommendedForYou({
         const data = await res.json() as { recommendations: RecommendedProduct[] };
         const recs = data.recommendations ?? [];
 
-        // Enrich with ratings
         if (recs.length > 0) {
           const { data: reviewsData } = await supabase
             .from('reviews')
@@ -138,10 +140,10 @@ export default function RecommendedForYou({
     } finally {
       setLoading(false);
     }
-  }, [user, context.currentProductId, context.currentCategory, maxItems]);
+  }, [user, currentProductId, currentCategory, maxItems, supabase]);
 
   useEffect(() => {
-    fetchRecommendations();
+    void fetchRecommendations();
   }, [fetchRecommendations]);
 
   if (loading) {
@@ -169,7 +171,6 @@ export default function RecommendedForYou({
 
   return (
     <section className="py-8">
-      {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-xl bg-gradient-teal flex items-center justify-center">
@@ -188,7 +189,6 @@ export default function RecommendedForYou({
         </Link>
       </div>
 
-      {/* Products grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {products.map((product) => {
           const lowestPrice = getLowestPrice(product.plans);
@@ -197,12 +197,10 @@ export default function RecommendedForYou({
 
           return (
             <div key={product.id} className="group relative bg-white rounded-2xl border border-border p-4 hover:shadow-lg hover:border-primary/20 transition-all duration-300">
-              {/* AI Pick badge */}
               <div className="absolute -top-2 -right-2 bg-gradient-teal text-white text-[10px] font-700 px-2 py-0.5 rounded-full flex items-center gap-1 shadow-sm">
                 <Sparkles size={8} /> AI Pick
               </div>
 
-              {/* Wishlist button */}
               <div className="absolute top-3 right-3">
                 <WishlistButton
                   productId={product.id}
@@ -218,9 +216,9 @@ export default function RecommendedForYou({
                 className="block"
               >
                 <div className="flex items-start gap-2 mb-3 pr-8">
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary/10 to-accent/10 flex items-center justify-center flex-shrink-0">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary/10 to-accent/10 flex items-center justify-center flex-shrink-0 overflow-hidden">
                     {product.thumbnail_url ? (
-                      <img src={product.thumbnail_url} alt={product.name} className="w-full h-full object-cover rounded-xl" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
+                      <AppImage src={product.thumbnail_url} alt={product.name} width={40} height={40} className="w-full h-full object-cover rounded-xl" />
                     ) : (
                       <CategoryIcon size={18} className="text-primary" />
                     )}
