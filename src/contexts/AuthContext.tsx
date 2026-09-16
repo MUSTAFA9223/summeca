@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useContext, useEffect, useState, useMemo } from 'react';
-import type { Session, User } from '@supabase/supabase-js';
+import type { AuthResponse, Session, User } from '@supabase/supabase-js';
 import { createClient } from '@/lib/supabase/client';
 
 type SignUpMetadata = {
@@ -14,8 +14,8 @@ type AuthContextValue = {
   user: User | null;
   session: Session | null;
   loading: boolean;
-  signUp: (email: string, password: string, metadata?: SignUpMetadata) => Promise<unknown>;
-  signIn: (email: string, password: string) => Promise<unknown>;
+  signUp: (email: string, password: string, metadata?: SignUpMetadata) => Promise<AuthResponse['data']>;
+  signIn: (email: string, password: string) => Promise<AuthResponse['data']>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<unknown>;
   getCurrentUser: () => Promise<User | null>;
@@ -39,9 +39,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const supabase = useMemo(() => createClient(), []);
 
   const getSiteUrl = () => {
-    // Prefer the configured canonical production origin. Using window.origin
-    // first can generate redirect URLs such as www.summeca.com on mobile even
-    // when only summeca.com is allow-listed in Supabase Auth.
     if (process.env.NEXT_PUBLIC_SITE_URL) return process.env.NEXT_PUBLIC_SITE_URL.replace(/\/$/, '');
     if (typeof window !== 'undefined') return window.location.origin;
     return 'https://summeca.com';
@@ -63,9 +60,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setLoading(false);
     });
 
-    // A recovery token-hash establishes its own isolated server-side verification
-    // path. Never refresh a stale browser session while /reset-password is holding
-    // that token, and never copy URL fragments containing access/refresh tokens.
     if (hasRecoveryMarkerInUrl()) {
       setLoading(false);
     } else {
@@ -118,9 +112,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const resetPassword = async (email: string) => {
-    // Recovery must not rely on localStorage or the browser that requested it.
-    // The hosted Supabase recovery template must carry TokenHash directly to
-    // /reset-password; verification and the password update happen server-side.
     const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${getSiteUrl()}/reset-password`,
     });
