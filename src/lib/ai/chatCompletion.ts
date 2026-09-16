@@ -2,13 +2,33 @@ import { callAIEndpoint } from './aiClient';
 
 const ENDPOINT = '/api/ai/chat-completion';
 
+export type ChatMessage = Record<string, unknown>;
+
+export interface ChatChunk {
+  choices?: Array<{
+    delta?: {
+      content?: string;
+    };
+  }>;
+  [key: string]: unknown;
+}
+
+export interface ChatCompletionResult {
+  choices?: Array<{
+    message?: {
+      content?: string;
+    };
+  }>;
+  [key: string]: unknown;
+}
+
 export async function getChatCompletion(
   provider: string,
   model: string,
-  messages: object[],
-  parameters: object = {}
+  messages: ChatMessage[],
+  parameters: Record<string, unknown> = {}
 ) {
-  return callAIEndpoint(ENDPOINT, {
+  return callAIEndpoint<ChatCompletionResult>(ENDPOINT, {
     provider,
     model,
     messages,
@@ -20,11 +40,11 @@ export async function getChatCompletion(
 export async function getStreamingChatCompletion(
   provider: string,
   model: string,
-  messages: object[],
-  onChunk: (chunk: any) => void,
+  messages: ChatMessage[],
+  onChunk: (chunk: ChatChunk) => void,
   onComplete: () => void,
   onError: (error: Error) => void,
-  parameters: object = {}
+  parameters: Record<string, unknown> = {}
 ) {
   try {
     const response = await fetch(ENDPOINT, {
@@ -34,8 +54,12 @@ export async function getStreamingChatCompletion(
     });
 
     if (!response.ok) {
-      const data = await response.json();
-      throw new Error(data.error || `HTTP error: ${response.status}`);
+      const data: unknown = await response.json();
+      const message =
+        data && typeof data === 'object' && 'error' in data && typeof data.error === 'string'
+          ? data.error
+          : `HTTP error: ${response.status}`;
+      throw new Error(message);
     }
 
     const reader = response.body?.getReader();
@@ -55,16 +79,20 @@ export async function getStreamingChatCompletion(
       for (const line of lines) {
         if (line.startsWith('data: ')) {
           try {
-            const data = JSON.parse(line.slice(6));
-            if (data.type === 'chunk' && data.chunk) {
-              onChunk(data.chunk);
-            } else if (data.type === 'done') onComplete();
-            else if (data.type === 'error') {
+            const data: unknown = JSON.parse(line.slice(6));
+            if (!data || typeof data !== 'object') continue;
+            const event = data as Record<string, unknown>;
+            if (event.type === 'chunk' && event.chunk && typeof event.chunk === 'object') {
+              onChunk(event.chunk as ChatChunk);
+            } else if (event.type === 'done') {
+              onComplete();
+            } else if (event.type === 'error') {
+              const message = typeof event.error === 'string' ? event.error : 'Streaming error';
               console.error('API Route Error:', {
-                error: data.error,
-                details: data.details,
+                error: event.error,
+                details: event.details,
               });
-              onError(new Error(data.error));
+              onError(new Error(message));
             }
           } catch {
             // Skip invalid JSON
