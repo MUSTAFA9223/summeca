@@ -66,6 +66,7 @@ type ProductStory = {
   finalHeadline: string;
   primaryCta: string;
   previewLabel: string;
+  buyerReceives: string[];
   steps: Array<{ title: string; text: string }>;
   audiences: Array<{ title: string; text: string; icon: LucideIcon }>;
   features: Array<{ title: string; text: string; icon: LucideIcon }>;
@@ -80,6 +81,11 @@ const STORIES: Record<SalesSlug, ProductStory> = {
     finalHeadline: 'Start building better invoices with SUMMECA InvoiceFlow.',
     primaryCta: 'Choose an InvoiceFlow plan',
     previewLabel: 'InvoiceFlow sample workspace',
+    buyerReceives: [
+      'Private InvoiceFlow workspace inside your SUMMECA account',
+      'Client records, invoice builder, status tracking, share/PDF and CSV workflow',
+      'Plan limits and access period shown clearly before checkout',
+    ],
     steps: [
       {
         title: 'Add your client',
@@ -129,7 +135,7 @@ const STORIES: Record<SalesSlug, ProductStory> = {
       },
       {
         title: 'Status tracking',
-        text: 'Move invoices through draft, sent, paid or cancelled states.',
+        text: 'Track draft, sent, paid or cancelled invoices and automatically surface sent invoices that are overdue.',
         icon: FileCheck2,
       },
       {
@@ -157,6 +163,11 @@ const STORIES: Record<SalesSlug, ProductStory> = {
     finalHeadline: 'Organize your leads and move every follow-up forward.',
     primaryCta: 'Choose a LeadFollow AI plan',
     previewLabel: 'LeadFollow AI sample workspace',
+    buyerReceives: [
+      'Private LeadFollow AI workspace inside your SUMMECA account',
+      'Lead pipeline, due follow-ups, AI-assisted drafts and saved message history',
+      'Plan lead limits and monthly AI allowance shown before checkout',
+    ],
     steps: [
       {
         title: 'Add a lead',
@@ -168,7 +179,7 @@ const STORIES: Record<SalesSlug, ProductStory> = {
       },
       {
         title: 'Prepare the next follow-up',
-        text: 'Generate a grounded draft, review it, edit it and send it through your own channel.',
+        text: 'Generate a grounded draft, review it, edit it and send it through the supported delivery workflow.',
       },
     ],
     audiences: [
@@ -201,7 +212,7 @@ const STORIES: Record<SalesSlug, ProductStory> = {
       },
       {
         title: 'Follow-up scheduling',
-        text: 'Save the next follow-up time and see which opportunities are due.',
+        text: 'Save the next follow-up time, use quick reschedule presets and see which opportunities need attention now.',
         icon: Clock3,
       },
       {
@@ -459,6 +470,17 @@ export default function SaasProductSalesExperience({
               <p className="mt-6 max-w-2xl text-base leading-7 text-muted-foreground sm:text-lg">
                 {story.supportingCopy}
               </p>
+              <div className="mt-6 rounded-2xl border border-primary/20 bg-card/90 p-4 shadow-sm">
+                <p className="text-xs font-black uppercase tracking-[0.14em] text-primary">What you get with your plan</p>
+                <ul className="mt-3 space-y-2">
+                  {story.buyerReceives.map((item) => (
+                    <li key={item} className="flex items-start gap-2 text-sm leading-5 text-secondary-foreground">
+                      <CheckCircle2 size={15} className="mt-0.5 shrink-0 text-primary" />
+                      <span>{item}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
               <div className="mt-6 flex flex-wrap items-end gap-5">
                 <div>
                   <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
@@ -480,6 +502,9 @@ export default function SaasProductSalesExperience({
                 </div>
                 <WishlistButton productId={product.id} productName={product.name} size="sm" />
               </div>
+              <p className="mt-2 max-w-xl text-xs leading-5 text-muted-foreground">
+                Checkout re-confirms the exact product, selected plan, price, currency and access period before payment. A lifetime or one-time label does not imply an extra SUMMECA recurring charge.
+              </p>
               <div className="mt-7 flex flex-col gap-3 sm:flex-row">
                 <Link
                   href={primaryHref}
@@ -496,7 +521,7 @@ export default function SaasProductSalesExperience({
               </div>
               <p className="mt-5 flex items-start gap-2 text-sm leading-6 text-muted-foreground">
                 <ShieldCheck size={17} className="mt-0.5 shrink-0 text-primary" />
-                After verified payment, access is unlocked in your SUMMECA account.
+                After verified payment, access is unlocked in your SUMMECA account. This is a working SaaS workspace, not a downloadable ZIP.
               </p>
             </div>
             <div
