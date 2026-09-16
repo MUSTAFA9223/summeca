@@ -70,10 +70,10 @@ export default function SignupForm({ onSwitchToLogin }: SignupFormProps) {
       });
       trackEvent('signup_completed', {
         method: 'email',
-        confirmation_required: !result?.session,
+        confirmation_required: !result.session,
         referral_present: Boolean(referralCode),
       });
-      if (result?.session) {
+      if (result.session) {
         toast.success('Account created! Welcome to SUMMECA.');
         router.push('/user-dashboard');
         router.refresh();
@@ -81,9 +81,9 @@ export default function SignupForm({ onSwitchToLogin }: SignupFormProps) {
         setRegisteredEmail(data.email);
         setEmailSent(true);
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       setError('root', {
-        message: error?.message || 'Failed to create account. Please try again.',
+        message: error instanceof Error ? error.message : 'Failed to create account. Please try again.',
       });
     } finally {
       setIsLoading(false);
