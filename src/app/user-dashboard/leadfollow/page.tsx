@@ -34,6 +34,7 @@ type Metric = [label: string, value: number, icon: LucideIcon];
 
 const emptyProfile: Profile = { business_name: '', offer: '', target_audience: '', value_proposition: '', default_tone: 'professional' };
 const statusOptions: LeadStatus[] = ['new', 'contacted', 'replied', 'won', 'lost'];
+const activeFollowUpStatuses = new Set<LeadStatus>(['new', 'contacted', 'replied']);
 
 function draftLanguageAttributes(language: string) {
   const isArabic = language.trim().toLowerCase() === 'arabic';
@@ -57,6 +58,18 @@ function localInputDate(value: string | null) {
   if (!Number.isFinite(date.getTime())) return '';
   const local = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
   return local.toISOString().slice(0, 16);
+}
+
+function followUpPreset(days: number) {
+  const date = new Date();
+  date.setDate(date.getDate() + days);
+  return localInputDate(date.toISOString());
+}
+
+function isFollowUpDue(lead: Lead) {
+  if (!activeFollowUpStatuses.has(lead.status) || !lead.next_follow_up_at) return false;
+  const due = new Date(lead.next_follow_up_at).getTime();
+  return Number.isFinite(due) && due <= Date.now();
 }
 
 function displayDateTime(value: string | null) {
@@ -193,6 +206,14 @@ export default function LeadFollowPage() {
     }
   }
 
+  function openEmailFollowUp(lead: Lead) {
+    setSelectedLeadId(lead.id);
+    setDraftForm((current) => ({ ...current, stage: lead.status === 'new' ? 'first_contact' : 'follow_up', channel: 'email' }));
+    requestAnimationFrame(() => {
+      document.getElementById('follow-up-studio')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  }
+
   async function generateDraft(event: FormEvent) {
     event.preventDefault();
     if (!selectedLeadId) {
@@ -326,9 +347,9 @@ export default function LeadFollowPage() {
 
         <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
           {metrics.map(([label, value, Icon]) => (
-            <div key={label} className="rounded-2xl border border-border bg-card p-5">
-              <div className="flex items-center justify-between"><span className="text-sm text-muted-foreground">{label}</span><Icon size={18} className="text-primary"/></div>
-              <div className="mt-2 text-2xl font-black">{value}</div>
+            <div key={label} className={`rounded-2xl border bg-card p-5 ${label === 'Due now' && value > 0 ? 'border-amber-500/30' : 'border-border'}`}>
+              <div className="flex items-center justify-between"><span className="text-sm text-muted-foreground">{label}</span><Icon size={18} className={label === 'Due now' && value > 0 ? 'text-amber-600' : 'text-primary'}/></div>
+              <div className={`mt-2 text-2xl font-black ${label === 'Due now' && value > 0 ? 'text-amber-700 dark:text-amber-400' : ''}`}>{value}</div>
             </div>
           ))}
         </section>
@@ -345,8 +366,9 @@ export default function LeadFollowPage() {
               <input className="form-input" placeholder="Source" value={leadForm.source} onChange={(e) => setLeadForm({ ...leadForm, source: e.target.value })}/>
               <input className="form-input" type="email" placeholder="Email" value={leadForm.email} onChange={(e) => setLeadForm({ ...leadForm, email: e.target.value })}/>
               <input className="form-input" placeholder="Phone" value={leadForm.phone} onChange={(e) => setLeadForm({ ...leadForm, phone: e.target.value })}/>
-              <input className="form-input" type="datetime-local" lang="en" dir="ltr" value={leadForm.nextFollowUpAt} onChange={(e) => setLeadForm({ ...leadForm, nextFollowUpAt: e.target.value })}/>
+              <input aria-label="Next follow-up time" className="form-input" type="datetime-local" lang="en" dir="ltr" value={leadForm.nextFollowUpAt} onChange={(e) => setLeadForm({ ...leadForm, nextFollowUpAt: e.target.value })}/>
               <textarea className="form-input sm:col-span-2 lg:col-span-3" placeholder="Factual notes: need, objection, last conversation, requested information..." value={leadForm.notes} onChange={(e) => setLeadForm({ ...leadForm, notes: e.target.value })}/>
+              <div className="flex flex-wrap gap-2 sm:col-span-2 lg:col-span-3"><span className="mr-1 self-center text-xs font-semibold text-muted-foreground">Quick follow-up:</span>{[{label:'Tomorrow',days:1},{label:'+3 days',days:3},{label:'+7 days',days:7}].map((preset)=><button key={preset.days} type="button" onClick={()=>setLeadForm({...leadForm,nextFollowUpAt:followUpPreset(preset.days)})} className="rounded-lg border border-border bg-background px-3 py-1.5 text-xs font-semibold hover:border-primary/40 hover:text-primary">{preset.label}</button>)}</div>
               <button disabled={saving} className="btn-primary sm:col-span-2 lg:col-span-3 py-2.5">Save lead</button>
             </form>
           </section>
@@ -368,7 +390,7 @@ export default function LeadFollowPage() {
             <button disabled={saving} className="btn-primary mt-4 px-5 py-2.5">Save sales context</button>
           </form>
 
-          <form onSubmit={generateDraft} className="rounded-2xl border border-primary/25 bg-gradient-to-br from-primary/[0.05] to-card p-6">
+          <form id="follow-up-studio" onSubmit={generateDraft} className="scroll-mt-24 rounded-2xl border border-primary/25 bg-gradient-to-br from-primary/[0.05] to-card p-6">
             <div className="flex items-center gap-2"><Bot size={19} className="text-primary"/><h2 className="font-bold">AI follow-up studio</h2></div>
             <p className="mt-1 text-xs text-muted-foreground">Generate and review the draft first. Email-channel drafts can then be sent directly from SUMMECA; other channels remain copy-and-send.</p>
             <div className="mt-5 grid gap-3 sm:grid-cols-2">
@@ -435,7 +457,7 @@ export default function LeadFollowPage() {
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h2 className="font-bold">Lead pipeline</h2>
-              <p className="mt-1 text-xs text-muted-foreground">{data.counts.leads} / {data.access.limits.maxLeads ?? '—'} plan limit · showing up to {data.pagination.pageSize} per page</p>
+              <p className="mt-1 text-xs text-muted-foreground">{data.counts.leads} / {data.access.limits.maxLeads ?? '—'} plan limit · {data.counts.due} active follow-up{data.counts.due === 1 ? '' : 's'} due now · showing up to {data.pagination.pageSize} per page</p>
             </div>
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <button type="button" aria-label="Previous lead page" disabled={!data.pagination.hasPrevious || loading} onClick={() => setLeadPage((page) => Math.max(1, page - 1))} className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-background disabled:opacity-40"><ChevronLeft size={16}/></button>
@@ -448,15 +470,15 @@ export default function LeadFollowPage() {
             <table className="w-full min-w-[920px] text-left text-sm">
               <thead className="border-b border-border text-xs uppercase text-muted-foreground"><tr><th className="py-3 pr-4">Lead</th><th className="py-3 pr-4">Source</th><th className="py-3 pr-4">Status</th><th className="py-3 pr-4">Next follow-up</th><th className="py-3">Actions</th></tr></thead>
               <tbody>
-                {data.leads.map((lead) => (
-                  <tr key={lead.id} className={`border-b border-border/60 ${selectedLeadId === lead.id ? 'bg-primary/[0.03]' : ''}`}>
+                {data.leads.map((lead) => { const due = isFollowUpDue(lead); return (
+                  <tr key={lead.id} className={`border-b border-border/60 ${selectedLeadId === lead.id ? 'bg-primary/[0.03]' : due ? 'bg-amber-500/[0.035]' : ''}`}>
                     <td className="py-3 pr-4"><button onClick={() => setSelectedLeadId(lead.id)} className="text-left"><div className="font-semibold">{lead.name}</div><div className="text-xs text-muted-foreground">{lead.company || lead.email || 'No company'}</div></button></td>
                     <td className="py-3 pr-4 text-muted-foreground">{lead.source || '—'}</td>
                     <td className="py-3 pr-4"><select className="rounded-lg border border-border bg-background px-2 py-1.5 text-xs font-semibold capitalize" value={lead.status} onChange={(e) => updateLead(lead.id, { status: e.target.value }, 'Lead status updated.')} disabled={saving}>{statusOptions.map((status) => <option key={status} value={status}>{status}</option>)}</select></td>
-                    <td className="py-3 pr-4"><time dir="ltr" className="inline-block whitespace-nowrap tabular-nums" dateTime={lead.next_follow_up_at ?? undefined}>{displayDateTime(lead.next_follow_up_at)}</time></td>
-                    <td className="py-3"><div className="flex gap-2"><button onClick={() => { setSelectedLeadId(lead.id); setDraftForm({ ...draftForm, stage: 'follow_up', channel: 'email' }); }} className="rounded-lg border border-border px-2.5 py-1.5 text-xs font-semibold">Email follow-up</button>{lead.status !== 'won' && <button onClick={() => updateLead(lead.id, { status: 'won' }, 'Lead marked won.')} className="rounded-lg bg-success/10 px-2.5 py-1.5 text-xs font-bold text-success">Won</button>}</div></td>
+                    <td className="py-3 pr-4"><div className="flex flex-wrap items-center gap-2"><time dir="ltr" className={`inline-block whitespace-nowrap tabular-nums ${due ? 'font-bold text-amber-700 dark:text-amber-400' : ''}`} dateTime={lead.next_follow_up_at ?? undefined}>{displayDateTime(lead.next_follow_up_at)}</time>{due && <span className="rounded-full bg-amber-500/10 px-2 py-1 text-[10px] font-black uppercase tracking-wide text-amber-700 dark:text-amber-400">Due now</span>}</div></td>
+                    <td className="py-3"><div className="flex gap-2"><button onClick={() => openEmailFollowUp(lead)} className={`rounded-lg border px-2.5 py-1.5 text-xs font-semibold ${due ? 'border-primary/35 bg-primary/[0.05] text-primary' : 'border-border'}`}>Email follow-up</button>{lead.status !== 'won' && <button onClick={() => updateLead(lead.id, { status: 'won' }, 'Lead marked won.')} className="rounded-lg bg-success/10 px-2.5 py-1.5 text-xs font-bold text-success">Won</button>}</div></td>
                   </tr>
-                ))}
+                )})}
               </tbody>
             </table>
             {!data.leads.length && <div className="py-12 text-center text-sm text-muted-foreground">No leads on this page.</div>}
@@ -465,11 +487,12 @@ export default function LeadFollowPage() {
 
         {selectedLead && (
           <section className="grid gap-6 xl:grid-cols-[0.75fr_1.25fr]">
-            <div className="rounded-2xl border border-border bg-card p-6">
-              <h2 className="font-bold">Next action · {selectedLead.name}</h2>
+            <div className={`rounded-2xl border bg-card p-6 ${isFollowUpDue(selectedLead) ? 'border-amber-500/30' : 'border-border'}`}>
+              <div className="flex flex-wrap items-center justify-between gap-2"><h2 className="font-bold">Next action · {selectedLead.name}</h2>{isFollowUpDue(selectedLead) && <span className="rounded-full bg-amber-500/10 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-amber-700 dark:text-amber-400">Follow-up due now</span>}</div>
               <p className="mt-2 whitespace-pre-line text-sm leading-6 text-muted-foreground">{selectedLead.notes || 'No notes yet.'}</p>
-              <div className="mt-4 flex gap-2"><input type="datetime-local" lang="en" dir="ltr" className="form-input flex-1" value={followUpValue} onChange={(e) => setFollowUpValue(e.target.value)}/><button onClick={() => updateLead(selectedLead.id, { nextFollowUpAt: followUpValue || null }, 'Follow-up schedule saved.')} className="rounded-xl border border-border px-4 text-xs font-bold">Save</button></div>
-              <button onClick={() => updateLead(selectedLead.id, { status: 'contacted' }, 'Lead marked contacted.')} className="mt-3 inline-flex items-center gap-2 text-xs font-bold text-primary"><MessageSquareText size={14}/> Mark contacted now</button>
+              <div className="mt-4 flex gap-2"><input aria-label="Selected lead follow-up time" type="datetime-local" lang="en" dir="ltr" className="form-input flex-1" value={followUpValue} onChange={(e) => setFollowUpValue(e.target.value)}/><button onClick={() => updateLead(selectedLead.id, { nextFollowUpAt: followUpValue || null }, 'Follow-up schedule saved.')} className="rounded-xl border border-border px-4 text-xs font-bold">Save</button></div>
+              <div className="mt-3 flex flex-wrap gap-2"><span className="mr-1 self-center text-xs font-semibold text-muted-foreground">Reschedule:</span>{[{label:'Tomorrow',days:1},{label:'+3 days',days:3},{label:'+7 days',days:7}].map((preset)=><button key={preset.days} type="button" onClick={()=>setFollowUpValue(followUpPreset(preset.days))} className="rounded-lg border border-border bg-background px-3 py-1.5 text-xs font-semibold hover:border-primary/40 hover:text-primary">{preset.label}</button>)}</div>
+              <div className="mt-4 flex flex-wrap gap-3"><button onClick={() => updateLead(selectedLead.id, { status: 'contacted' }, 'Lead marked contacted.')} className="inline-flex items-center gap-2 text-xs font-bold text-primary"><MessageSquareText size={14}/> Mark contacted now</button><button type="button" onClick={() => openEmailFollowUp(selectedLead)} className="inline-flex items-center gap-2 text-xs font-bold text-primary"><Mail size={14}/> Open email follow-up</button></div>
             </div>
             <div className="rounded-2xl border border-border bg-card p-6">
               <h2 className="font-bold">Recent drafts for this lead</h2>
