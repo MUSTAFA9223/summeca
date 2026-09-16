@@ -20,6 +20,7 @@ import { translateSupportText } from '@/lib/i18n-support';
 import { translateSurfaceText } from '@/lib/i18n-surfaces';
 import { translateAdminDashboardText } from '@/lib/i18n-admin-dashboard';
 import { translateDashboardDetailsText } from '@/lib/i18n-dashboard-details';
+import { translateLeadFollowEmailText } from '@/lib/i18n-leadfollow-email';
 import { translateSiteText } from '@/lib/i18n-products';
 
 type LanguageContextValue = {
@@ -62,7 +63,8 @@ function translateValue(value: string) {
   const surface = translateSurfaceText(support);
   const dashboard = translateAdminDashboardText(surface);
   const dashboardDetails = translateDashboardDetailsText(dashboard);
-  return translateSiteText(dashboardDetails);
+  const leadFollowEmail = translateLeadFollowEmailText(dashboardDetails);
+  return translateSiteText(leadFollowEmail);
 }
 
 function translateTextNode(node: Text) {
