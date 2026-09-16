@@ -97,6 +97,9 @@ export async function broadcastNewVisit(input: {
   country?: string;
   city?: string;
   device?: string;
+  visitorStatus?: 'New visitor' | 'Returning visitor';
+  trafficType?: 'Likely human' | 'Likely bot';
+  maskedIp?: string;
 }) {
   const time = new Intl.DateTimeFormat('en-GB', {
     timeZone: 'Asia/Aden',
@@ -108,13 +111,24 @@ export async function broadcastNewVisit(input: {
   const country = input.country || 'Unknown';
   const city = input.city || 'Unknown';
   const device = input.device || 'Unknown';
+  const visitorStatus = input.visitorStatus || 'New visitor';
+  const trafficType = input.trafficType || 'Likely human';
+  const maskedIp = input.maskedIp || 'Unknown';
+  const title =
+    visitorStatus === 'Returning visitor'
+      ? '🔁 Returning visitor on SUMMECA'
+      : '👤 New visitor on SUMMECA';
+  const trafficIcon = trafficType === 'Likely bot' ? '🤖' : '✅';
 
   await broadcastTelegramMessage(
     [
-      '👤 New visitor on SUMMECA',
+      title,
       '',
+      `🧭 Visit: ${visitorStatus}`,
+      `${trafficIcon} Traffic: ${trafficType}`,
       `🌍 Country: ${country}`,
       `🏙️ City: ${city}`,
+      `🌐 IP: ${maskedIp}`,
       `🔗 Source: ${input.source}`,
       `📱 Device: ${device}`,
       `📄 Page: ${input.path}`,
