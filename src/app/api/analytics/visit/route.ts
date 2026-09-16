@@ -5,14 +5,18 @@ import { broadcastNewVisit } from '@/lib/telegram/server';
 
 const BOT_UA =
   /bot|crawler|spider|slurp|facebookexternalhit|whatsapp|telegrambot|preview|curl|wget|uptimerobot|lighthouse|pagespeed|headless|playwright|puppeteer|selenium|phantomjs|python-requests|go-http-client|node-fetch/i;
-const DUPLICATE_ALERT_WINDOW_MS = 2 * 60 * 1000;
+const VISITOR_ALERT_WINDOW_MS = 10 * 60 * 1000;
+const DATACENTER_ORG =
+  /amazon|aws|microsoft|azure|google llc|google cloud|digitalocean|linode|akamai|oracle cloud|oracle corporation|ovh|hetzner|vultr|choopa|leaseweb|contabo|m247|datacamp|scaleway|alibaba|tencent|vercel|railway|render|fly\.io|github/i;
 
 type VisitorStatus = 'New visitor' | 'Returning visitor';
-type TrafficType = 'Likely human' | 'Likely bot';
+type TrafficType = 'Real visitor' | 'Test visit' | 'Datacenter / cloud' | 'Suspected bot';
 
 type CloudflareSignals = {
   country?: unknown;
   city?: unknown;
+  asn?: unknown;
+  asOrganization?: unknown;
   botManagement?: {
     score?: unknown;
     verifiedBot?: unknown;
@@ -112,6 +116,8 @@ function detectDevice(userAgent: string) {
 function requestSignals(req: NextRequest) {
   let countryCode = cleanText(req.headers.get('cf-ipcountry'), 16);
   let city = cleanText(req.headers.get('cf-ipcity'), 120);
+  let asOrganization = '';
+  let asn: number | null = null;
   let botScore: number | null = null;
   let verifiedBot = false;
 
@@ -120,6 +126,15 @@ function requestSignals(req: NextRequest) {
     const signals = cf as unknown as CloudflareSignals | undefined;
     countryCode ||= cleanText(signals?.country, 16);
     city ||= cleanText(signals?.city, 120);
+    asOrganization = cleanText(signals?.asOrganization, 160);
+
+    const asnValue = signals?.asn;
+    if (typeof asnValue === 'number' && Number.isFinite(asnValue)) {
+      asn = asnValue;
+    } else {
+      const parsedAsn = Number.parseInt(cleanText(asnValue, 20), 10);
+      if (Number.isFinite(parsedAsn)) asn = parsedAsn;
+    }
 
     const score = signals?.botManagement?.score;
     if (typeof score === 'number' && Number.isFinite(score)) botScore = score;
@@ -131,6 +146,8 @@ function requestSignals(req: NextRequest) {
   return {
     country: countryName(countryCode),
     city: city || 'Unknown',
+    asn,
+    asOrganization,
     botScore,
     verifiedBot,
   };
@@ -182,9 +199,27 @@ async function visitorKey(ip: string, userAgent: string) {
     .join('');
 }
 
-function trafficType(botScore: number | null, verifiedBot: boolean): TrafficType {
-  if (verifiedBot || (botScore !== null && botScore < 30)) return 'Likely bot';
-  return 'Likely human';
+function networkLabel(asOrganization: string, asn: number | null) {
+  if (!asOrganization && !asn) return 'Unknown';
+  if (asOrganization && asn) return `${asOrganization} · AS${asn}`;
+  if (asOrganization) return asOrganization;
+  return `AS${asn}`;
+}
+
+function trafficType(input: {
+  botScore: number | null;
+  verifiedBot: boolean;
+  isAdmin: boolean;
+  asOrganization: string;
+}): TrafficType {
+  if (input.isAdmin) return 'Test visit';
+  if (input.verifiedBot || (input.botScore !== null && input.botScore < 30)) {
+    return 'Suspected bot';
+  }
+  if (input.asOrganization && DATACENTER_ORG.test(input.asOrganization)) {
+    return 'Datacenter / cloud';
+  }
+  return 'Real visitor';
 }
 
 export async function POST(req: NextRequest) {
@@ -216,21 +251,32 @@ export async function POST(req: NextRequest) {
     }
 
     const service = createServiceClient();
+    let isAdmin = false;
+    if (userId) {
+      const { data: profile } = await service
+        .from('user_profiles')
+        .select('is_admin')
+        .eq('id', userId)
+        .maybeSingle();
+      isAdmin = profile?.is_admin === true;
+    }
+
     const source = detectSource(referrer, utmSource);
-    const { country, city, botScore, verifiedBot } = requestSignals(req);
+    const { country, city, asn, asOrganization, botScore, verifiedBot } = requestSignals(req);
     const device = detectDevice(userAgent);
     const rawIp = clientIp(req);
     const maskedIp = maskIp(rawIp);
     const stableVisitorKey = await visitorKey(rawIp, userAgent);
-    const traffic = trafficType(botScore, verifiedBot);
+    const network = networkLabel(asOrganization, asn);
+    const traffic = trafficType({ botScore, verifiedBot, isAdmin, asOrganization });
     const now = new Date().toISOString();
-    const duplicateSince = new Date(Date.now() - DUPLICATE_ALERT_WINDOW_MS).toISOString();
+    const duplicateSince = new Date(Date.now() - VISITOR_ALERT_WINDOW_MS).toISOString();
 
     let status: VisitorStatus = 'New visitor';
     let duplicateAlert = false;
 
     if (stableVisitorKey) {
-      const [previousVisit, recentSamePage] = await Promise.all([
+      const [previousVisit, recentVisitorActivity] = await Promise.all([
         service
           .from('analytics_events')
           .select('id')
@@ -242,7 +288,6 @@ export async function POST(req: NextRequest) {
           .from('analytics_events')
           .select('id')
           .eq('event_type', 'page_view')
-          .eq('path', path)
           .contains('metadata', { visitorKey: stableVisitorKey })
           .gte('created_at', duplicateSince)
           .limit(1)
@@ -250,7 +295,7 @@ export async function POST(req: NextRequest) {
       ]);
 
       if (!previousVisit.error && previousVisit.data) status = 'Returning visitor';
-      if (!recentSamePage.error && recentSamePage.data) duplicateAlert = true;
+      if (!recentVisitorActivity.error && recentVisitorActivity.data) duplicateAlert = true;
     } else if (userId) {
       const { data: previousUserVisit } = await service
         .from('analytics_visits')
@@ -310,6 +355,8 @@ export async function POST(req: NextRequest) {
         visitorKey: stableVisitorKey || undefined,
         maskedIp,
         traffic,
+        asn: asn || undefined,
+        network: asOrganization || undefined,
       },
       created_at: now,
     });
@@ -326,13 +373,14 @@ export async function POST(req: NextRequest) {
           visitorStatus: status,
           trafficType: traffic,
           maskedIp,
+          network,
         });
       } catch (error) {
         console.warn('[analytics] Telegram visit alert failed:', error);
       }
     }
 
-    return NextResponse.json({ ok: true, isNew, duplicateAlert });
+    return NextResponse.json({ ok: true, isNew, duplicateAlert, trafficType: traffic });
   } catch (error) {
     console.error('[analytics-visit]', error);
     return NextResponse.json({ error: 'Unable to record visit' }, { status: 500 });

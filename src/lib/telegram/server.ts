@@ -15,6 +15,8 @@ type TelegramBotProfile = {
   username?: string;
 };
 
+type VisitTrafficType = 'Real visitor' | 'Test visit' | 'Datacenter / cloud' | 'Suspected bot';
+
 function getTelegramToken() {
   const token = process.env.TELEGRAM_BOT_TOKEN?.trim();
   if (!token) throw new Error('TELEGRAM_BOT_TOKEN is not configured.');
@@ -90,6 +92,13 @@ export async function broadcastTelegramMessage(text: string) {
   await Promise.allSettled((chats ?? []).map((chat) => sendTelegramMessage(chat.chat_id, text)));
 }
 
+function trafficIcon(trafficType: VisitTrafficType) {
+  if (trafficType === 'Test visit') return '🧪';
+  if (trafficType === 'Datacenter / cloud') return '☁️';
+  if (trafficType === 'Suspected bot') return '🤖';
+  return '✅';
+}
+
 export async function broadcastNewVisit(input: {
   source: string;
   path: string;
@@ -98,8 +107,9 @@ export async function broadcastNewVisit(input: {
   city?: string;
   device?: string;
   visitorStatus?: 'New visitor' | 'Returning visitor';
-  trafficType?: 'Likely human' | 'Likely bot';
+  trafficType?: VisitTrafficType;
   maskedIp?: string;
+  network?: string;
 }) {
   const time = new Intl.DateTimeFormat('en-GB', {
     timeZone: 'Asia/Aden',
@@ -112,27 +122,34 @@ export async function broadcastNewVisit(input: {
   const city = input.city || 'Unknown';
   const device = input.device || 'Unknown';
   const visitorStatus = input.visitorStatus || 'New visitor';
-  const trafficType = input.trafficType || 'Likely human';
+  const trafficType = input.trafficType || 'Real visitor';
   const maskedIp = input.maskedIp || 'Unknown';
+  const network = input.network || 'Unknown';
   const title =
-    visitorStatus === 'Returning visitor'
-      ? '🔁 Returning visitor on SUMMECA'
-      : '👤 New visitor on SUMMECA';
-  const trafficIcon = trafficType === 'Likely bot' ? '🤖' : '✅';
+    trafficType === 'Test visit'
+      ? '🧪 Test visit on SUMMECA'
+      : visitorStatus === 'Returning visitor'
+        ? '🔁 Returning visitor on SUMMECA'
+        : '👤 New visitor on SUMMECA';
 
-  await broadcastTelegramMessage(
-    [
-      title,
-      '',
-      `🧭 Visit: ${visitorStatus}`,
-      `${trafficIcon} Traffic: ${trafficType}`,
-      `🌍 Country: ${country}`,
-      `🏙️ City: ${city}`,
-      `🌐 IP: ${maskedIp}`,
-      `🔗 Source: ${input.source}`,
-      `📱 Device: ${device}`,
-      `📄 Page: ${input.path}`,
-      `🕒 Time: ${time} (Yemen)`,
-    ].join('\n')
+  const lines = [
+    title,
+    '',
+    `🧭 Visit: ${visitorStatus}`,
+    `${trafficIcon(trafficType)} Traffic: ${trafficType}`,
+    `🌍 Country: ${country}`,
+    `🏙️ City: ${city}`,
+    `🌐 IP: ${maskedIp}`,
+  ];
+
+  if (network !== 'Unknown') lines.push(`🏢 Network: ${network}`);
+
+  lines.push(
+    `🔗 Source: ${input.source}`,
+    `📱 Device: ${device}`,
+    `📄 Page: ${input.path}`,
+    `🕒 Time: ${time} (Yemen)`
   );
+
+  await broadcastTelegramMessage(lines.join('\n'));
 }
