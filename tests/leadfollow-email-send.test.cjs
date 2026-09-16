@@ -23,14 +23,29 @@ test('LeadFollow never trusts a browser supplied recipient and only sends owned 
   assert.match(sendRoute, /from\('leadfollow_leads'\)/);
   assert.match(sendRoute, /const recipient = \(lead\.email/);
   assert.doesNotMatch(sendRoute, /body\.to/);
-  assert.match(sendRoute, /replyTo = \(user\.email/);
+
+  // Sender identity comes only from a server-loaded mailbox connection or the
+  // signed-in SUMMECA account used by the legacy fallback; neither is supplied
+  // by the browser request body.
+  assert.match(sendRoute, /from\('leadfollow_email_connections'\)/);
+  assert.match(sendRoute, /const senderEmail = \(connection\?\.email/);
+  assert.match(sendRoute, /fallbackReplyTo = \(user\.email/);
+  assert.doesNotMatch(sendRoute, /body\.senderEmail|body\.replyTo|body\.from/);
 });
 
-test('LeadFollow marks contact only after the provider confirms the email send', () => {
-  const invokeIndex = sendRoute.indexOf("functions.invoke('send-leadfollow-email'");
-  const sentIndex = sendRoute.indexOf('const sent =');
+test('LeadFollow marks contact only after the selected provider confirms the email send', () => {
+  const connectedSendIndex = sendRoute.indexOf('sendMailboxMessage({');
+  const fallbackInvokeIndex = sendRoute.indexOf("functions.invoke('send-leadfollow-email'");
   const leadPatchIndex = sendRoute.indexOf('const leadPatch');
-  assert.ok(invokeIndex >= 0 && sentIndex > invokeIndex && leadPatchIndex > sentIndex);
+
+  assert.ok(connectedSendIndex >= 0, 'connected Gmail/Microsoft send path must exist');
+  assert.ok(fallbackInvokeIndex >= 0, 'legacy SUMMECA fallback send path must exist');
+  assert.ok(
+    leadPatchIndex > connectedSendIndex && leadPatchIndex > fallbackInvokeIndex,
+    'lead contact state must only be updated after either provider path completes',
+  );
+
+  assert.match(sendRoute, /connected mailbox could not send this email[\s\S]*No lead status was changed/);
   assert.match(sendRoute, /if \(!sent\)[\s\S]*No lead status was changed/);
   assert.match(sendRoute, /if \(lead\.status === 'new'\) leadPatch\.status = 'contacted'/);
   assert.match(sendRoute, /last_contacted_at: sentAt/);
