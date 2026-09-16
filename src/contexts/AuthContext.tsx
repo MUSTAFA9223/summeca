@@ -1,9 +1,30 @@
 'use client';
 
 import { createContext, useContext, useEffect, useState, useMemo } from 'react';
+import type { Session, User } from '@supabase/supabase-js';
 import { createClient } from '@/lib/supabase/client';
 
-const AuthContext = createContext<any>({});
+type SignUpMetadata = {
+  fullName?: string;
+  avatarUrl?: string;
+  referralCode?: string;
+};
+
+type AuthContextValue = {
+  user: User | null;
+  session: Session | null;
+  loading: boolean;
+  signUp: (email: string, password: string, metadata?: SignUpMetadata) => Promise<unknown>;
+  signIn: (email: string, password: string) => Promise<unknown>;
+  signOut: () => Promise<void>;
+  resetPassword: (email: string) => Promise<unknown>;
+  getCurrentUser: () => Promise<User | null>;
+  isEmailVerified: () => boolean;
+  getUserProfile: () => Promise<Record<string, unknown> | null>;
+  updateProfile: (updates: { full_name?: string; avatar_url?: string }) => Promise<unknown>;
+};
+
+const AuthContext = createContext<AuthContextValue | null>(null);
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
@@ -12,8 +33,8 @@ export const useAuth = () => {
 };
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
-  const [user, setUser] = useState<any>(null);
-  const [session, setSession] = useState<any>(null);
+  const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const supabase = useMemo(() => createClient(), []);
 
@@ -62,15 +83,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     };
   }, [supabase]);
 
-  const signUp = async (email: string, password: string, metadata: any = {}) => {
+  const signUp = async (email: string, password: string, metadata: SignUpMetadata = {}) => {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
         data: {
-          full_name: metadata?.fullName || '',
-          avatar_url: metadata?.avatarUrl || '',
-          referral_code: metadata?.referralCode || '',
+          full_name: metadata.fullName || '',
+          avatar_url: metadata.avatarUrl || '',
+          referral_code: metadata.referralCode || '',
         },
         emailRedirectTo: `${getSiteUrl()}/auth/callback`,
       },
@@ -122,7 +143,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     if (!user) return null;
     const { data, error } = await supabase.from('user_profiles').select('*').eq('id', user.id).single();
     if (error) return null;
-    return data;
+    return data as Record<string, unknown>;
   };
 
   const updateProfile = async (updates: { full_name?: string; avatar_url?: string }) => {
@@ -132,6 +153,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return data;
   };
 
-  const value = { user, session, loading, signUp, signIn, signOut, resetPassword, getCurrentUser, isEmailVerified, getUserProfile, updateProfile };
+  const value: AuthContextValue = { user, session, loading, signUp, signIn, signOut, resetPassword, getCurrentUser, isEmailVerified, getUserProfile, updateProfile };
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
