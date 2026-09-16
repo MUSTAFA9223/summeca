@@ -2,6 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient, createServiceClient } from '@/lib/supabase/server';
 import { checkRateLimit, getRequestIdentity } from '@/lib/security/rateLimit';
 import { getSaasAccess } from '@/lib/saas/access';
+import {
+  decryptMailboxToken,
+  encryptMailboxToken,
+  refreshMailboxAccessToken,
+  sendMailboxMessage,
+  type LeadFollowMailboxProvider,
+} from '@/lib/email/leadfollowMailbox';
 
 const PRODUCT_SLUG = 'summeca-leadfollow-ai' as const;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -15,6 +22,10 @@ function json(body: unknown, status = 200) {
     status,
     headers: { 'Cache-Control': 'private, no-store' },
   });
+}
+
+function mailboxProvider(value: unknown): LeadFollowMailboxProvider | null {
+  return value === 'google' || value === 'microsoft' ? value : null;
 }
 
 export async function POST(request: NextRequest) {
@@ -71,47 +82,46 @@ export async function POST(request: NextRequest) {
     return json({ error: 'Confirm that you have permission or a lawful basis to email this lead.' }, 400);
   }
 
-  const replyTo = (user.email ?? '').trim().toLowerCase();
-  if (!EMAIL_PATTERN.test(replyTo)) {
-    return json({ error: 'Your SUMMECA account needs a valid reply-to email before sending.' }, 400);
-  }
-
   const service = createServiceClient();
-  const { data: message, error: messageError } = await service
-    .from('leadfollow_messages')
-    .select('id, lead_id, channel, output_text')
-    .eq('id', messageId)
-    .eq('user_id', user.id)
-    .maybeSingle();
-
-  if (messageError || !message) return json({ error: 'Email draft not found.' }, 404);
-  if (message.channel !== 'email') return json({ error: 'Only drafts generated for the Email channel can be sent by email.' }, 400);
-
-  const [{ data: lead, error: leadError }, { data: profile, error: profileError }] = await Promise.all([
+  const [{ data: message, error: messageError }, { data: connection, error: connectionError }] = await Promise.all([
     service
-      .from('leadfollow_leads')
-      .select('id, name, email, status')
-      .eq('id', message.lead_id)
+      .from('leadfollow_messages')
+      .select('id, lead_id, channel, output_text')
+      .eq('id', messageId)
       .eq('user_id', user.id)
       .maybeSingle(),
     service
-      .from('leadfollow_profiles')
-      .select('business_name')
+      .from('leadfollow_email_connections')
+      .select('id, provider, email, encrypted_refresh_token, status')
       .eq('user_id', user.id)
       .maybeSingle(),
   ]);
 
+  if (messageError || !message) return json({ error: 'Email draft not found.' }, 404);
+  if (message.channel !== 'email') return json({ error: 'Only drafts generated for the Email channel can be sent by email.' }, 400);
+  if (connectionError) return json({ error: 'Unable to load your connected mailbox.' }, 500);
+
+  const provider = mailboxProvider(connection?.provider);
+  const senderEmail = (connection?.email ?? '').trim().toLowerCase();
+  if (!connection || connection.status !== 'active' || !provider || !EMAIL_PATTERN.test(senderEmail)) {
+    return json({
+      error: 'Connect Gmail or Outlook before sending email.',
+      code: 'mailbox_not_connected',
+    }, 409);
+  }
+
+  const { data: lead, error: leadError } = await service
+    .from('leadfollow_leads')
+    .select('id, name, email, status')
+    .eq('id', message.lead_id)
+    .eq('user_id', user.id)
+    .maybeSingle();
+
   if (leadError || !lead) return json({ error: 'Lead not found.' }, 404);
-  if (profileError) return json({ error: 'Unable to load your sales context.' }, 500);
 
   const recipient = (lead.email ?? '').trim().toLowerCase();
   if (!EMAIL_PATTERN.test(recipient)) {
     return json({ error: 'This lead does not have a valid email address.' }, 400);
-  }
-
-  const businessName = (profile?.business_name ?? '').trim();
-  if (!businessName) {
-    return json({ error: 'Save your business name in Sales Context before sending email.' }, 400);
   }
 
   const { data: existing, error: existingError } = await service
@@ -146,6 +156,8 @@ export async function POST(request: NextRequest) {
       .from('leadfollow_email_deliveries')
       .update({
         recipient_email: recipient,
+        sender_provider: provider,
+        sender_email: senderEmail,
         subject,
         body_text: messageBody,
         status: 'sending',
@@ -170,6 +182,8 @@ export async function POST(request: NextRequest) {
         lead_id: lead.id,
         message_id: message.id,
         recipient_email: recipient,
+        sender_provider: provider,
+        sender_email: senderEmail,
         subject,
         body_text: messageBody,
         status: 'sending',
@@ -184,37 +198,61 @@ export async function POST(request: NextRequest) {
     delivery = data;
   }
 
-  const { data: deliveryResult, error: deliveryError } = await service.functions.invoke('send-leadfollow-email', {
-    body: {
-      deliveryId: delivery.id,
-      to: recipient,
+  let providerMessageId = '';
+  try {
+    const refreshToken = decryptMailboxToken(connection.encrypted_refresh_token);
+    const refreshed = await refreshMailboxAccessToken(provider, refreshToken);
+    const sent = await sendMailboxMessage({
+      provider,
+      accessToken: refreshed.access_token!,
+      senderEmail,
+      recipientEmail: recipient,
       subject,
       body: messageBody,
-      businessName,
-      replyTo,
-      attempt: delivery.attempt_count,
-    },
-  });
+    });
+    providerMessageId = sent.providerMessageId;
 
-  const providerMessageId = typeof deliveryResult?.providerMessageId === 'string'
-    ? deliveryResult.providerMessageId
-    : '';
-  const sent = !deliveryError && deliveryResult?.success === true;
-
-  if (!sent) {
-    const providerError = deliveryError?.message ||
-      (typeof deliveryResult?.error === 'string' ? deliveryResult.error : 'Email provider did not confirm delivery.');
+    const connectionPatch: Record<string, unknown> = {
+      status: 'active',
+      last_error: '',
+      last_used_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    if (refreshed.refresh_token?.trim()) {
+      connectionPatch.encrypted_refresh_token = encryptMailboxToken(refreshed.refresh_token.trim());
+    }
     await service
-      .from('leadfollow_email_deliveries')
-      .update({
-        status: 'failed',
-        error_message: providerError.slice(0, 500),
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', delivery.id)
+      .from('leadfollow_email_connections')
+      .update(connectionPatch)
+      .eq('id', connection.id)
       .eq('user_id', user.id);
-    console.error('[leadfollow/send-email] provider send failed:', providerError);
-    return json({ error: 'Email could not be sent. No lead status was changed.' }, 502);
+  } catch (providerError) {
+    const errorMessage = providerError instanceof Error ? providerError.message : 'Mailbox provider did not confirm delivery.';
+    await Promise.all([
+      service
+        .from('leadfollow_email_deliveries')
+        .update({
+          status: 'failed',
+          error_message: errorMessage.slice(0, 500),
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', delivery.id)
+        .eq('user_id', user.id),
+      service
+        .from('leadfollow_email_connections')
+        .update({
+          status: 'error',
+          last_error: errorMessage.slice(0, 500),
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', connection.id)
+        .eq('user_id', user.id),
+    ]);
+    console.error('[leadfollow/send-email] connected mailbox send failed:', errorMessage);
+    return json({
+      error: 'Your connected mailbox could not send this email. Reconnect it and try again. No lead status was changed.',
+      code: 'mailbox_send_failed',
+    }, 502);
   }
 
   const sentAt = new Date().toISOString();
@@ -232,7 +270,7 @@ export async function POST(request: NextRequest) {
 
   if (auditError) {
     console.error('[leadfollow/send-email] provider succeeded but audit update failed:', auditError.message);
-    return json({ error: 'Email was accepted by the provider, but delivery history could not be finalized.' }, 500);
+    return json({ error: 'Email was accepted by your mailbox provider, but delivery history could not be finalized.' }, 500);
   }
 
   const leadPatch: Record<string, unknown> = {
@@ -255,5 +293,7 @@ export async function POST(request: NextRequest) {
     messageId: message.id,
     sentAt,
     recipient,
+    senderEmail,
+    provider,
   });
 }
