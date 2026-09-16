@@ -18,6 +18,7 @@ const footerLinks = {
     { label: 'Help Center', href: '/support' },
     { label: 'FAQ', href: '/faq' },
     { label: 'Refund Policy', href: '/refunds' },
+    { label: 'Delivery Policy', href: '/shipping' },
   ],
   Legal: [
     { label: 'Privacy Policy', href: '/privacy' },
