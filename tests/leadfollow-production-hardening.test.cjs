@@ -20,6 +20,13 @@ test('LeadFollow paginates large lead collections and keeps global counts server
   assert.match(page, /data\.pagination\.hasNext/);
 });
 
+test('LeadFollow keeps dates readable inside translated and RTL dashboards', () => {
+  assert.match(page, /Intl\.DateTimeFormat\('en-GB'/);
+  assert.doesNotMatch(page, /\.toLocaleString\(\)/);
+  assert.match(page, /type="datetime-local" lang="en" dir="ltr"/);
+  assert.match(page, /<time dir="ltr"[^>]*tabular-nums/);
+});
+
 test('LeadFollow releases reserved AI quota when no usable draft is delivered', () => {
   assert.match(releaseMigration, /create or replace function public\.release_leadfollow_ai_request/);
   assert.match(releaseMigration, /greatest\(requests_count - 1, 0\)/);

@@ -41,6 +41,20 @@ function localInputDate(value: string | null) {
   return local.toISOString().slice(0, 16);
 }
 
+function displayDateTime(value: string | null) {
+  if (!value) return '—';
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) return '—';
+  return new Intl.DateTimeFormat('en-GB', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true,
+  }).format(date);
+}
+
 export default function LeadFollowPage() {
   const [data, setData] = useState<Data | null>(null);
   const [loading, setLoading] = useState(true);
@@ -243,7 +257,7 @@ export default function LeadFollowPage() {
               <input className="form-input" placeholder="Source" value={leadForm.source} onChange={(e) => setLeadForm({ ...leadForm, source: e.target.value })}/>
               <input className="form-input" placeholder="Email" value={leadForm.email} onChange={(e) => setLeadForm({ ...leadForm, email: e.target.value })}/>
               <input className="form-input" placeholder="Phone" value={leadForm.phone} onChange={(e) => setLeadForm({ ...leadForm, phone: e.target.value })}/>
-              <input className="form-input" type="datetime-local" value={leadForm.nextFollowUpAt} onChange={(e) => setLeadForm({ ...leadForm, nextFollowUpAt: e.target.value })}/>
+              <input className="form-input" type="datetime-local" lang="en" dir="ltr" value={leadForm.nextFollowUpAt} onChange={(e) => setLeadForm({ ...leadForm, nextFollowUpAt: e.target.value })}/>
               <textarea className="form-input sm:col-span-2 lg:col-span-3" placeholder="Factual notes: need, objection, last conversation, requested information..." value={leadForm.notes} onChange={(e) => setLeadForm({ ...leadForm, notes: e.target.value })}/>
               <button disabled={saving} className="btn-primary sm:col-span-2 lg:col-span-3 py-2.5">Save lead</button>
             </form>
@@ -312,7 +326,7 @@ export default function LeadFollowPage() {
                     <td className="py-3 pr-4"><button onClick={() => setSelectedLeadId(lead.id)} className="text-left"><div className="font-semibold">{lead.name}</div><div className="text-xs text-muted-foreground">{lead.company || lead.email || 'No company'}</div></button></td>
                     <td className="py-3 pr-4 text-muted-foreground">{lead.source || '—'}</td>
                     <td className="py-3 pr-4"><select className="rounded-lg border border-border bg-background px-2 py-1.5 text-xs font-semibold capitalize" value={lead.status} onChange={(e) => updateLead(lead.id, { status: e.target.value }, 'Lead status updated.')} disabled={saving}>{statusOptions.map((status) => <option key={status} value={status}>{status}</option>)}</select></td>
-                    <td className="py-3 pr-4">{lead.next_follow_up_at ? new Date(lead.next_follow_up_at).toLocaleString() : '—'}</td>
+                    <td className="py-3 pr-4"><time dir="ltr" className="inline-block whitespace-nowrap tabular-nums" dateTime={lead.next_follow_up_at ?? undefined}>{displayDateTime(lead.next_follow_up_at)}</time></td>
                     <td className="py-3"><div className="flex gap-2"><button onClick={() => { setSelectedLeadId(lead.id); setDraftForm({ ...draftForm, stage: 'follow_up' }); }} className="rounded-lg border border-border px-2.5 py-1.5 text-xs font-semibold">Draft follow-up</button>{lead.status !== 'won' && <button onClick={() => updateLead(lead.id, { status: 'won' }, 'Lead marked won.')} className="rounded-lg bg-success/10 px-2.5 py-1.5 text-xs font-bold text-success">Won</button>}</div></td>
                   </tr>
                 ))}
@@ -327,7 +341,7 @@ export default function LeadFollowPage() {
             <div className="rounded-2xl border border-border bg-card p-6">
               <h2 className="font-bold">Next action · {selectedLead.name}</h2>
               <p className="mt-2 whitespace-pre-line text-sm leading-6 text-muted-foreground">{selectedLead.notes || 'No notes yet.'}</p>
-              <div className="mt-4 flex gap-2"><input type="datetime-local" className="form-input flex-1" value={followUpValue} onChange={(e) => setFollowUpValue(e.target.value)}/><button onClick={() => updateLead(selectedLead.id, { nextFollowUpAt: followUpValue || null }, 'Follow-up schedule saved.')} className="rounded-xl border border-border px-4 text-xs font-bold">Save</button></div>
+              <div className="mt-4 flex gap-2"><input type="datetime-local" lang="en" dir="ltr" className="form-input flex-1" value={followUpValue} onChange={(e) => setFollowUpValue(e.target.value)}/><button onClick={() => updateLead(selectedLead.id, { nextFollowUpAt: followUpValue || null }, 'Follow-up schedule saved.')} className="rounded-xl border border-border px-4 text-xs font-bold">Save</button></div>
               <button onClick={() => updateLead(selectedLead.id, { status: 'contacted' }, 'Lead marked contacted.')} className="mt-3 inline-flex items-center gap-2 text-xs font-bold text-primary"><MessageSquareText size={14}/> Mark contacted now</button>
             </div>
             <div className="rounded-2xl border border-border bg-card p-6">
@@ -337,7 +351,7 @@ export default function LeadFollowPage() {
                   <div key={message.id} className="rounded-xl border border-border p-4">
                     <div className="flex items-center justify-between gap-3"><span className="text-xs font-bold uppercase text-primary">{message.channel} · {message.stage}</span><button onClick={() => copyDraft(message.output_text)} className="text-xs font-semibold text-primary">Copy</button></div>
                     <p className="mt-2 line-clamp-4 whitespace-pre-line text-sm leading-6 text-muted-foreground">{message.output_text}</p>
-                    <p className="mt-2 text-[11px] text-muted-foreground">{new Date(message.created_at).toLocaleString()}</p>
+                    <time dir="ltr" className="mt-2 block text-[11px] tabular-nums text-muted-foreground" dateTime={message.created_at}>{displayDateTime(message.created_at)}</time>
                   </div>
                 ))}
                 {!data.messages.some((message) => message.lead_id === selectedLead.id) && <p className="py-8 text-center text-sm text-muted-foreground">No AI drafts for this lead yet.</p>}
