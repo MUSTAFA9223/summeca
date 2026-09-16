@@ -103,10 +103,14 @@ export async function POST(request: NextRequest) {
 
   const provider = mailboxProvider(connection?.provider);
   const senderEmail = (connection?.email ?? '').trim().toLowerCase();
-  if (!connection || connection.status !== 'active' || !provider || !EMAIL_PATTERN.test(senderEmail)) {
+  const connectedMailbox = Boolean(
+    connection && connection.status === 'active' && provider && EMAIL_PATTERN.test(senderEmail),
+  );
+
+  if (connection && !connectedMailbox) {
     return json({
-      error: 'Connect Gmail or Outlook before sending email.',
-      code: 'mailbox_not_connected',
+      error: 'Your connected mailbox needs to be reconnected before sending.',
+      code: 'mailbox_reconnect_required',
     }, 409);
   }
 
@@ -123,6 +127,28 @@ export async function POST(request: NextRequest) {
   if (!EMAIL_PATTERN.test(recipient)) {
     return json({ error: 'This lead does not have a valid email address.' }, 400);
   }
+
+  let fallbackBusinessName = '';
+  let fallbackReplyTo = '';
+  if (!connectedMailbox) {
+    fallbackReplyTo = (user.email ?? '').trim().toLowerCase();
+    if (!EMAIL_PATTERN.test(fallbackReplyTo)) {
+      return json({ error: 'Your SUMMECA account needs a valid reply-to email before sending.' }, 400);
+    }
+    const { data: profile, error: profileError } = await service
+      .from('leadfollow_profiles')
+      .select('business_name')
+      .eq('user_id', user.id)
+      .maybeSingle();
+    if (profileError) return json({ error: 'Unable to load your sales context.' }, 500);
+    fallbackBusinessName = (profile?.business_name ?? '').trim();
+    if (!fallbackBusinessName) {
+      return json({ error: 'Save your business name in Sales Context before sending email.' }, 400);
+    }
+  }
+
+  const senderProvider = connectedMailbox ? provider! : 'summeca';
+  const auditSenderEmail = connectedMailbox ? senderEmail : fallbackReplyTo;
 
   const { data: existing, error: existingError } = await service
     .from('leadfollow_email_deliveries')
@@ -156,8 +182,8 @@ export async function POST(request: NextRequest) {
       .from('leadfollow_email_deliveries')
       .update({
         recipient_email: recipient,
-        sender_provider: provider,
-        sender_email: senderEmail,
+        sender_provider: senderProvider,
+        sender_email: auditSenderEmail,
         subject,
         body_text: messageBody,
         status: 'sending',
@@ -182,8 +208,8 @@ export async function POST(request: NextRequest) {
         lead_id: lead.id,
         message_id: message.id,
         recipient_email: recipient,
-        sender_provider: provider,
-        sender_email: senderEmail,
+        sender_provider: senderProvider,
+        sender_email: auditSenderEmail,
         subject,
         body_text: messageBody,
         status: 'sending',
@@ -199,37 +225,82 @@ export async function POST(request: NextRequest) {
   }
 
   let providerMessageId = '';
-  try {
-    const refreshToken = decryptMailboxToken(connection.encrypted_refresh_token);
-    const refreshed = await refreshMailboxAccessToken(provider, refreshToken);
-    const sent = await sendMailboxMessage({
-      provider,
-      accessToken: refreshed.access_token!,
-      senderEmail,
-      recipientEmail: recipient,
-      subject,
-      body: messageBody,
-    });
-    providerMessageId = sent.providerMessageId;
+  if (connectedMailbox) {
+    try {
+      const refreshToken = decryptMailboxToken(connection!.encrypted_refresh_token);
+      const refreshed = await refreshMailboxAccessToken(provider!, refreshToken);
+      const sent = await sendMailboxMessage({
+        provider: provider!,
+        accessToken: refreshed.access_token!,
+        senderEmail,
+        recipientEmail: recipient,
+        subject,
+        body: messageBody,
+      });
+      providerMessageId = sent.providerMessageId;
 
-    const connectionPatch: Record<string, unknown> = {
-      status: 'active',
-      last_error: '',
-      last_used_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    };
-    if (refreshed.refresh_token?.trim()) {
-      connectionPatch.encrypted_refresh_token = encryptMailboxToken(refreshed.refresh_token.trim());
+      const connectionPatch: Record<string, unknown> = {
+        status: 'active',
+        last_error: '',
+        last_used_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+      if (refreshed.refresh_token?.trim()) {
+        connectionPatch.encrypted_refresh_token = encryptMailboxToken(refreshed.refresh_token.trim());
+      }
+      await service
+        .from('leadfollow_email_connections')
+        .update(connectionPatch)
+        .eq('id', connection!.id)
+        .eq('user_id', user.id);
+    } catch (providerError) {
+      const errorMessage = providerError instanceof Error ? providerError.message : 'Mailbox provider did not confirm delivery.';
+      await Promise.all([
+        service
+          .from('leadfollow_email_deliveries')
+          .update({
+            status: 'failed',
+            error_message: errorMessage.slice(0, 500),
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', delivery.id)
+          .eq('user_id', user.id),
+        service
+          .from('leadfollow_email_connections')
+          .update({
+            status: 'error',
+            last_error: errorMessage.slice(0, 500),
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', connection!.id)
+          .eq('user_id', user.id),
+      ]);
+      console.error('[leadfollow/send-email] connected mailbox send failed:', errorMessage);
+      return json({
+        error: 'Your connected mailbox could not send this email. Reconnect it and try again. No lead status was changed.',
+        code: 'mailbox_send_failed',
+      }, 502);
     }
-    await service
-      .from('leadfollow_email_connections')
-      .update(connectionPatch)
-      .eq('id', connection.id)
-      .eq('user_id', user.id);
-  } catch (providerError) {
-    const errorMessage = providerError instanceof Error ? providerError.message : 'Mailbox provider did not confirm delivery.';
-    await Promise.all([
-      service
+  } else {
+    const { data: deliveryResult, error: deliveryError } = await service.functions.invoke('send-leadfollow-email', {
+      body: {
+        deliveryId: delivery.id,
+        to: recipient,
+        subject,
+        body: messageBody,
+        businessName: fallbackBusinessName,
+        replyTo: fallbackReplyTo,
+        attempt: delivery.attempt_count,
+      },
+    });
+    providerMessageId = typeof deliveryResult?.providerMessageId === 'string'
+      ? deliveryResult.providerMessageId
+      : '';
+    const sent = !deliveryError && deliveryResult?.success === true;
+    if (!sent) {
+      const errorMessage = deliveryError?.message ||
+        (typeof deliveryResult?.error === 'string' ? deliveryResult.error : 'SUMMECA email provider did not confirm delivery.');
+      await service
         .from('leadfollow_email_deliveries')
         .update({
           status: 'failed',
@@ -237,22 +308,10 @@ export async function POST(request: NextRequest) {
           updated_at: new Date().toISOString(),
         })
         .eq('id', delivery.id)
-        .eq('user_id', user.id),
-      service
-        .from('leadfollow_email_connections')
-        .update({
-          status: 'error',
-          last_error: errorMessage.slice(0, 500),
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', connection.id)
-        .eq('user_id', user.id),
-    ]);
-    console.error('[leadfollow/send-email] connected mailbox send failed:', errorMessage);
-    return json({
-      error: 'Your connected mailbox could not send this email. Reconnect it and try again. No lead status was changed.',
-      code: 'mailbox_send_failed',
-    }, 502);
+        .eq('user_id', user.id);
+      console.error('[leadfollow/send-email] SUMMECA fallback send failed:', errorMessage);
+      return json({ error: 'Email could not be sent. No lead status was changed.' }, 502);
+    }
   }
 
   const sentAt = new Date().toISOString();
@@ -270,7 +329,7 @@ export async function POST(request: NextRequest) {
 
   if (auditError) {
     console.error('[leadfollow/send-email] provider succeeded but audit update failed:', auditError.message);
-    return json({ error: 'Email was accepted by your mailbox provider, but delivery history could not be finalized.' }, 500);
+    return json({ error: 'Email was accepted by the provider, but delivery history could not be finalized.' }, 500);
   }
 
   const leadPatch: Record<string, unknown> = {
@@ -293,7 +352,7 @@ export async function POST(request: NextRequest) {
     messageId: message.id,
     sentAt,
     recipient,
-    senderEmail,
-    provider,
+    senderEmail: connectedMailbox ? senderEmail : fallbackReplyTo,
+    provider: senderProvider,
   });
 }
