@@ -7,6 +7,7 @@ import LanguageSwitcher from '@/components/LanguageSwitcher';
 export default function GlobalLanguageSwitcher() {
   const pathname = usePathname();
   const [hasHostedSwitcher, setHasHostedSwitcher] = useState<boolean | null>(null);
+  const isInvoiceRoute = pathname?.startsWith('/invoice/');
 
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
@@ -22,10 +23,17 @@ export default function GlobalLanguageSwitcher() {
 
   return (
     <div
-      className="fixed left-1/2 z-[120] -translate-x-1/2 px-2 transition-[top] duration-300 print:hidden"
-      style={{
-        top: 'calc(var(--launch-offer-height, 0px) + max(1rem, env(safe-area-inset-top)))',
-      }}
+      className={isInvoiceRoute
+        ? 'fixed z-[120] print:hidden'
+        : 'fixed left-1/2 z-[120] -translate-x-1/2 px-2 transition-[top] duration-300'}
+      style={isInvoiceRoute
+        ? {
+            right: 'max(1rem, env(safe-area-inset-right))',
+            bottom: 'max(1rem, env(safe-area-inset-bottom))',
+          }
+        : {
+            top: 'calc(var(--launch-offer-height, 0px) + max(1rem, env(safe-area-inset-top)))',
+          }}
       data-i18n-skip
     >
       <LanguageSwitcher className="max-w-[calc(100vw-1rem)]" />
