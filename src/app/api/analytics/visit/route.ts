@@ -3,7 +3,21 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient, createServiceClient } from '@/lib/supabase/server';
 import { broadcastNewVisit } from '@/lib/telegram/server';
 
-const BOT_UA = /bot|crawler|spider|slurp|facebookexternalhit|whatsapp|telegrambot|preview|curl|wget|uptimerobot|lighthouse|pagespeed|headless/i;
+const BOT_UA =
+  /bot|crawler|spider|slurp|facebookexternalhit|whatsapp|telegrambot|preview|curl|wget|uptimerobot|lighthouse|pagespeed|headless|playwright|puppeteer|selenium|phantomjs|python-requests|go-http-client|node-fetch/i;
+const DUPLICATE_ALERT_WINDOW_MS = 2 * 60 * 1000;
+
+type VisitorStatus = 'New visitor' | 'Returning visitor';
+type TrafficType = 'Likely human' | 'Likely bot';
+
+type CloudflareSignals = {
+  country?: unknown;
+  city?: unknown;
+  botManagement?: {
+    score?: unknown;
+    verifiedBot?: unknown;
+  };
+};
 
 function cleanText(value: unknown, maxLength: number) {
   return typeof value === 'string' ? value.trim().slice(0, maxLength) : '';
@@ -58,7 +72,12 @@ function detectDevice(userAgent: string) {
     const version = userAgent.match(/Android\s+([\d.]+)/i)?.[1];
     const modelSegment = userAgent.match(/Android\s+[^;]+;\s*([^;)]+)/i)?.[1] || '';
     const model = modelSegment.replace(/\s+Build\/.*/i, '').trim();
-    device = model && !/^wv$/i.test(model) ? model.slice(0, 60) : /Mobile/i.test(userAgent) ? 'Android phone' : 'Android tablet';
+    device =
+      model && !/^wv$/i.test(model)
+        ? model.slice(0, 60)
+        : /Mobile/i.test(userAgent)
+          ? 'Android phone'
+          : 'Android tablet';
     os = version ? `Android ${version}` : 'Android';
   } else if (/Windows NT/i.test(userAgent)) {
     device = 'Windows PC';
@@ -90,14 +109,21 @@ function detectDevice(userAgent: string) {
   return `${device} · ${os} · ${browser}`;
 }
 
-function detectLocation(req: NextRequest) {
+function requestSignals(req: NextRequest) {
   let countryCode = cleanText(req.headers.get('cf-ipcountry'), 16);
   let city = cleanText(req.headers.get('cf-ipcity'), 120);
+  let botScore: number | null = null;
+  let verifiedBot = false;
 
   try {
     const { cf } = getCloudflareContext();
-    countryCode ||= cleanText(cf?.country, 16);
-    city ||= cleanText(cf?.city, 120);
+    const signals = cf as unknown as CloudflareSignals | undefined;
+    countryCode ||= cleanText(signals?.country, 16);
+    city ||= cleanText(signals?.city, 120);
+
+    const score = signals?.botManagement?.score;
+    if (typeof score === 'number' && Number.isFinite(score)) botScore = score;
+    verifiedBot = signals?.botManagement?.verifiedBot === true;
   } catch {
     // Local development may not have a Cloudflare request context.
   }
@@ -105,7 +131,60 @@ function detectLocation(req: NextRequest) {
   return {
     country: countryName(countryCode),
     city: city || 'Unknown',
+    botScore,
+    verifiedBot,
   };
+}
+
+function clientIp(req: NextRequest) {
+  const cloudflareIp = cleanText(req.headers.get('cf-connecting-ip'), 100);
+  if (cloudflareIp) return cloudflareIp;
+
+  const forwarded = cleanText(req.headers.get('x-forwarded-for'), 500);
+  return forwarded.split(',')[0]?.trim().slice(0, 100) || '';
+}
+
+function maskIp(ip: string) {
+  if (!ip) return 'Unknown';
+
+  const ipv4 = ip.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
+  if (ipv4) return `${ipv4[1]}.${ipv4[2]}.xxx.xxx`;
+
+  if (ip.includes(':')) {
+    const parts = ip.split(':').filter(Boolean);
+    return parts.length >= 2 ? `${parts[0]}:${parts[1]}:…` : 'IPv6 (masked)';
+  }
+
+  return 'Masked';
+}
+
+async function visitorKey(ip: string, userAgent: string) {
+  const secret =
+    process.env.ANALYTICS_VISITOR_SALT?.trim() || process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
+  if (!ip || !secret) return '';
+
+  const encoder = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    'raw',
+    encoder.encode(secret),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign']
+  );
+  const digest = await crypto.subtle.sign(
+    'HMAC',
+    key,
+    encoder.encode(`summeca-visitor-v1:${ip}:${userAgent}`)
+  );
+
+  return Array.from(new Uint8Array(digest))
+    .map((byte) => byte.toString(16).padStart(2, '0'))
+    .join('');
+}
+
+function trafficType(botScore: number | null, verifiedBot: boolean): TrafficType {
+  if (verifiedBot || (botScore !== null && botScore < 30)) return 'Likely bot';
+  return 'Likely human';
 }
 
 export async function POST(req: NextRequest) {
@@ -138,9 +217,51 @@ export async function POST(req: NextRequest) {
 
     const service = createServiceClient();
     const source = detectSource(referrer, utmSource);
-    const { country, city } = detectLocation(req);
+    const { country, city, botScore, verifiedBot } = requestSignals(req);
     const device = detectDevice(userAgent);
+    const rawIp = clientIp(req);
+    const maskedIp = maskIp(rawIp);
+    const stableVisitorKey = await visitorKey(rawIp, userAgent);
+    const traffic = trafficType(botScore, verifiedBot);
     const now = new Date().toISOString();
+    const duplicateSince = new Date(Date.now() - DUPLICATE_ALERT_WINDOW_MS).toISOString();
+
+    let status: VisitorStatus = 'New visitor';
+    let duplicateAlert = false;
+
+    if (stableVisitorKey) {
+      const [previousVisit, recentSamePage] = await Promise.all([
+        service
+          .from('analytics_events')
+          .select('id')
+          .eq('event_type', 'page_view')
+          .contains('metadata', { visitorKey: stableVisitorKey })
+          .limit(1)
+          .maybeSingle(),
+        service
+          .from('analytics_events')
+          .select('id')
+          .eq('event_type', 'page_view')
+          .eq('path', path)
+          .contains('metadata', { visitorKey: stableVisitorKey })
+          .gte('created_at', duplicateSince)
+          .limit(1)
+          .maybeSingle(),
+      ]);
+
+      if (!previousVisit.error && previousVisit.data) status = 'Returning visitor';
+      if (!recentSamePage.error && recentSamePage.data) duplicateAlert = true;
+    } else if (userId) {
+      const { data: previousUserVisit } = await service
+        .from('analytics_visits')
+        .select('id')
+        .eq('user_id', userId)
+        .neq('session_key', sessionKey)
+        .limit(1)
+        .maybeSingle();
+      if (previousUserVisit) status = 'Returning visitor';
+    }
+
     const { data: existing } = await service
       .from('analytics_visits')
       .select('id')
@@ -181,19 +302,37 @@ export async function POST(req: NextRequest) {
       user_id: userId,
       event_type: 'page_view',
       path,
-      metadata: { source, country, city, device },
+      metadata: {
+        source,
+        country,
+        city,
+        device,
+        visitorKey: stableVisitorKey || undefined,
+        maskedIp,
+        traffic,
+      },
       created_at: now,
     });
 
-    if (isNew) {
+    if (isNew && !duplicateAlert) {
       try {
-        await broadcastNewVisit({ source, path, startedAt: now, country, city, device });
+        await broadcastNewVisit({
+          source,
+          path,
+          startedAt: now,
+          country,
+          city,
+          device,
+          visitorStatus: status,
+          trafficType: traffic,
+          maskedIp,
+        });
       } catch (error) {
         console.warn('[analytics] Telegram visit alert failed:', error);
       }
     }
 
-    return NextResponse.json({ ok: true, isNew });
+    return NextResponse.json({ ok: true, isNew, duplicateAlert });
   } catch (error) {
     console.error('[analytics-visit]', error);
     return NextResponse.json({ error: 'Unable to record visit' }, { status: 500 });
