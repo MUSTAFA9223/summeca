@@ -22,7 +22,7 @@ export default function GlobalLanguageSwitcher() {
 
   return (
     <div
-      className="fixed left-1/2 z-[120] -translate-x-1/2 px-2 transition-[top] duration-300"
+      className="fixed left-1/2 z-[120] -translate-x-1/2 px-2 transition-[top] duration-300 print:hidden"
       style={{
         top: 'calc(var(--launch-offer-height, 0px) + max(1rem, env(safe-area-inset-top)))',
       }}
