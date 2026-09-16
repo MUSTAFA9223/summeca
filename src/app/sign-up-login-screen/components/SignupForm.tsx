@@ -96,14 +96,16 @@ export default function SignupForm({ onSwitchToLogin }: SignupFormProps) {
         <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-5">
           <Mail size={28} className="text-primary" />
         </div>
-        <h2 className="text-xl font-700 text-foreground mb-2">Check your inbox</h2>
-        <p className="text-sm text-muted-foreground leading-relaxed max-w-xs mx-auto mb-6">
-          We sent a confirmation link to{' '}
-          <span className="font-600 text-foreground">{registeredEmail}</span>.
-          Click the link to activate your account.
-        </p>
+        <h2 className="text-xl font-700 text-foreground mb-2">Continue with your email</h2>
+        <div className="text-sm text-muted-foreground leading-relaxed max-w-xs mx-auto mb-6">
+          <p className="mb-2">
+            If confirmation is required, check the inbox for{' '}
+            <span className="font-600 text-foreground">{registeredEmail}</span>.
+          </p>
+          <p>Already have an account? No new confirmation email is sent. Go to sign in instead.</p>
+        </div>
         <button onClick={onSwitchToLogin} className="text-sm text-primary font-600 hover:text-primary/80 transition-colors">
-          Back to sign in
+          Go to sign in
         </button>
       </div>
     );

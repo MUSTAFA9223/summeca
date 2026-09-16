@@ -25,6 +25,12 @@ test('email signup records funnel milestones without sending identity fields to 
   assert.doesNotMatch(analyticsSource, /data\.password/);
 });
 
+test('signup confirmation state does not falsely promise an email for an existing account', () => {
+  assert.match(signup, /If confirmation is required, check the inbox for/);
+  assert.match(signup, /Already have an account\? No new confirmation email is sent/);
+  assert.doesNotMatch(signup, /We sent a confirmation link to/);
+});
+
 test('dashboard includes a dismissible three-step quick start instead of a dead empty state', () => {
   assert.match(dashboardPage, /DashboardQuickStart/);
   assert.match(quickStart, /Get to your first useful workflow in three clear steps/);
