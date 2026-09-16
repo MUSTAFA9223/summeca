@@ -1,9 +1,27 @@
 'use client';
 
 import React, { useState, useCallback, useMemo, memo } from 'react';
-import Image from 'next/image';
+import Image, { type ImageProps } from 'next/image';
 
-interface AppImageProps {
+interface AppImageProps extends Omit<
+    ImageProps,
+    | 'src'
+    | 'alt'
+    | 'width'
+    | 'height'
+    | 'className'
+    | 'priority'
+    | 'quality'
+    | 'placeholder'
+    | 'blurDataURL'
+    | 'fill'
+    | 'sizes'
+    | 'onClick'
+    | 'loading'
+    | 'unoptimized'
+    | 'onError'
+    | 'onLoad'
+> {
     src: string;
     alt: string;
     width?: number;
@@ -15,11 +33,10 @@ interface AppImageProps {
     blurDataURL?: string;
     fill?: boolean;
     sizes?: string;
-    onClick?: () => void;
+    onClick?: React.MouseEventHandler<HTMLImageElement>;
     fallbackSrc?: string;
     loading?: 'lazy' | 'eager';
     unoptimized?: boolean;
-    [key: string]: any;
 }
 
 const AppImage = memo(function AppImage({
@@ -44,7 +61,10 @@ const AppImage = memo(function AppImage({
     const [isLoading, setIsLoading] = useState(true);
     const [hasError, setHasError] = useState(false);
 
-    const isExternalUrl = useMemo(() => typeof imageSrc === 'string' && imageSrc.startsWith('http'), [imageSrc]);
+    const isExternalUrl = useMemo(
+        () => typeof imageSrc === 'string' && imageSrc.startsWith('http'),
+        [imageSrc]
+    );
     const resolvedUnoptimized = unoptimized || isExternalUrl;
 
     const handleError = useCallback(() => {
@@ -67,37 +87,26 @@ const AppImage = memo(function AppImage({
         return classes.filter(Boolean).join(' ');
     }, [className, isLoading, onClick]);
 
-    const imageProps = useMemo(() => {
-        const baseProps: any = {
-            src: imageSrc,
-            alt,
-            className: imageClassName,
-            quality,
-            placeholder,
-            unoptimized: resolvedUnoptimized,
-            onError: handleError,
-            onLoad: handleLoad,
-            onClick,
-        };
-
-        if (priority) {
-            baseProps.priority = true;
-        } else {
-            baseProps.loading = loading;
-        }
-
-        if (blurDataURL && placeholder === 'blur') {
-            baseProps.blurDataURL = blurDataURL;
-        }
-
-        return baseProps;
-    }, [imageSrc, alt, imageClassName, quality, placeholder, blurDataURL, resolvedUnoptimized, priority, loading, handleError, handleLoad, onClick]);
+    const commonProps = {
+        src: imageSrc,
+        alt,
+        className: imageClassName,
+        quality,
+        placeholder,
+        unoptimized: resolvedUnoptimized,
+        onError: handleError,
+        onLoad: handleLoad,
+        onClick,
+        priority: priority || undefined,
+        loading: priority ? undefined : loading,
+        blurDataURL: blurDataURL && placeholder === 'blur' ? blurDataURL : undefined,
+    } satisfies ImageProps;
 
     if (fill) {
         return (
             <div className="relative" style={{ width: '100%', height: '100%' }}>
                 <Image
-                    {...imageProps}
+                    {...commonProps}
                     fill
                     sizes={sizes || '(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw'}
                     style={{ objectFit: 'cover' }}
@@ -109,7 +118,7 @@ const AppImage = memo(function AppImage({
 
     return (
         <Image
-            {...imageProps}
+            {...commonProps}
             width={width || 400}
             height={height || 300}
             sizes={sizes}
