@@ -6,7 +6,7 @@ import { getSaasAccess } from '@/lib/saas/access';
 const PRODUCT_SLUG = 'summeca-leadfollow-ai' as const;
 const STATUSES = ['new', 'contacted', 'replied', 'won', 'lost'] as const;
 const STATUS_SET = new Set(STATUSES);
-const LEAD_PAGE_SIZE = 100;
+const LEAD_PAGE_SIZE = 50;
 
 function text(value: unknown, max = 240) {
   return typeof value === 'string' ? value.trim().slice(0, max) : '';
@@ -59,10 +59,14 @@ export async function GET(request: NextRequest) {
   );
 
   const [profileResult, leadsResult, countResult, dueResult, usageResult, ...pipelineResults] = await Promise.all([
-    service.from('leadfollow_profiles').select('*').eq('user_id', user.id).maybeSingle(),
+    service
+      .from('leadfollow_profiles')
+      .select('business_name, offer, target_audience, value_proposition, default_tone')
+      .eq('user_id', user.id)
+      .maybeSingle(),
     service
       .from('leadfollow_leads')
-      .select('*', { count: 'exact' })
+      .select('id, name, company, email, phone, source, status, notes, next_follow_up_at, last_contacted_at, created_at', { count: 'exact' })
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
       .range(from, to),
@@ -94,11 +98,11 @@ export async function GET(request: NextRequest) {
   const messagesResult = leadIds.length
     ? await service
         .from('leadfollow_messages')
-        .select('*')
+        .select('id, lead_id, channel, stage, tone, language, output_text, created_at')
         .eq('user_id', user.id)
         .in('lead_id', leadIds)
         .order('created_at', { ascending: false })
-        .limit(600)
+        .limit(300)
     : { data: [], error: null };
 
   if (messagesResult.error) {
