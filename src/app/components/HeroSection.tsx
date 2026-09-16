@@ -97,7 +97,7 @@ export default function HeroSection() {
               }
               className={`group inline-flex min-h-11 items-center justify-center gap-2 rounded-full px-6 py-3 text-sm font-bold backdrop-blur-xl transition duration-300 hover:-translate-y-0.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#4bcdf6] motion-reduce:transform-none motion-reduce:transition-none ${
                 isLight
-                  ? 'border border-[#00a9a5]/30 bg-white/85 text-[#173f48] shadow-[0_8px_24px_rgba(6,43,53,0.05)] hover:border-[#00a9a5]/55 hover:bg-[#e9f7f7] hover:text-[#007f7c]'
+                  ? 'border border-[#00a9a5]/30 bg-white/[0.85] text-[#173f48] shadow-[0_8px_24px_rgba(6,43,53,0.05)] hover:border-[#00a9a5]/[0.55] hover:bg-[#e9f7f7] hover:text-[#007f7c]'
                   : 'border border-[#65dfe0]/15 bg-[#65dfe0]/[0.055] text-[#e6faf9] hover:border-[#4bcdf6]/45 hover:bg-[#4bcdf6]/10 hover:text-white'
               }`}
             >
@@ -132,7 +132,7 @@ export default function HeroSection() {
           <div
             className={`pointer-events-none absolute inset-[10%] rounded-[28px] backdrop-blur-[2px] ${
               isLight
-                ? 'border border-[#00a9a5]/12 bg-white/60 shadow-[inset_0_1px_0_rgba(255,255,255,0.95),0_42px_100px_rgba(6,43,53,0.08)]'
+                ? 'border border-[#00a9a5]/[0.12] bg-white/60 shadow-[inset_0_1px_0_rgba(255,255,255,0.95),0_42px_100px_rgba(6,43,53,0.08)]'
                 : 'border border-[#78e4df]/[0.08] bg-[#0c2731]/35 shadow-[inset_0_1px_0_rgba(164,255,244,0.05),0_42px_100px_rgba(0,0,0,0.22)]'
             }`}
           />
