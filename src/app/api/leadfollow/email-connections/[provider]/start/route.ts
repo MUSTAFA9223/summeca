@@ -44,7 +44,10 @@ export async function GET(
 
   const state = randomBytes(32).toString('base64url');
   const cookieStore = await cookies();
-  cookieStore.set(STATE_COOKIE, `${provider}.${state}`, {
+  // Bind the short-lived OAuth transaction to both the provider and the
+  // currently authenticated SUMMECA user. A session swap between start and
+  // callback cannot attach a mailbox to a different account.
+  cookieStore.set(STATE_COOKIE, `${provider}.${user.id}.${state}`, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
