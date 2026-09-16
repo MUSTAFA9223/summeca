@@ -32,7 +32,7 @@ function applyTheme(theme: SiteTheme) {
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setThemeState] = useState<SiteTheme>('dark');
+  const [theme, setThemeState] = useState<SiteTheme>('light');
 
   useEffect(() => {
     const stored = window.localStorage.getItem(THEME_STORAGE_KEY);
@@ -41,7 +41,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       ? stored
       : isSiteTheme(fromDocument)
         ? fromDocument
-        : 'dark';
+        : 'light';
 
     setThemeState(preferred);
     applyTheme(preferred);
