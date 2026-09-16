@@ -91,6 +91,29 @@ export default function DashboardSidebar({
 }: SidebarProps) {
   const { user, signOut } = useAuth();
   const router = useRouter();
+  const [canUseLeadFollowEmail, setCanUseLeadFollowEmail] = React.useState(false);
+
+  React.useEffect(() => {
+    if (!user) {
+      setCanUseLeadFollowEmail(false);
+      return;
+    }
+
+    const controller = new AbortController();
+
+    void fetch('/api/leadfollow/email-connections', {
+      cache: 'no-store',
+      signal: controller.signal,
+    })
+      .then((response) => {
+        if (!controller.signal.aborted) setCanUseLeadFollowEmail(response.ok);
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setCanUseLeadFollowEmail(false);
+      });
+
+    return () => controller.abort();
+  }, [user]);
 
   const displayName =
     user?.user_metadata?.full_name ||
@@ -133,21 +156,23 @@ export default function DashboardSidebar({
                 </div>
               )}
               <ul className="space-y-0.5">
-                {group.items.map((item) => {
-                  const isActive = activeRoute === item.id;
-                  return (
-                    <li key={`sidebar-${item.id}`}>
-                      <Link
-                        href={item.href}
-                        className={`sidebar-link ${isActive ? 'active' : ''} ${collapsed ? 'justify-center px-0' : ''}`}
-                        title={collapsed ? item.label : undefined}
-                      >
-                        <item.icon size={17} className="flex-shrink-0" />
-                        {!collapsed && <span className="flex-1 truncate">{item.label}</span>}
-                      </Link>
-                    </li>
-                  );
-                })}
+                {group.items
+                  .filter((item) => item.id !== 'leadfollow-mailbox' || canUseLeadFollowEmail)
+                  .map((item) => {
+                    const isActive = activeRoute === item.id;
+                    return (
+                      <li key={`sidebar-${item.id}`}>
+                        <Link
+                          href={item.href}
+                          className={`sidebar-link ${isActive ? 'active' : ''} ${collapsed ? 'justify-center px-0' : ''}`}
+                          title={collapsed ? item.label : undefined}
+                        >
+                          <item.icon size={17} className="flex-shrink-0" />
+                          {!collapsed && <span className="flex-1 truncate">{item.label}</span>}
+                        </Link>
+                      </li>
+                    );
+                  })}
               </ul>
             </div>
           ))}
@@ -212,21 +237,23 @@ export default function DashboardSidebar({
                 </span>
               </div>
               <ul className="space-y-0.5">
-                {group.items.map((item) => {
-                  const isActive = activeRoute === item.id;
-                  return (
-                    <li key={`mobile-sidebar-${item.id}`}>
-                      <Link
-                        href={item.href}
-                        className={`sidebar-link ${isActive ? 'active' : ''}`}
-                        onClick={onCloseMobile}
-                      >
-                        <item.icon size={17} className="flex-shrink-0" />
-                        <span className="flex-1 truncate">{item.label}</span>
-                      </Link>
-                    </li>
-                  );
-                })}
+                {group.items
+                  .filter((item) => item.id !== 'leadfollow-mailbox' || canUseLeadFollowEmail)
+                  .map((item) => {
+                    const isActive = activeRoute === item.id;
+                    return (
+                      <li key={`mobile-sidebar-${item.id}`}>
+                        <Link
+                          href={item.href}
+                          className={`sidebar-link ${isActive ? 'active' : ''}`}
+                          onClick={onCloseMobile}
+                        >
+                          <item.icon size={17} className="flex-shrink-0" />
+                          <span className="flex-1 truncate">{item.label}</span>
+                        </Link>
+                      </li>
+                    );
+                  })}
               </ul>
             </div>
           ))}
