@@ -131,8 +131,16 @@ export async function POST(request: NextRequest) {
   if (targetError) return NextResponse.json({ error: targetError }, { status: 500 });
 
   if (targetUsers.length === 0) {
-    await service.from('marketing_campaigns').update({ status: 'sent' }).eq('id', campaign_id);
-    return NextResponse.json({ success: true, sent: 0, failed: 0, total: 0, optedIn: 0 });
+    return NextResponse.json(
+      {
+        error: 'No eligible profiles were found for this segment. The campaign is still a draft.',
+        sent: 0,
+        failed: 0,
+        total: 0,
+        optedIn: 0,
+      },
+      { status: 409 },
+    );
   }
 
   const targetIds = targetUsers.map((target) => target.id);
@@ -153,14 +161,16 @@ export async function POST(request: NextRequest) {
     .sort((left, right) => left.id.localeCompare(right.id));
 
   if (optedInUsers.length === 0) {
-    await service.from('marketing_campaigns').update({ status: 'sent' }).eq('id', campaign_id);
-    return NextResponse.json({
-      success: true,
-      sent: 0,
-      failed: 0,
-      total: targetUsers.length,
-      optedIn: 0,
-    });
+    return NextResponse.json(
+      {
+        error: 'No users have opted in to marketing email yet. The campaign is still a draft.',
+        sent: 0,
+        failed: 0,
+        total: targetUsers.length,
+        optedIn: 0,
+      },
+      { status: 409 },
+    );
   }
 
   const optedInUserIds = optedInUsers.map((target) => target.id);
