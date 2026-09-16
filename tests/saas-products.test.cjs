@@ -11,7 +11,10 @@ const leadApi = fs.readFileSync('src/app/api/leadfollow/route.ts', 'utf8');
 const leadGenerate = fs.readFileSync('src/app/api/leadfollow/generate/route.ts', 'utf8');
 const sidebar = fs.readFileSync('src/app/user-dashboard/components/DashboardSidebar.tsx', 'utf8');
 const productPage = fs.readFileSync('src/app/products/[slug]/page.tsx', 'utf8');
-const salesExperience = fs.readFileSync('src/components/catalog/SaasProductSalesExperience.tsx', 'utf8');
+const salesExperience = [
+  fs.readFileSync('src/components/catalog/SaasProductSalesExperience.tsx', 'utf8'),
+  fs.readFileSync('src/components/catalog/SaasProductSalesExperienceBase.tsx', 'utf8'),
+].join('\n');
 
 test('SaaS tables are private to trusted server code', () => {
   for (const table of [
