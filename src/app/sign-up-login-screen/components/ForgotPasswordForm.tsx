@@ -28,9 +28,9 @@ export default function ForgotPasswordForm() {
       await resetPassword(data.email);
       setSubmittedEmail(data.email);
       setSubmitted(true);
-    } catch (error: any) {
+    } catch (error: unknown) {
       setError('root', {
-        message: error?.message || 'Failed to send reset email. Please try again.',
+        message: error instanceof Error ? error.message : 'Failed to send reset email. Please try again.',
       });
     } finally {
       setIsLoading(false);
