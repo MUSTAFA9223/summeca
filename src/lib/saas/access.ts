@@ -64,7 +64,7 @@ export async function getSaasAccess(userId: string, slug: SaasProductSlug): Prom
 
   const { data: order, error: orderError } = await service
     .from('orders')
-    .select('id, plan_id, created_at')
+    .select('id, plan_id, created_at, product_plans!inner(id, name, is_active)')
     .eq('user_id', userId)
     .eq('product_id', product.id)
     .eq('status', 'completed')
@@ -76,14 +76,14 @@ export async function getSaasAccess(userId: string, slug: SaasProductSlug): Prom
     return { ...denied, productId: product.id };
   }
 
-  const { data: plan, error: planError } = await service
-    .from('product_plans')
-    .select('id, name, is_active')
-    .eq('id', order.plan_id)
-    .eq('product_id', product.id)
-    .maybeSingle();
+  const planRelation = order.product_plans as unknown;
+  const plan = (Array.isArray(planRelation) ? planRelation[0] : planRelation) as {
+    id: string;
+    name: string;
+    is_active: boolean;
+  } | null;
 
-  if (planError || !plan) return { ...denied, productId: product.id };
+  if (!plan) return { ...denied, productId: product.id };
 
   const planName = LIMITS[slug][plan.name] ? plan.name : 'Starter';
   return {

@@ -56,6 +56,19 @@ test('InvoiceFlow API authenticates, checks paid access and enforces plan limits
   assert.match(invoiceApi, /taxAmount = Math\.round/);
 });
 
+test('InvoiceFlow initial load avoids duplicate fetches and redundant count requests', () => {
+  const invoicePage = fs.readFileSync('src/app/user-dashboard/invoiceflow/page.tsx', 'utf8');
+  const invoiceGet = invoiceApi.slice(invoiceApi.indexOf('export async function GET'), invoiceApi.indexOf('export async function POST'));
+  assert.match(invoicePage, /const load = useCallback\(async \(\) =>/);
+  assert.match(invoicePage, /\}, \[\]\);/);
+  assert.doesNotMatch(invoicePage, /\}, \[invoiceForm\.clientId\]\);/);
+  assert.match(invoicePage, /loading && !data && !forbidden/);
+  assert.match(invoiceGet, /select\('\*', \{ count: 'exact' \}\)/);
+  assert.doesNotMatch(invoiceGet, /head: true/);
+  assert.match(access, /product_plans!inner\(id, name, is_active\)/);
+  assert.doesNotMatch(access, /from\('product_plans'\)/);
+});
+
 test('LeadFollow CRM API authenticates and enforces paid lead limits', () => {
   assert.match(leadApi, /auth\.getUser\(\)/);
   assert.match(leadApi, /getSaasAccess\(user\.id, PRODUCT_SLUG\)/);

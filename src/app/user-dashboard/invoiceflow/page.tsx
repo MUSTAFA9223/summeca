@@ -53,13 +53,17 @@ export default function InvoiceFlowPage() {
       setForbidden(null);
       setData(payload);
       setProfile(payload.profile ? { ...emptyProfile, ...payload.profile } : emptyProfile);
-      if (!invoiceForm.clientId && payload.clients?.[0]?.id) setInvoiceForm((current) => ({ ...current, clientId: payload.clients[0].id }));
+      if (payload.clients?.[0]?.id) {
+        setInvoiceForm((current) => current.clientId
+          ? current
+          : { ...current, clientId: payload.clients[0].id });
+      }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Unable to load InvoiceFlow.');
     } finally {
       setLoading(false);
     }
-  }, [invoiceForm.clientId]);
+  }, []);
 
   useEffect(() => { void load(); }, [load]);
 
@@ -140,7 +144,27 @@ export default function InvoiceFlowPage() {
     const anchor = document.createElement('a'); anchor.href = url; anchor.download = `invoiceflow-${new Date().toISOString().slice(0,10)}.csv`; anchor.click(); URL.revokeObjectURL(url);
   }
 
-  if (loading) return <DashboardLayout activeRoute="invoiceflow"><div className="flex min-h-[55vh] items-center justify-center"><RefreshCw className="animate-spin text-primary" /></div></DashboardLayout>;
+  if (loading && !data && !forbidden) return (
+    <DashboardLayout activeRoute="invoiceflow">
+      <div className="space-y-7" aria-busy="true" aria-label="Loading InvoiceFlow">
+        <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-primary"><ReceiptText size={15} /> SUMMECA SaaS</div>
+            <h1 className="mt-2 text-3xl font-black tracking-tight">InvoiceFlow</h1>
+            <p className="mt-2 text-sm text-muted-foreground">Preparing your invoicing workspace…</p>
+          </div>
+          <div className="h-10 w-40 animate-pulse rounded-xl bg-primary/10" />
+        </header>
+        <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          {[0, 1, 2, 3].map((item) => <div key={item} className="h-24 animate-pulse rounded-2xl border border-border bg-card" />)}
+        </section>
+        <section className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
+          <div className="h-80 animate-pulse rounded-2xl border border-border bg-card" />
+          <div className="h-80 animate-pulse rounded-2xl border border-border bg-card" />
+        </section>
+      </div>
+    </DashboardLayout>
+  );
 
   if (forbidden) return (
     <DashboardLayout activeRoute="invoiceflow">
@@ -157,7 +181,7 @@ export default function InvoiceFlowPage() {
 
   return (
     <DashboardLayout activeRoute="invoiceflow">
-      <div className="space-y-7">
+      <div className="space-y-7" aria-busy={loading}>
         <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div><div className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-primary"><ReceiptText size={15} /> SUMMECA SaaS</div><h1 className="mt-2 text-3xl font-black tracking-tight">InvoiceFlow</h1><p className="mt-2 text-sm text-muted-foreground">Create, track, share, print and export professional invoices from one workspace.</p></div>
           <div className="flex flex-wrap gap-2"><span className="rounded-full bg-primary/10 px-3 py-2 text-xs font-bold text-primary">{data.access.planName} · Lifetime</span><button onClick={exportCsv} className="inline-flex items-center gap-2 rounded-xl border border-border bg-card px-4 py-2 text-sm font-semibold"><Download size={15} /> Export CSV</button><button onClick={() => setShowInvoiceForm(true)} className="btn-primary inline-flex items-center gap-2 px-4 py-2"><FilePlus2 size={15} /> New invoice</button></div>

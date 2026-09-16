@@ -69,15 +69,13 @@ export async function GET(request: NextRequest) {
   }
 
   const service = createServiceClient();
-  const [profileResult, clientsResult, invoicesResult, clientCountResult, invoiceCountResult] = await Promise.all([
+  const [profileResult, clientsResult, invoicesResult] = await Promise.all([
     service.from('invoiceflow_profiles').select('*').eq('user_id', user.id).maybeSingle(),
-    service.from('invoiceflow_clients').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(300),
-    service.from('invoiceflow_invoices').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(300),
-    service.from('invoiceflow_clients').select('id', { count: 'exact', head: true }).eq('user_id', user.id),
-    service.from('invoiceflow_invoices').select('id', { count: 'exact', head: true }).eq('user_id', user.id),
+    service.from('invoiceflow_clients').select('*', { count: 'exact' }).eq('user_id', user.id).order('created_at', { ascending: false }).limit(300),
+    service.from('invoiceflow_invoices').select('*', { count: 'exact' }).eq('user_id', user.id).order('created_at', { ascending: false }).limit(300),
   ]);
 
-  const firstError = profileResult.error || clientsResult.error || invoicesResult.error || clientCountResult.error || invoiceCountResult.error;
+  const firstError = profileResult.error || clientsResult.error || invoicesResult.error;
   if (firstError) {
     console.error('[invoiceflow] dashboard load failed:', firstError.message);
     return NextResponse.json({ error: 'Unable to load InvoiceFlow.' }, { status: 500 });
@@ -97,8 +95,8 @@ export async function GET(request: NextRequest) {
     clients: clientsResult.data ?? [],
     invoices,
     counts: {
-      clients: clientCountResult.count ?? 0,
-      invoices: invoiceCountResult.count ?? 0,
+      clients: clientsResult.count ?? 0,
+      invoices: invoicesResult.count ?? 0,
       outstanding: Math.round(outstanding * 100) / 100,
       paid: Math.round(paid * 100) / 100,
     },

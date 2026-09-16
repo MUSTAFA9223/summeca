@@ -201,6 +201,7 @@ const COMPREHENSIVE_AR_TRANSLATIONS: Record<string, string> = {
   // InvoiceFlow
   'Clients': 'العملاء',
   'Outstanding': 'المستحق',
+  'Preparing your invoicing workspace…': 'جارٍ تجهيز مساحة الفواتير الخاصة بك…',
   'InvoiceFlow is ready when you are': 'InvoiceFlow جاهز لك',
   'Purchase a lifetime InvoiceFlow plan once, then create clients and invoices directly from your SUMMECA account.': 'اشترِ خطة InvoiceFlow مدى الحياة مرة واحدة، ثم أنشئ العملاء والفواتير مباشرة من حساب SUMMECA.',
   'View InvoiceFlow plans': 'عرض خطط InvoiceFlow',
