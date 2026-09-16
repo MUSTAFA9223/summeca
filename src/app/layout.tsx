@@ -7,6 +7,7 @@ import '../styles/site-theme.css';
 import '../styles/summeca-home-dark.css';
 import '../styles/i18n.css';
 import '../styles/customer-feedback-refresh.css';
+import '../styles/summeca-light-premium.css';
 import { Toaster } from 'sonner';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { LanguageProvider } from '@/contexts/LanguageContext';
@@ -130,7 +131,7 @@ export default function RootLayout({
       dir="ltr"
       suppressHydrationWarning
       className={plusJakartaSans.variable}
-      data-site-theme="dark"
+      data-site-theme="light"
     >
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
