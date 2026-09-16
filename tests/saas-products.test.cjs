@@ -59,14 +59,16 @@ test('InvoiceFlow API authenticates, checks paid access and enforces plan limits
   assert.match(invoiceApi, /taxAmount = Math\.round/);
 });
 
-test('InvoiceFlow initial load avoids duplicate fetches and redundant count requests', () => {
+test('InvoiceFlow initial load avoids duplicate fetches, redundant count requests and unused columns', () => {
   const invoicePage = fs.readFileSync('src/app/user-dashboard/invoiceflow/page.tsx', 'utf8');
   const invoiceGet = invoiceApi.slice(invoiceApi.indexOf('export async function GET'), invoiceApi.indexOf('export async function POST'));
   assert.match(invoicePage, /const load = useCallback\(async \(\) =>/);
   assert.match(invoicePage, /\}, \[\]\);/);
   assert.doesNotMatch(invoicePage, /\}, \[invoiceForm\.clientId\]\);/);
   assert.match(invoicePage, /loading && !data && !forbidden/);
-  assert.match(invoiceGet, /select\('\*', \{ count: 'exact' \}\)/);
+  assert.match(invoiceGet, /select\('id, name, company, email, phone, address, notes, created_at', \{ count: 'exact' \}\)/);
+  assert.match(invoiceGet, /select\('id, client_id, invoice_number, issue_date, due_date, status, currency, items, subtotal, tax_rate, tax_amount, total, notes, terms, share_token, share_enabled, created_at', \{ count: 'exact' \}\)/);
+  assert.doesNotMatch(invoiceGet, /select\('\*'/);
   assert.doesNotMatch(invoiceGet, /head: true/);
   assert.match(access, /product_plans!inner\(id, name, is_active\)/);
   assert.doesNotMatch(access, /from\('product_plans'\)/);
