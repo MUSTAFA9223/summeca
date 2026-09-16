@@ -50,6 +50,22 @@ const structuredData = {
       logo: 'https://summeca.com/assets/images/app_logo.png',
       description: siteDescription,
       email: 'hello@summeca.com',
+      hasMerchantReturnPolicy: {
+        '@type': 'MerchantReturnPolicy',
+        '@id': 'https://summeca.com/refunds#policy',
+        merchantReturnLink: 'https://summeca.com/refunds',
+      },
+      hasShippingService: {
+        '@type': 'ShippingService',
+        '@id': 'https://summeca.com/shipping#policy',
+        name: 'Digital delivery — no physical shipping',
+        description:
+          'SUMMECA provides digital products and software access electronically. No physical goods are shipped.',
+        shippingConditions: {
+          '@type': 'ShippingConditions',
+          doesNotShip: true,
+        },
+      },
       sameAs: [
         'https://x.com/summeca_',
         'https://www.producthunt.com/products/summeca',
