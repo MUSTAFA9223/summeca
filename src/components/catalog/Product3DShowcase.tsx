@@ -18,8 +18,14 @@ function categoryLabel(category?: string) {
   return category.replaceAll('_', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
+function isRealProductScreenshot(thumbnailUrl?: string | null) {
+  if (!thumbnailUrl) return false;
+  return /\.(?:png|webp|jpe?g)(?:\?.*)?$/i.test(thumbnailUrl);
+}
+
 export default function Product3DShowcase({
   name,
+  thumbnailUrl,
   category,
   eyebrow,
   variant = 'hero',
@@ -28,6 +34,7 @@ export default function Product3DShowcase({
   children,
 }: Product3DShowcaseProps) {
   const hero = variant === 'hero';
+  const useScreenshot = isRealProductScreenshot(thumbnailUrl);
 
   return (
     <div
@@ -45,6 +52,19 @@ export default function Product3DShowcase({
         </div>
         {children ? (
           <div className={hero ? 'h-[360px] sm:h-[430px]' : 'h-[180px]'}>{children}</div>
+        ) : useScreenshot ? (
+          <div
+            className={`${hero ? 'h-[360px] sm:h-[430px]' : 'h-[180px]'} overflow-hidden rounded-xl border border-slate-700/80 bg-white shadow-[0_18px_48px_rgba(0,0,0,.35)]`}
+            data-product-proof-preview="true"
+          >
+            <img
+              src={thumbnailUrl ?? ''}
+              alt={`${name} product screenshot`}
+              loading={hero ? 'eager' : 'lazy'}
+              decoding="async"
+              className="h-full w-full object-contain object-top"
+            />
+          </div>
         ) : (
           <ProductProofPreview name={name} variant={variant} />
         )}
