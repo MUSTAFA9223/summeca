@@ -1,9 +1,11 @@
 'use client';
 
 import React, { useState } from 'react';
+import { usePathname } from 'next/navigation';
 import AdminSidebar from './AdminSidebar';
 import CompactLanguageSwitcher from '@/components/CompactLanguageSwitcher';
 import { ThemeSwitcher } from '@/components/GlobalThemeSwitcher';
+import MarketingCampaignActionsPanel from '@/app/admin/marketing/components/MarketingCampaignActionsPanel';
 
 interface AdminShellProps {
   children: React.ReactNode;
@@ -18,6 +20,7 @@ export default function AdminShell({
 }: AdminShellProps) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const pathname = usePathname();
 
   return (
     <div className="min-h-screen bg-background flex">
@@ -69,6 +72,7 @@ export default function AdminShell({
 
         <main className="flex-1 px-4 py-6 lg:px-8 max-w-screen-2xl w-full">
           {children}
+          {pathname === '/admin/marketing' && <MarketingCampaignActionsPanel />}
         </main>
       </div>
     </div>
