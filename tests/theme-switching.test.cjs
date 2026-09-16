@@ -5,14 +5,15 @@ const fs = require('node:fs');
 const themeContext = fs.readFileSync('src/contexts/ThemeContext.tsx', 'utf8');
 const themeSwitcher = fs.readFileSync('src/components/GlobalThemeSwitcher.tsx', 'utf8');
 const layout = fs.readFileSync('src/app/layout.tsx', 'utf8');
-const hero = fs.readFileSync('src/app/components/HeroSection.tsx', 'utf8');
 const themeCss = fs.readFileSync('src/styles/site-theme.css', 'utf8');
+const lightPremiumCss = fs.readFileSync('src/styles/summeca-light-premium.css', 'utf8');
 const adminShell = fs.readFileSync('src/app/admin/components/AdminShell.tsx', 'utf8');
 const dashboardTopbar = fs.readFileSync('src/app/user-dashboard/components/DashboardTopbar.tsx', 'utf8');
 
-test('site theme defaults to dark and persists the customer choice', () => {
-  assert.match(layout, /data-site-theme="dark"/);
+test('site theme defaults to light premium and persists the customer choice', () => {
+  assert.match(layout, /data-site-theme="light"/);
   assert.match(layout, /summeca:theme/);
+  assert.match(themeContext, /useState<SiteTheme>\('light'\)/);
   assert.match(themeContext, /window\.localStorage\.setItem\(THEME_STORAGE_KEY, nextTheme\)/);
   assert.match(themeContext, /value === 'dark' \|\| value === 'light'/);
 });
@@ -33,17 +34,20 @@ test('dashboard theme controls are hosted in top bars instead of covering sideba
   assert.match(dashboardTopbar, /<ThemeSwitcher compact \/>/);
 });
 
-test('homepage keeps the cinematic hero while the rest follows the selected theme', () => {
-  assert.match(hero, /theme === 'dark'/);
-  assert.match(hero, /summeca-home-light-theme/);
-  assert.match(themeCss, /Light Premium keeps the homepage hero cinematic/);
-  assert.match(themeCss, /body\.summeca-home-light-theme header/);
+test('homepage follows the light premium SaaS palette while dark mode remains available', () => {
+  assert.match(layout, /summeca-light-premium\.css/);
+  assert.match(lightPremiumCss, /html\[data-site-theme='light'\] body\.summeca-home-theme/);
+  assert.match(lightPremiumCss, /html\[data-site-theme='light'\] \.summeca-home-hero/);
+  assert.match(lightPremiumCss, /--background: #f3fafa/);
+  assert.match(lightPremiumCss, /--foreground: #062b35/);
+  assert.match(lightPremiumCss, /--primary: #00a9a5/);
+  assert.match(themeCss, /html\[data-site-theme='dark'\]/);
 });
 
 test('dark theme has site-wide semantic tokens and light mode remaps dark product landing surfaces', () => {
   assert.match(themeCss, /html\[data-site-theme='dark'\]/);
   assert.match(themeCss, /--background: #0d1116/);
   assert.ok(
-    themeCss.includes("html[data-site-theme='light'] [class~='bg-[#070b10]']"),
+    lightPremiumCss.includes("html[data-site-theme='light'] [class~='bg-[#070b10]']"),
   );
 });
