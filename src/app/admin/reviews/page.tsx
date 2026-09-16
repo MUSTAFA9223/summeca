@@ -1,11 +1,9 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { toast } from 'sonner';
-import { Search, CheckCircle2, XCircle, Clock, Star, Eye, X } from 'lucide-react';
-import Icon from '@/components/ui/AppIcon';
-
+import { Search, CheckCircle2, XCircle, Clock, Star, Eye, X, type LucideIcon } from 'lucide-react';
 
 interface Review {
   id: string;
@@ -22,7 +20,7 @@ interface Review {
   product?: { name: string; slug: string };
 }
 
-const STATUS_CONFIG: Record<string, { label: string; cls: string; icon: React.ComponentType<any> }> = {
+const STATUS_CONFIG: Record<string, { label: string; cls: string; icon: LucideIcon }> = {
   pending: { label: 'Pending', cls: 'bg-amber-50 text-amber-700 border-amber-200', icon: Clock },
   approved: { label: 'Approved', cls: 'bg-teal-50 text-teal-700 border-teal-200', icon: CheckCircle2 },
   rejected: { label: 'Rejected', cls: 'bg-red-50 text-red-700 border-red-200', icon: XCircle },
@@ -66,10 +64,10 @@ function ReviewDetailModal({ review, onClose, onAction }: { review: Review; onCl
           {review.body && <p className="text-sm text-secondary-foreground leading-relaxed">{review.body}</p>}
           <div className="flex items-center gap-2">
             {Object.entries(STATUS_CONFIG).map(([key, cfg]) => {
-              const Icon = cfg.icon;
+              const StatusIcon = cfg.icon;
               return (
                 <span key={key} className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-600 border ${review.moderation_status === key ? cfg.cls : 'bg-secondary text-muted-foreground border-border opacity-40'}`}>
-                  <Icon size={11} />{cfg.label}
+                  <StatusIcon size={11} />{cfg.label}
                 </span>
               );
             })}
@@ -103,7 +101,7 @@ export default function AdminReviewsPage() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [selectedReview, setSelectedReview] = useState<Review | null>(null);
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
 
   const fetchReviews = useCallback(async () => {
     setLoading(true);
@@ -115,9 +113,9 @@ export default function AdminReviewsPage() {
     const { data, error } = await query;
     if (error) { toast.error(error.message); } else { setReviews(data ?? []); }
     setLoading(false);
-  }, [statusFilter]);
+  }, [statusFilter, supabase]);
 
-  useEffect(() => { fetchReviews(); }, [fetchReviews]);
+  useEffect(() => { void fetchReviews(); }, [fetchReviews]);
 
   const handleAction = async (id: string, action: string) => {
     const { error } = await supabase
@@ -126,7 +124,7 @@ export default function AdminReviewsPage() {
       .eq('id', id);
     if (error) { toast.error(error.message); } else {
       toast.success(`Review ${action}`);
-      fetchReviews();
+      void fetchReviews();
     }
   };
 
@@ -134,7 +132,7 @@ export default function AdminReviewsPage() {
     const { error } = await supabase.from('reviews').update({ is_featured: !review.is_featured }).eq('id', review.id);
     if (error) { toast.error(error.message); } else {
       toast.success(review.is_featured ? 'Removed from featured' : 'Marked as featured');
-      fetchReviews();
+      void fetchReviews();
     }
   };
 
@@ -160,7 +158,6 @@ export default function AdminReviewsPage() {
         </div>
       </div>
 
-      {/* Status tabs */}
       <div className="flex flex-wrap gap-2">
         {[
           { key: '', label: 'All', count: counts.all },
@@ -179,7 +176,6 @@ export default function AdminReviewsPage() {
         ))}
       </div>
 
-      {/* Search */}
       <div className="flex gap-3">
         <div className="relative flex-1">
           <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
@@ -187,7 +183,6 @@ export default function AdminReviewsPage() {
         </div>
       </div>
 
-      {/* Table */}
       <div className="rounded-2xl border border-border bg-card overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
