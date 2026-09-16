@@ -7,6 +7,8 @@ import { getSaasAccess } from '@/lib/saas/access';
 const PRODUCT_SLUG = 'summeca-leadfollow-ai' as const;
 const CHANNELS = new Set(['email', 'linkedin', 'whatsapp', 'sms', 'generic']);
 const STAGES = new Set(['first_contact', 'follow_up', 'objection', 'close', 'revive']);
+const TONES = new Set(['professional', 'friendly', 'concise', 'consultative', 'warm']);
+const LANGUAGES = new Set(['English', 'Arabic', 'Spanish', 'French', 'German']);
 type ServiceClient = ReturnType<typeof createServiceClient>;
 
 function text(value: unknown, max = 800) {
@@ -70,8 +72,8 @@ export async function POST(request: NextRequest) {
   const language = text(body.language, 40) || 'English';
   const extraContext = text(body.extraContext, 2500);
 
-  if (!leadId || !CHANNELS.has(channel) || !STAGES.has(stage)) {
-    return NextResponse.json({ error: 'Invalid lead, channel, or follow-up stage.' }, { status: 400 });
+  if (!leadId || !CHANNELS.has(channel) || !STAGES.has(stage) || !TONES.has(tone) || !LANGUAGES.has(language)) {
+    return NextResponse.json({ error: 'Invalid lead, channel, follow-up stage, tone, or language.' }, { status: 400 });
   }
 
   const service = createServiceClient();
@@ -103,6 +105,18 @@ export async function POST(request: NextRequest) {
   }
 
   const businessName = profile?.business_name || 'the sender';
+  const languageRules = language === 'Arabic'
+    ? `Arabic quality requirements:
+- Write natural modern professional Arabic, not a literal translation from English.
+- Address the recipient directly and naturally by the supplied lead name, for example: "مرحبًا أليكس،". Never describe the recipient as "NAME from COMPANY" in the greeting.
+- For email, label the subject as "الموضوع:" rather than "Subject:".
+- Use Arabic punctuation and close with "مع أطيب التحيات،" or another natural Arabic closing. Never use the literal phrase "أفضل التمنيات".
+- Keep product and company names such as InvoiceFlow Starter, SUMMECA, and Example Store unchanged and readable inside the Arabic text.
+- Do not output CRM labels such as "المرحلة التالية" or "موعد المتابعة".`
+    : `Language quality requirements:
+- Write naturally in ${language}; do not translate English phrases word for word.
+- Address the recipient directly by the supplied lead name.
+- Keep product and company names unchanged and readable.`;
   const systemPrompt = `You are LeadFollow AI inside SUMMECA. Write one practical sales follow-up draft using only the facts supplied below.
 
 Rules:
@@ -114,6 +128,10 @@ Rules:
 - Match the requested channel: SMS/WhatsApp should be short; LinkedIn concise; email may include a short subject line followed by the body.
 - For first contact, introduce the sender without pretending prior contact.
 - For follow-up or revive, acknowledge uncertainty rather than assuming the prior message was read.
+- Treat pipeline status and scheduling as private CRM metadata. Never output internal labels, a next-action line, or a follow-up date unless the user explicitly asks for it in Additional factual context.
+- Do not identify the recipient as being "from" their company in the greeting. Address them directly by name.
+- Do not include a date line between the subject and greeting.
+- ${languageRules}
 - Return only the final draft, with no analysis or commentary.`;
 
   const userPrompt = `Requested language: ${language}
@@ -129,10 +147,7 @@ Value proposition: ${profile?.value_proposition || 'Not provided'}
 Lead name: ${lead.name}
 Lead company: ${lead.company || 'Not provided'}
 Lead source: ${lead.source || 'Not provided'}
-Pipeline status: ${lead.status}
 Lead notes: ${lead.notes || 'None'}
-Last contacted: ${lead.last_contacted_at || 'Not recorded'}
-Next follow-up: ${lead.next_follow_up_at || 'Not scheduled'}
 
 Additional factual context from the user:
 ${extraContext || 'None'}
