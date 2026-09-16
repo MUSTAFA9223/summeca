@@ -47,15 +47,16 @@ export async function GET(
   const code = request.nextUrl.searchParams.get('code') || '';
   const providerError = request.nextUrl.searchParams.get('error') || '';
 
-  if (providerError) return resultRedirect(request, 'cancelled', provider);
-  if (!expectedState.startsWith(`${provider}.`) || !state || !sameState(expectedState.slice(provider.length + 1), state)) {
-    return resultRedirect(request, 'invalid-state', provider);
-  }
-  if (!code) return resultRedirect(request, 'missing-code', provider);
-
   const session = await createClient();
   const { data: { user }, error } = await session.auth.getUser();
   if (error || !user) return resultRedirect(request, 'login-required', provider);
+
+  const expectedPrefix = `${provider}.${user.id}.`;
+  if (providerError) return resultRedirect(request, 'cancelled', provider);
+  if (!expectedState.startsWith(expectedPrefix) || !state || !sameState(expectedState.slice(expectedPrefix.length), state)) {
+    return resultRedirect(request, 'invalid-state', provider);
+  }
+  if (!code) return resultRedirect(request, 'missing-code', provider);
 
   const access = await getSaasAccess(user.id, PRODUCT_SLUG);
   if (!access.allowed) return resultRedirect(request, 'purchase-required', provider);
