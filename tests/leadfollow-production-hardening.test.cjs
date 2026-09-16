@@ -27,6 +27,31 @@ test('LeadFollow keeps dates readable inside translated and RTL dashboards', () 
   assert.match(page, /<time dir="ltr"[^>]*tabular-nums/);
 });
 
+test('LeadFollow renders Arabic drafts right-to-left without changing copied text', () => {
+  assert.match(page, /function draftLanguageAttributes\(language: string\)/);
+  assert.match(page, /language\.trim\(\)\.toLowerCase\(\) === 'arabic'/);
+  assert.match(page, /draftLanguageAttributes\(latestDraftLanguage\)/);
+  assert.match(page, /draftLanguageAttributes\(message\.language\)/);
+  assert.match(page, /navigator\.clipboard\.writeText\(value\)/);
+});
+
+test('LeadFollow requests natural Arabic and keeps private CRM scheduling out of drafts', () => {
+  assert.match(generate, /Write natural modern professional Arabic, not a literal translation from English/);
+  assert.match(generate, /Never describe the recipient as "NAME from COMPANY" in the greeting/);
+  assert.match(generate, /Never use the literal phrase "أفضل التمنيات"/);
+  assert.match(generate, /Never output internal labels, a next-action line, or a follow-up date/);
+  assert.match(generate, /Do not include a date line between the subject and greeting/);
+  assert.doesNotMatch(generate, /^Pipeline status:/m);
+  assert.doesNotMatch(generate, /^Next follow-up:/m);
+});
+
+test('LeadFollow validates every prompt-shaping option server-side', () => {
+  assert.match(generate, /const TONES = new Set/);
+  assert.match(generate, /const LANGUAGES = new Set/);
+  assert.match(generate, /!TONES\.has\(tone\)/);
+  assert.match(generate, /!LANGUAGES\.has\(language\)/);
+});
+
 test('LeadFollow releases reserved AI quota when no usable draft is delivered', () => {
   assert.match(releaseMigration, /create or replace function public\.release_leadfollow_ai_request/);
   assert.match(releaseMigration, /greatest\(requests_count - 1, 0\)/);
