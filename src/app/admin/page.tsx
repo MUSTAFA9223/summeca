@@ -38,23 +38,40 @@ function getTrafficPeriodStarts() {
 
 async function getStats(supabase: Awaited<ReturnType<typeof createClient>>) {
   const periods = getTrafficPeriodStarts();
-  const results = await Promise.all([
-    supabase.from('orders').select('*', { count: 'exact', head: true }),
-    supabase.from('orders').select('*', { count: 'exact', head: true }).eq('status', 'completed'),
+  const [
+    realOrders,
+    realCompletedOrders,
+    customers,
+    products,
+    downloads,
+    realRevenue,
+    realPendingPayments,
+    visitsToday,
+    visitsWeek,
+    visitsMonthResult,
+    pageViewsToday,
+    realCompletedOrdersMonth,
+    testCompletedOrdersMonth,
+    testCompletedOrdersTotal,
+  ] = await Promise.all([
+    supabase.from('orders').select('*', { count: 'exact', head: true }).eq('purchase_kind', 'real'),
+    supabase.from('orders').select('*', { count: 'exact', head: true }).eq('status', 'completed').eq('purchase_kind', 'real'),
     supabase.from('user_profiles').select('*', { count: 'exact', head: true }),
     supabase.from('products').select('*', { count: 'exact', head: true }),
     supabase.from('downloads').select('*', { count: 'exact', head: true }),
-    supabase.from('orders').select('amount, currency').eq('status', 'completed'),
-    supabase.from('orders').select('*', { count: 'exact', head: true }).eq('status', 'pending_payment'),
+    supabase.from('orders').select('amount, currency').eq('status', 'completed').eq('purchase_kind', 'real'),
+    supabase.from('orders').select('*', { count: 'exact', head: true }).eq('status', 'pending_payment').eq('purchase_kind', 'real'),
     supabase.from('analytics_visits').select('*', { count: 'exact', head: true }).gte('started_at', periods.today),
     supabase.from('analytics_visits').select('*', { count: 'exact', head: true }).gte('started_at', periods.week),
     supabase.from('analytics_visits').select('*', { count: 'exact', head: true }).gte('started_at', periods.month),
     supabase.from('analytics_events').select('*', { count: 'exact', head: true }).eq('event_type', 'page_view').gte('created_at', periods.today),
-    supabase.from('orders').select('*', { count: 'exact', head: true }).eq('status', 'completed').gte('created_at', periods.month),
+    supabase.from('orders').select('*', { count: 'exact', head: true }).eq('status', 'completed').eq('purchase_kind', 'real').gte('created_at', periods.month),
+    supabase.from('orders').select('*', { count: 'exact', head: true }).eq('status', 'completed').eq('purchase_kind', 'test').gte('created_at', periods.month),
+    supabase.from('orders').select('*', { count: 'exact', head: true }).eq('status', 'completed').eq('purchase_kind', 'test'),
   ]);
 
   const revenueByCurrency = new Map<string, number>();
-  for (const order of results[5].data ?? []) {
+  for (const order of realRevenue.data ?? []) {
     const currency = normalizeCurrency(order.currency);
     revenueByCurrency.set(currency, (revenueByCurrency.get(currency) ?? 0) + Number(order.amount || 0));
   }
@@ -63,24 +80,26 @@ async function getStats(supabase: Awaited<ReturnType<typeof createClient>>) {
     .map(([currency, amount]) => ({ currency, amount }))
     .sort((a, b) => a.currency.localeCompare(b.currency));
 
-  const visitsMonth = results[9].count ?? 0;
-  const completedOrdersMonth = results[11].count ?? 0;
+  const visitsMonth = visitsMonthResult.count ?? 0;
+  const completedOrdersMonth = realCompletedOrdersMonth.count ?? 0;
   const conversionMonth = visitsMonth > 0 ? (completedOrdersMonth / visitsMonth) * 100 : 0;
 
   return {
     revenueTotals,
-    totalOrders: results[0].count ?? 0,
-    completedOrders: results[1].count ?? 0,
-    pendingPayments: results[6].count ?? 0,
-    totalCustomers: results[2].count ?? 0,
-    totalProducts: results[3].count ?? 0,
-    totalDownloads: results[4].count ?? 0,
-    visitsToday: results[7].count ?? 0,
-    visitsWeek: results[8].count ?? 0,
+    totalOrders: realOrders.count ?? 0,
+    completedOrders: realCompletedOrders.count ?? 0,
+    pendingPayments: realPendingPayments.count ?? 0,
+    totalCustomers: customers.count ?? 0,
+    totalProducts: products.count ?? 0,
+    totalDownloads: downloads.count ?? 0,
+    visitsToday: visitsToday.count ?? 0,
+    visitsWeek: visitsWeek.count ?? 0,
     visitsMonth,
-    pageViewsToday: results[10].count ?? 0,
+    pageViewsToday: pageViewsToday.count ?? 0,
     completedOrdersMonth,
     conversionMonth,
+    testCompletedOrdersMonth: testCompletedOrdersMonth.count ?? 0,
+    testCompletedOrdersTotal: testCompletedOrdersTotal.count ?? 0,
   };
 }
 
@@ -91,6 +110,7 @@ async function getChartData(supabase: Awaited<ReturnType<typeof createClient>>, 
   const { data: orders } = await supabase
     .from('orders')
     .select('created_at, status')
+    .eq('purchase_kind', 'real')
     .gte('created_at', since.toISOString())
     .order('created_at', { ascending: true });
 
@@ -110,7 +130,8 @@ async function getTopProducts(supabase: Awaited<ReturnType<typeof createClient>>
   const { data } = await supabase
     .from('orders')
     .select('product_id, products(name)')
-    .eq('status', 'completed');
+    .eq('status', 'completed')
+    .eq('purchase_kind', 'real');
 
   const byProduct: Record<string, { name: string; count: number }> = {};
   for (const row of (data ?? []) as ProductOrderRow[]) {
@@ -134,5 +155,36 @@ export default async function AdminDashboardPage() {
     getTopProducts(supabase),
   ]);
 
-  return <AdminDashboardClient stats={stats} initialChartData={chartData} topProducts={topProducts} />;
+  return (
+    <div className="space-y-6">
+      <AdminDashboardClient stats={stats} initialChartData={chartData} topProducts={topProducts} />
+
+      <section className="rounded-2xl border border-border bg-card p-5">
+        <div className="mb-4">
+          <h2 className="text-sm font-700 text-foreground">Purchase classification</h2>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Real customer purchases drive conversion and revenue. Test purchases are tracked separately and excluded from business metrics.
+          </p>
+        </div>
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+          <div className="rounded-xl border border-border bg-secondary/20 p-4">
+            <p className="text-xs font-600 text-muted-foreground">Real Purchases This Month</p>
+            <p className="mt-1 text-xl font-800 tabular-nums text-foreground">{stats.completedOrdersMonth.toLocaleString('en-US')}</p>
+          </div>
+          <div className="rounded-xl border border-border bg-secondary/20 p-4">
+            <p className="text-xs font-600 text-muted-foreground">Test Purchases This Month</p>
+            <p className="mt-1 text-xl font-800 tabular-nums text-foreground">{stats.testCompletedOrdersMonth.toLocaleString('en-US')}</p>
+          </div>
+          <div className="rounded-xl border border-border bg-secondary/20 p-4">
+            <p className="text-xs font-600 text-muted-foreground">Real Purchases Total</p>
+            <p className="mt-1 text-xl font-800 tabular-nums text-foreground">{stats.completedOrders.toLocaleString('en-US')}</p>
+          </div>
+          <div className="rounded-xl border border-border bg-secondary/20 p-4">
+            <p className="text-xs font-600 text-muted-foreground">Test Purchases Total</p>
+            <p className="mt-1 text-xl font-800 tabular-nums text-foreground">{stats.testCompletedOrdersTotal.toLocaleString('en-US')}</p>
+          </div>
+        </div>
+      </section>
+    </div>
+  );
 }
