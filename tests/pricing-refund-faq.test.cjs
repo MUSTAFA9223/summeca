@@ -25,6 +25,6 @@ test('refund FAQ links to the existing policy and avoids approval promises', () 
 
 test('pricing refund wording stays aligned with the existing refund policy', () => {
   assert.match(refundPolicy, /eligibility/i);
-  assert.match(refundPolicy, /does not guarantee/i);
+  assert.match(refundPolicy, /does not by itself guarantee approval/i);
   assert.match(refundPolicy, /payment method/i);
 });
