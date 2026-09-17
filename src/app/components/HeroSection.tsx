@@ -180,7 +180,7 @@ export default function HeroSection() {
           </div>
         </div>
 
-        <div className="relative flex min-h-[390px] items-center self-stretch overflow-hidden px-4 py-5 sm:min-h-[440px] sm:px-8 lg:min-h-[550px] lg:overflow-visible lg:pl-1 lg:pr-10 xl:pr-14">
+        <div className="relative flex min-h-[400px] items-center self-stretch overflow-hidden px-4 py-5 sm:min-h-[450px] sm:px-8 lg:min-h-[550px] lg:overflow-visible lg:pl-1 lg:pr-10 xl:pr-14">
           <div
             className={`pointer-events-none absolute left-[52%] top-[50%] h-[54%] aspect-square -translate-x-1/2 -translate-y-1/2 rounded-full blur-[82px] ${
               isLight ? 'bg-[#00a9a5]/10' : 'bg-[#20d9bd]/10'
