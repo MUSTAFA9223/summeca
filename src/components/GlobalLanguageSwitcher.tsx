@@ -4,19 +4,36 @@ import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
 
+const HOST_SELECTOR = '[data-public-nav="true"], [data-language-switcher-host="true"]';
+
 export default function GlobalLanguageSwitcher() {
   const pathname = usePathname();
   const [hasHostedSwitcher, setHasHostedSwitcher] = useState<boolean | null>(null);
   const isInvoiceRoute = pathname?.startsWith('/invoice/');
 
   useEffect(() => {
-    const frame = window.requestAnimationFrame(() => {
-      setHasHostedSwitcher(Boolean(
-        document.querySelector('[data-public-nav="true"], [data-language-switcher-host="true"]'),
-      ));
-    });
+    let frame = 0;
 
-    return () => window.cancelAnimationFrame(frame);
+    const syncHostedSwitcher = () => {
+      setHasHostedSwitcher(Boolean(document.querySelector(HOST_SELECTOR)));
+    };
+
+    const scheduleSync = () => {
+      window.cancelAnimationFrame(frame);
+      frame = window.requestAnimationFrame(syncHostedSwitcher);
+    };
+
+    scheduleSync();
+
+    // Dashboard/admin navigation hosts can mount after auth finishes. Watching the
+    // DOM keeps the fallback switcher from remaining visible beside the hosted one.
+    const observer = new MutationObserver(scheduleSync);
+    observer.observe(document.body, { childList: true, subtree: true });
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+      observer.disconnect();
+    };
   }, [pathname]);
 
   if (hasHostedSwitcher !== false) return null;
