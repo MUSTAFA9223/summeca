@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
+import CompactLanguageSwitcher from '@/components/CompactLanguageSwitcher';
 
 const HOST_SELECTOR = '[data-public-nav="true"], [data-language-switcher-host="true"]';
 
@@ -25,8 +26,6 @@ export default function GlobalLanguageSwitcher() {
 
     scheduleSync();
 
-    // Dashboard/admin navigation hosts can mount after auth finishes. Watching the
-    // DOM keeps the fallback switcher from remaining visible beside the hosted one.
     const observer = new MutationObserver(scheduleSync);
     observer.observe(document.body, { childList: true, subtree: true });
 
@@ -41,19 +40,24 @@ export default function GlobalLanguageSwitcher() {
   return (
     <div
       className={isInvoiceRoute
-        ? 'fixed z-[120] print:hidden'
+        ? 'fixed z-[120] scale-90 print:hidden sm:scale-100'
         : 'fixed left-1/2 z-[120] -translate-x-1/2 px-2 transition-[top] duration-300'}
       style={isInvoiceRoute
         ? {
-            right: 'max(1rem, env(safe-area-inset-right))',
-            bottom: 'max(1rem, env(safe-area-inset-bottom))',
+            right: 'max(.5rem, env(safe-area-inset-right))',
+            bottom: 'max(.5rem, env(safe-area-inset-bottom))',
           }
         : {
-            top: 'calc(var(--launch-offer-height, 0px) + max(1rem, env(safe-area-inset-top)))',
+            top: 'calc(var(--launch-offer-height, 0px) + max(.5rem, env(safe-area-inset-top)))',
           }}
       data-i18n-skip
     >
-      <LanguageSwitcher className="max-w-[calc(100vw-1rem)]" />
+      <div className="sm:hidden">
+        <CompactLanguageSwitcher />
+      </div>
+      <div className="hidden sm:block">
+        <LanguageSwitcher className="max-w-[calc(100vw-1rem)]" />
+      </div>
     </div>
   );
 }
