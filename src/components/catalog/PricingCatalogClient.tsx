@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { ArrowRight, CheckCircle2, Package, ShieldCheck } from 'lucide-react';
+import PricingRefundFaq from '@/components/catalog/PricingRefundFaq';
 import { getEffectivePrice } from '@/lib/pricing';
 import {
   getPublicCatalog,
@@ -194,7 +195,7 @@ export default async function PricingCatalogClient() {
           </div>
         </div>
 
-        <div className="mt-10 grid gap-4 md:grid-cols-3" aria-label="Pricing frequently asked questions">
+        <div className="mt-10 grid gap-4 md:grid-cols-2 xl:grid-cols-4" aria-label="Pricing frequently asked questions">
           <article className="rounded-2xl border border-border bg-card p-5">
             <h2 className="text-base font-black text-foreground">Which payment methods can I use?</h2>
             <p className="mt-2 text-sm leading-6 text-muted-foreground">
@@ -213,6 +214,7 @@ export default async function PricingCatalogClient() {
               Open the product details before checkout to see whether the offer opens inside your SUMMECA account or uses protected digital delivery.
             </p>
           </article>
+          <PricingRefundFaq />
         </div>
       </section>
     </main>
