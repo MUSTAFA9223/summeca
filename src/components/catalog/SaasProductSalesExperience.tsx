@@ -10,21 +10,41 @@ import type {
 
 export * from './SaasProductSalesExperienceBase';
 
+type DemoSlug = 'summeca-invoiceflow' | 'summeca-leadfollow-ai';
+
+// Publish only recordings captured from the real customer-facing workspaces.
+// Keep a slug absent until its final demo file is hosted and verified.
+const DEMO_VIDEO_BY_SLUG: Partial<Record<DemoSlug, string>> = {};
+
+function demoVideoFor(slug: string) {
+  if (slug !== 'summeca-invoiceflow' && slug !== 'summeca-leadfollow-ai') return null;
+  const url = DEMO_VIDEO_BY_SLUG[slug];
+  if (!url) return null;
+  return url.startsWith('/') || url.startsWith('https://') ? url : null;
+}
+
 function RealProductPreview({ product }: { product: SaasSalesProduct }) {
   const [target, setTarget] = useState<HTMLElement | null>(null);
-  const [failed, setFailed] = useState(false);
+  const [imageFailed, setImageFailed] = useState(false);
+  const [videoFailed, setVideoFailed] = useState(false);
+  const demoVideoUrl = demoVideoFor(product.slug);
 
   useEffect(() => {
-    setFailed(false);
-    if (!product.thumbnail_url) {
+    setImageFailed(false);
+    setVideoFailed(false);
+    if (!product.thumbnail_url && !demoVideoUrl) {
       setTarget(null);
       return;
     }
 
     setTarget(document.getElementById('product-preview'));
-  }, [product.slug, product.thumbnail_url]);
+  }, [product.slug, product.thumbnail_url, demoVideoUrl]);
 
-  if (!target || !product.thumbnail_url || failed) return null;
+  if (!target) return null;
+
+  const showVideo = Boolean(demoVideoUrl && !videoFailed);
+  const showImage = Boolean(product.thumbnail_url && !imageFailed);
+  if (!showVideo && !showImage) return null;
 
   return createPortal(
     <>
@@ -36,17 +56,30 @@ function RealProductPreview({ product }: { product: SaasSalesProduct }) {
         <div className="flex items-center justify-between border-b border-border bg-secondary/30 px-4 py-3 sm:px-5">
           <span className="text-xs font-bold text-foreground">{product.name}</span>
           <span className="rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-bold text-primary">
-            ACTUAL PRODUCT
+            {showVideo ? 'REAL PRODUCT DEMO' : 'ACTUAL PRODUCT'}
           </span>
         </div>
-        <img
-          src={product.thumbnail_url}
-          alt={`${product.name} actual product screenshot`}
-          loading="eager"
-          decoding="async"
-          onError={() => setFailed(true)}
-          className="block h-auto w-full bg-white object-contain object-top"
-        />
+        {showVideo ? (
+          <video
+            src={demoVideoUrl ?? undefined}
+            poster={product.thumbnail_url ?? undefined}
+            controls
+            playsInline
+            preload="metadata"
+            onError={() => setVideoFailed(true)}
+            className="block aspect-video w-full bg-black object-contain"
+            aria-label={`${product.name} real product demo`}
+          />
+        ) : (
+          <img
+            src={product.thumbnail_url ?? undefined}
+            alt={`${product.name} actual product screenshot`}
+            loading="eager"
+            decoding="async"
+            onError={() => setImageFailed(true)}
+            className="block h-auto w-full bg-white object-contain object-top"
+          />
+        )}
       </div>
     </>,
     target,
