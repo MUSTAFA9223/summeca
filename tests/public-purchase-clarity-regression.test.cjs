@@ -14,7 +14,8 @@ test('homepage hero keeps a readable filled headline and product-first CTA hiera
   assert.match(hero, /color: isLight \? '#062b35' : '#e8fbfa'/);
   assert.match(hero, /WebkitTextStroke/);
   assert.match(hero, /href="\/products"[\s\S]*?primary_cta_click/);
-  assert.match(hero, />\s*View Products\s*</);
+  assert.match(hero, /primary: 'Explore SUMMECA Tools'/);
+  assert.match(hero, /primary: 'استكشف أدوات SUMMECA'/);
   assert.match(hero, /Transparent pricing/);
   assert.match(hero, /Protected checkout/);
   assert.match(hero, /Account-based access/);
