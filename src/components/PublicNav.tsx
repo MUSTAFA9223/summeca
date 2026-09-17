@@ -71,7 +71,7 @@ export default function PublicNav() {
   return (
     <header
       data-public-nav="true"
-      className="sticky top-0 z-50 -mb-[70px] border-b border-primary/10 bg-background/92 shadow-sm shadow-primary/5 backdrop-blur-xl transition-[background-color,box-shadow,border-color] duration-300"
+      className="sticky top-0 z-50 -mb-[70px] border-b border-primary/10 bg-background/90 shadow-sm shadow-primary/5 backdrop-blur-xl transition-[background-color,box-shadow,border-color] duration-300"
     >
       <div className="mx-auto max-w-screen-xl px-5 sm:px-6 lg:px-8">
         <div className="flex h-[70px] items-center justify-between">
