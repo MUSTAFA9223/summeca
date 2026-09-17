@@ -116,7 +116,6 @@ function billingSuffix(period: string) {
 function productCta(product: PublishedProduct) {
   if (product.slug === 'summeca-invoiceflow') return 'Explore InvoiceFlow';
   if (product.slug === 'summeca-leadfollow-ai') return 'Explore LeadFollow';
-  if (product.slug === 'ecommerce-product-page-conversion-kit') return 'View Template';
   if (product.slug.startsWith('conversion-rescue-kit-')) return 'View Kit';
   return 'View Product';
 }
@@ -204,7 +203,45 @@ export default async function HomePage() {
   return (
     <div className="min-h-screen overflow-x-clip bg-background">
       <PublicNav />
-      <main>
+      <main className="summeca-home-motion-scope">
+        <style>{`
+          .summeca-home-hero .summeca-hero-orb {
+            animation: none !important;
+            will-change: auto !important;
+          }
+          .summeca-home-hero .summeca-reveal {
+            animation-duration: 200ms !important;
+            animation-timing-function: ease-out !important;
+            transform: translateY(10px);
+          }
+          .summeca-home-hero .summeca-reveal-1 { animation-delay: 0ms !important; }
+          .summeca-home-hero .summeca-reveal-2 { animation-delay: 35ms !important; }
+          .summeca-home-hero .summeca-reveal-3 { animation-delay: 70ms !important; }
+          .summeca-home-hero .summeca-reveal-4 { animation-delay: 90ms !important; }
+          .summeca-home-hero .summeca-reveal-5 { animation-delay: 110ms !important; }
+          .summeca-home-motion-scope article,
+          .summeca-home-motion-scope a[class*='rounded-2xl'][class*='bg-card'],
+          .summeca-home-motion-scope div[class*='rounded-2xl'][class*='bg-card'] {
+            transition-duration: 200ms !important;
+            transition-timing-function: ease !important;
+          }
+          body.summeca-home-theme .summeca-home-motion-scope article:hover,
+          body.summeca-home-theme .summeca-home-motion-scope a[class*='rounded-2xl'][class*='bg-card']:hover,
+          body.summeca-home-theme .summeca-home-motion-scope div[class*='rounded-2xl'][class*='bg-card']:hover {
+            transform: translateY(-4px) !important;
+          }
+          @media (prefers-reduced-motion: reduce) {
+            .summeca-home-hero .summeca-reveal,
+            .summeca-home-hero .summeca-hero-orb,
+            .summeca-home-motion-scope article,
+            .summeca-home-motion-scope a,
+            .summeca-home-motion-scope div {
+              animation: none !important;
+              transition: none !important;
+              transform: none !important;
+            }
+          }
+        `}</style>
         <HeroSection />
 
         <section
@@ -220,11 +257,8 @@ export default async function HomePage() {
                 id="featured-products-title"
                 className="mt-2 max-w-2xl text-2xl font-800 tracking-tight text-foreground sm:text-3xl"
               >
-                Start with the workflow slowing your business down today.
+                Start with the store workflow slowing you down today.
               </h2>
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
-                Compare a SaaS workspace, an AI-assisted workspace, a downloadable kit, and a business template using current production offers.
-              </p>
             </div>
             <Link
               href="/products"
