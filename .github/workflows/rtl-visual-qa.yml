@@ -1,0 +1,172 @@
+name: RTL Visual QA
+
+on:
+  push:
+    branches:
+      - qa/rtl-visual-2026-09-17-v2
+
+permissions:
+  contents: read
+
+jobs:
+  visual-qa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+
+      - name: Install Playwright
+        run: |
+          mkdir -p /tmp/rtl-qa
+          cd /tmp/rtl-qa
+          npm init -y >/dev/null 2>&1
+          npm install playwright@1.55.0 --no-audit --no-fund
+          npx playwright install chromium --with-deps
+
+      - name: Capture production RTL screenshots and audit
+        env:
+          NODE_PATH: /tmp/rtl-qa/node_modules
+        run: |
+          mkdir -p rtl-visual-qa/screenshots
+          node <<'NODE'
+          const fs = require('fs');
+          const path = require('path');
+          const { chromium } = require('playwright');
+
+          const base = 'https://summeca.com';
+          const pages = [
+            ['home', '/'],
+            ['products', '/products'],
+            ['pricing', '/pricing'],
+            ['invoiceflow', '/products/summeca-invoiceflow'],
+            ['leadfollow', '/products/summeca-leadfollow-ai'],
+            ['login', '/sign-up-login-screen'],
+            ['dashboard', '/user-dashboard'],
+            ['checkout', '/checkout'],
+            ['404', '/visual-qa-not-found-route'],
+          ];
+          const viewports = [
+            ['320x568', 320, 568],
+            ['375x667', 375, 667],
+            ['390x844', 390, 844],
+            ['430x932', 430, 932],
+            ['768x1024', 768, 1024],
+            ['1024x768', 1024, 768],
+            ['1440x900', 1440, 900],
+          ];
+          const darkViewports = new Set(['390x844', '1440x900']);
+          const outDir = path.join(process.cwd(), 'rtl-visual-qa', 'screenshots');
+          const results = [];
+
+          function safeName(s) { return s.replace(/[^a-zA-Z0-9_-]+/g, '-'); }
+
+          (async () => {
+            const browser = await chromium.launch({ headless: true });
+            for (const [vpName, width, height] of viewports) {
+              for (const theme of ['light', ...(darkViewports.has(vpName) ? ['dark'] : [])]) {
+                for (const [pageName, route] of pages) {
+                  const context = await browser.newContext({
+                    viewport: { width, height },
+                    deviceScaleFactor: 1,
+                    locale: 'ar',
+                    colorScheme: theme,
+                  });
+                  await context.addCookies([{ name: 'summeca_language', value: 'ar', domain: 'summeca.com', path: '/', secure: true, sameSite: 'Lax' }]);
+                  await context.addInitScript(({ theme }) => {
+                    localStorage.setItem('summeca.language', 'ar');
+                    localStorage.setItem('summeca:theme', theme);
+                  }, { theme });
+                  const p = await context.newPage();
+                  const consoleErrors = [];
+                  const pageErrors = [];
+                  p.on('console', msg => { if (msg.type() === 'error') consoleErrors.push(msg.text()); });
+                  p.on('pageerror', err => pageErrors.push(String(err)));
+                  let status = null;
+                  let finalUrl = null;
+                  let navError = null;
+                  try {
+                    const response = await p.goto(base + route, { waitUntil: 'networkidle', timeout: 45000 });
+                    status = response?.status() ?? null;
+                    finalUrl = p.url();
+                    await p.waitForTimeout(800);
+                  } catch (err) {
+                    navError = String(err);
+                    finalUrl = p.url();
+                  }
+                  const metrics = await p.evaluate(() => {
+                    const el = document.documentElement;
+                    const body = document.body;
+                    const overflow = Math.max(el.scrollWidth, body?.scrollWidth || 0) > el.clientWidth + 2;
+                    const visibleProblemElements = [...document.querySelectorAll('*')].filter(node => {
+                      const r = node.getBoundingClientRect();
+                      if (!r.width || !r.height) return false;
+                      const style = getComputedStyle(node);
+                      if (style.position === 'fixed' || style.position === 'sticky') return false;
+                      return r.right > innerWidth + 2 || r.left < -2;
+                    }).slice(0, 12).map(node => ({
+                      tag: node.tagName,
+                      cls: String(node.className || '').slice(0, 120),
+                      text: String(node.textContent || '').trim().slice(0, 80),
+                      rect: (() => { const r = node.getBoundingClientRect(); return { left: Math.round(r.left), right: Math.round(r.right), width: Math.round(r.width) }; })(),
+                    }));
+                    return {
+                      lang: el.lang,
+                      dir: el.dir,
+                      dataLanguage: el.dataset.language || null,
+                      siteTheme: el.dataset.siteTheme || null,
+                      clientWidth: el.clientWidth,
+                      scrollWidth: Math.max(el.scrollWidth, body?.scrollWidth || 0),
+                      overflow,
+                      visibleProblemElements,
+                      title: document.title,
+                    };
+                  });
+                  const filename = `${safeName(pageName)}__${vpName}__${theme}.png`;
+                  await p.screenshot({ path: path.join(outDir, filename), fullPage: true });
+                  results.push({ pageName, route, viewport: vpName, width, height, theme, status, finalUrl, navError, consoleErrors, pageErrors, ...metrics, screenshot: filename });
+                  await context.close();
+                }
+              }
+            }
+            await browser.close();
+
+            const summary = {
+              generatedAt: new Date().toISOString(),
+              production: base,
+              totalCases: results.length,
+              rtlFailures: results.filter(r => r.dir !== 'rtl' || r.lang !== 'ar' || r.dataLanguage !== 'ar').length,
+              overflowFailures: results.filter(r => r.overflow).length,
+              navigationFailures: results.filter(r => r.navError).length,
+              consoleErrorCases: results.filter(r => r.consoleErrors.length || r.pageErrors.length).length,
+              dashboardRedirectCases: results.filter(r => r.pageName === 'dashboard' && r.finalUrl && r.finalUrl.includes('/sign-up-login-screen')).length,
+            };
+            fs.writeFileSync(path.join(process.cwd(), 'rtl-visual-qa', 'report.json'), JSON.stringify({ summary, results }, null, 2));
+            fs.writeFileSync(path.join(process.cwd(), 'rtl-visual-qa', 'summary.txt'), [
+              `Generated: ${summary.generatedAt}`,
+              `Production: ${summary.production}`,
+              `Cases: ${summary.totalCases}`,
+              `RTL/lang failures: ${summary.rtlFailures}`,
+              `Horizontal overflow failures: ${summary.overflowFailures}`,
+              `Navigation failures: ${summary.navigationFailures}`,
+              `Cases with console/page errors: ${summary.consoleErrorCases}`,
+              `Dashboard redirected to login: ${summary.dashboardRedirectCases}`,
+            ].join('\n') + '\n');
+            console.log(JSON.stringify(summary, null, 2));
+            if (summary.rtlFailures || summary.overflowFailures || summary.navigationFailures) process.exitCode = 2;
+          })().catch(err => { console.error(err); process.exit(1); });
+          NODE
+
+      - name: Upload visual QA evidence
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: rtl-visual-qa-production
+          path: rtl-visual-qa
+          if-no-files-found: error
+          retention-days: 14
