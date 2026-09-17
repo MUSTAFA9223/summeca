@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { Play } from 'lucide-react';
 import BaseSaasProductSalesExperience from './SaasProductSalesExperienceBase';
 import type {
   SaasSalesPlan,
@@ -30,11 +31,14 @@ function RealProductPreview({ product }: { product: SaasSalesProduct }) {
   const [target, setTarget] = useState<HTMLElement | null>(null);
   const [imageFailed, setImageFailed] = useState(false);
   const [videoFailed, setVideoFailed] = useState(false);
+  const [playing, setPlaying] = useState(false);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
   const demoVideoUrl = demoVideoFor(product.slug);
 
   useEffect(() => {
     setImageFailed(false);
     setVideoFailed(false);
+    setPlaying(false);
     if (!product.thumbnail_url && !demoVideoUrl) {
       setTarget(null);
       return;
@@ -49,30 +53,55 @@ function RealProductPreview({ product }: { product: SaasSalesProduct }) {
   const showImage = Boolean(product.thumbnail_url && !imageFailed);
   if (!showVideo && !showImage) return null;
 
+  const playVideo = () => {
+    const node = videoRef.current;
+    if (!node) return;
+    void node.play();
+  };
+
   return createPortal(
     <>
       <style>{`#product-preview > div:not([data-real-product-preview="true"]) { display: none !important; }`}</style>
       <div
         data-real-product-preview="true"
-        className="overflow-hidden rounded-[24px] border border-border/80 bg-card shadow-2xl shadow-primary/10"
+        className="overflow-hidden rounded-[24px] border border-border/80 bg-card shadow-2xl shadow-primary/10 transition duration-300 hover:-translate-y-1 hover:border-primary/30 hover:shadow-primary/15 motion-reduce:transform-none"
       >
-        <div className="flex items-center justify-between border-b border-border bg-secondary/30 px-4 py-3 sm:px-5">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border bg-secondary/30 px-4 py-3 sm:px-5">
           <span className="text-xs font-bold text-foreground">{product.name}</span>
-          <span className="rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-bold text-primary">
+          <span className="rounded-full bg-primary/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-primary sm:text-[11px]">
             {showVideo ? 'REAL PRODUCT DEMO' : 'ACTUAL PRODUCT'}
           </span>
         </div>
         {showVideo ? (
-          <video
-            src={demoVideoUrl ?? undefined}
-            poster={product.thumbnail_url ?? undefined}
-            controls
-            playsInline
-            preload="metadata"
-            onError={() => setVideoFailed(true)}
-            className="block aspect-video w-full bg-black object-contain"
-            aria-label={`${product.name} real product demo`}
-          />
+          <div className="relative aspect-video overflow-hidden bg-black">
+            <video
+              ref={videoRef}
+              src={demoVideoUrl ?? undefined}
+              poster={product.thumbnail_url ?? undefined}
+              controls={playing}
+              muted
+              loop
+              playsInline
+              preload="metadata"
+              onPlay={() => setPlaying(true)}
+              onPause={() => setPlaying(false)}
+              onError={() => setVideoFailed(true)}
+              className="h-full w-full object-contain"
+              aria-label={`${product.name} real product demo`}
+            />
+            {!playing && (
+              <button
+                type="button"
+                onClick={playVideo}
+                aria-label={`Play ${product.name} demo`}
+                className="group absolute inset-0 flex items-center justify-center bg-black/20 transition hover:bg-black/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-4px] focus-visible:outline-primary"
+              >
+                <span className="flex h-20 w-20 items-center justify-center rounded-full border border-white/25 bg-white/95 text-slate-950 shadow-2xl transition duration-200 group-hover:scale-105 motion-reduce:transform-none">
+                  <Play size={32} className="ml-1 fill-current" />
+                </span>
+              </button>
+            )}
+          </div>
         ) : (
           <img
             src={product.thumbnail_url ?? undefined}
