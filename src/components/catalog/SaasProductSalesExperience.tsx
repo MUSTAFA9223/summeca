@@ -71,7 +71,7 @@ function RealProductPreview({ product }: { product: SaasSalesProduct }) {
           <div className="flex flex-wrap items-center justify-end gap-2">
             {showVideo && (
               <span className="text-[10px] font-semibold text-muted-foreground sm:text-[11px]">
-                6-second real product walkthrough
+                15-second real product walkthrough
               </span>
             )}
             <span className="rounded-full bg-primary/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-primary sm:text-[11px]">
@@ -94,13 +94,13 @@ function RealProductPreview({ product }: { product: SaasSalesProduct }) {
               onPause={() => setPlaying(false)}
               onError={() => setVideoFailed(true)}
               className="h-full w-full object-contain"
-              aria-label={`${product.name} real product demo, 6 seconds`}
+              aria-label={`${product.name} real product demo, 15 seconds`}
             />
             {!playing && (
               <button
                 type="button"
                 onClick={playVideo}
-                aria-label={`Play ${product.name} 6-second demo`}
+                aria-label={`Play ${product.name} 15-second demo`}
                 className="group absolute inset-0 flex items-center justify-center bg-black/20 transition hover:bg-black/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-4px] focus-visible:outline-primary"
               >
                 <span className="flex h-20 w-20 items-center justify-center rounded-full border border-white/25 bg-white/95 text-slate-950 shadow-2xl transition duration-200 group-hover:scale-105 motion-reduce:transform-none">
@@ -110,7 +110,7 @@ function RealProductPreview({ product }: { product: SaasSalesProduct }) {
             )}
             {!playing && (
               <span className="pointer-events-none absolute bottom-3 right-3 rounded-md bg-black/70 px-2 py-1 text-[11px] font-bold text-white">
-                0:06
+                0:15
               </span>
             )}
           </div>
