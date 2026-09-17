@@ -9,22 +9,18 @@ const hero = fs.readFileSync(path.join(root, 'src/app/components/HeroSection.tsx
 const nav = fs.readFileSync(path.join(root, 'src/components/PublicNav.tsx'), 'utf8');
 const translations = fs.readFileSync(path.join(root, 'src/lib/i18n-homepage.ts'), 'utf8');
 const provider = fs.readFileSync(path.join(root, 'src/contexts/LanguageContext.tsx'), 'utf8');
-const normalizedMarketing = `${homepage}\n${hero}\n${nav}`.replace(/\s+/g, ' ');
+const normalizedMarketing = `${homepage}\n${nav}`.replace(/\s+/g, ' ');
 
-const visibleHomepagePhrases = [
+const translatedHomepagePhrases = [
   'AI-assisted workspace',
   'Downloadable digital kit',
   'SaaS workspace',
+  'Business Template',
   'For Stores',
   'Products',
   'Pricing',
   'Support',
   'Get Started',
-  'Built for small e-commerce stores',
-  'Run your store faster',
-  'with practical digital tools.',
-  'Handle invoices, customer follow-ups, and conversion work with focused tools instead of a bloated software stack. See the real product experience before you choose.',
-  'View Products',
   'Transparent pricing',
   'Protected checkout',
   'Customer support',
@@ -59,14 +55,38 @@ const visibleHomepagePhrases = [
   'View Pricing',
 ];
 
-test('all explicitly rendered homepage marketing copy has an Arabic translation', () => {
-  for (const phrase of visibleHomepagePhrases) {
+test('all shared homepage marketing copy has an Arabic translation', () => {
+  for (const phrase of translatedHomepagePhrases) {
     assert.ok(normalizedMarketing.includes(phrase), `homepage phrase moved or changed: ${phrase}`);
     assert.ok(
       translations.includes(`'${phrase}'`) || translations.includes(`\"${phrase}\"`),
       `missing Arabic homepage translation: ${phrase}`,
     );
   }
+});
+
+test('hero owns natural English and Arabic copy and explicit RTL direction', () => {
+  for (const phrase of [
+    'Built for modern small online businesses',
+    'Run your online business faster',
+    'with practical digital tools.',
+    'Explore SUMMECA Tools',
+    'Transparent pricing',
+    'Protected checkout',
+    'Account-based access',
+    'Customer support',
+    'مصمم للأعمال والمتاجر الرقمية الصغيرة',
+    'أدِر عملك الرقمي بسرعة أكبر',
+    'بأدوات عملية من SUMMECA.',
+    'استكشف أدوات SUMMECA',
+    'أسعار واضحة',
+    'دفع محمي',
+    'وصول مرتبط بالحساب',
+    'دعم العملاء',
+  ]) {
+    assert.ok(hero.includes(phrase), `missing bilingual hero copy: ${phrase}`);
+  }
+  assert.match(hero, /dir=\{isArabic \? 'rtl' : 'ltr'\}/);
 });
 
 test('language provider applies the homepage translation layer before shared surface translation', () => {
