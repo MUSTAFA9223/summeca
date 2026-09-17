@@ -66,10 +66,10 @@ function RealProductPreview({ product }: { product: SaasSalesProduct }) {
         data-real-product-preview="true"
         className="overflow-hidden rounded-[24px] border border-border/80 bg-card shadow-2xl shadow-primary/10 transition duration-300 hover:-translate-y-1 hover:border-primary/30 hover:shadow-primary/15 motion-reduce:transform-none"
       >
-        <div className="flex items-center justify-between border-b border-border bg-secondary/30 px-4 py-3 sm:px-5">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border bg-secondary/30 px-4 py-3 sm:px-5">
           <span className="text-xs font-bold text-foreground">{product.name}</span>
-          <span className="rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-bold text-primary">
-            {showVideo ? 'REAL PRODUCT DEMO' : 'ACTUAL PRODUCT'}
+          <span className="rounded-full bg-primary/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-primary sm:text-[11px]">
+            {showVideo ? '15-second real product walkthrough' : 'Actual product'}
           </span>
         </div>
         {showVideo ? (
@@ -87,7 +87,7 @@ function RealProductPreview({ product }: { product: SaasSalesProduct }) {
               onPause={() => setPlaying(false)}
               onError={() => setVideoFailed(true)}
               className="h-full w-full object-contain"
-              aria-label={`${product.name} real product demo`}
+              aria-label={`${product.name} 15-second real product walkthrough`}
             />
             {!playing && (
               <button
