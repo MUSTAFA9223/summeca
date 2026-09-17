@@ -49,6 +49,12 @@ function suffix(period: PublicCatalogPlan['billing_period']) {
   return '';
 }
 
+function planGridClass(planCount: number) {
+  if (planCount <= 1) return 'mx-auto max-w-2xl grid-cols-1';
+  if (planCount === 2) return 'mx-auto max-w-4xl md:grid-cols-2';
+  return 'md:grid-cols-2 xl:grid-cols-3';
+}
+
 export default async function PricingCatalogClient() {
   const products = await getPublicCatalog();
 
@@ -102,7 +108,7 @@ export default async function PricingCatalogClient() {
                   </Link>
                 </div>
 
-                <div className="mt-6 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+                <div className={`mt-6 grid gap-5 ${planGridClass(product.plans.length)}`}>
                   {product.plans.map((plan) => {
                     const pricing = pricingFor(plan);
                     return (
