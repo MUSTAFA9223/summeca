@@ -1,0 +1,171 @@
+/* Prompt 11 — accessibility, motion and frontend visual performance guardrails. */
+
+/* Provide a reliable keyboard focus fallback across public, auth, checkout and app surfaces. */
+:where(
+  a[href],
+  button,
+  input,
+  select,
+  textarea,
+  summary,
+  [tabindex]:not([tabindex='-1'])
+):focus-visible {
+  outline: 3px solid var(--ring);
+  outline-offset: 3px;
+}
+
+/* Keyboard users can bypass repeated global controls and jump to page content. */
+.skip-to-content {
+  position: fixed;
+  inset-inline-start: 1rem;
+  top: max(0.75rem, env(safe-area-inset-top));
+  z-index: 220;
+  transform: translateY(-180%);
+  border: 2px solid var(--ring);
+  border-radius: 0.75rem;
+  background: var(--card);
+  color: var(--card-foreground);
+  padding: 0.7rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 800;
+  box-shadow: 0 10px 28px rgba(2, 8, 23, 0.18);
+  transition: transform 180ms ease;
+}
+
+.skip-to-content:focus-visible {
+  transform: translateY(0);
+}
+
+/* Light Premium: preserve the turquoise brand surface while meeting readable text contrast. */
+html[data-site-theme='light'] {
+  --primary-foreground: #041014;
+  --muted-foreground: #52727a;
+  --ring: #087f79;
+}
+
+html[data-site-theme='light'] .btn-primary,
+html[data-site-theme='dark'] .btn-primary,
+body.summeca-home-theme .btn-primary {
+  color: #041014;
+}
+
+/* Featured price cards keep white text, so use a deeper turquoise surface. */
+.price-card-featured {
+  background: linear-gradient(145deg, #0f766e 0%, #0e7490 100%);
+}
+
+/* Keep micro-interactions brief and targeted instead of transitioning every property. */
+.btn-primary,
+.btn-secondary,
+.btn-ghost-white,
+.sidebar-link {
+  transition-property: background-color, border-color, color, box-shadow, transform;
+  transition-duration: 200ms;
+}
+
+.usage-bar-fill {
+  transition-duration: 220ms;
+}
+
+.fade-in,
+.slide-up,
+.page-transition,
+.summeca-reveal {
+  animation-duration: 220ms !important;
+}
+
+.stagger-1 { animation-delay: 30ms; }
+.stagger-2 { animation-delay: 60ms; }
+.stagger-3 { animation-delay: 90ms; }
+.stagger-4 { animation-delay: 120ms; }
+.stagger-5 { animation-delay: 150ms; }
+.stagger-6 { animation-delay: 180ms; }
+
+/* Decorative continuous motion is intentionally static. Content stays immediately visible. */
+.float-animation,
+.pulse-ring,
+.text-shimmer,
+.summeca-hero-orb,
+.summeca-hero-word {
+  animation: none !important;
+}
+
+/* Reduce expensive visual work while keeping the existing premium glass direction. */
+.glass-card {
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.glass-card-dark,
+.glass-nav,
+.glass-card-premium {
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.summeca-hero-orb {
+  filter: blur(72px);
+  will-change: auto;
+}
+
+body.summeca-home-theme header,
+body.summeca-home-light-theme header[class*='bg-transparent'] {
+  backdrop-filter: blur(14px) saturate(115%) !important;
+  -webkit-backdrop-filter: blur(14px) saturate(115%) !important;
+}
+
+body.summeca-home-theme main article,
+body.summeca-home-theme main a[class*='rounded-2xl'][class*='bg-card'],
+body.summeca-home-theme main div[class*='rounded-2xl'][class*='bg-card'] {
+  transition:
+    transform 220ms ease,
+    border-color 200ms ease,
+    box-shadow 220ms ease,
+    background-color 200ms ease;
+}
+
+body.summeca-home-theme main article:hover,
+body.summeca-home-theme main a[class*='rounded-2xl'][class*='bg-card']:hover,
+body.summeca-home-theme main div[class*='rounded-2xl'][class*='bg-card']:hover {
+  transform: translateY(-3px);
+}
+
+/* Honor the OS preference everywhere, including legacy utility animations. */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto !important;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    transition-delay: 0ms !important;
+  }
+
+  .float-animation,
+  .pulse-ring,
+  .shimmer,
+  .text-shimmer,
+  .summeca-hero-orb,
+  .summeca-hero-word {
+    animation: none !important;
+  }
+
+  .fade-in,
+  .slide-up,
+  .page-transition,
+  .summeca-reveal,
+  .summeca-catalog-enter {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  .skip-to-content {
+    transition: none;
+  }
+}

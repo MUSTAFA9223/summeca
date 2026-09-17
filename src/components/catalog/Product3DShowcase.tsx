@@ -44,10 +44,10 @@ export default function Product3DShowcase({
       <div className="absolute inset-0 rounded-[22px] border border-slate-700/80 bg-[#0c1218] p-3 shadow-[0_26px_70px_rgba(0,0,0,.38)] sm:p-4">
         <div className="mb-3 flex items-center justify-between gap-3">
           <span className="inline-flex items-center gap-1.5 text-[9px] font-black uppercase tracking-[0.16em] text-cyan-200">
-            <Layers3 size={11} /> {eyebrow || categoryLabel(category)}
+            <Layers3 size={11} aria-hidden="true" /> {eyebrow || categoryLabel(category)}
           </span>
           <span className="inline-flex items-center gap-1.5 text-[8px] font-bold uppercase tracking-[0.12em] text-slate-400">
-            <Eye size={10} className="text-cyan-300" /> {badge}
+            <Eye size={10} className="text-cyan-300" aria-hidden="true" /> {badge}
           </span>
         </div>
         {children ? (
@@ -60,6 +60,8 @@ export default function Product3DShowcase({
             <img
               src={thumbnailUrl ?? ''}
               alt={`${name} product screenshot`}
+              width={1200}
+              height={675}
               loading={hero ? 'eager' : 'lazy'}
               decoding="async"
               className="h-full w-full object-contain object-top"
