@@ -9,7 +9,7 @@ const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
 const signup = read('src/app/sign-up-login-screen/components/SignupForm.tsx');
 const quickStart = read('src/app/user-dashboard/components/DashboardQuickStart.tsx');
 const dashboardPage = read('src/app/user-dashboard/page.tsx');
-const pricing = read('src/components/catalog/PricingCatalogClient.tsx');
+const pricing = read('src/components/catalog/PricingCatalogView.tsx');
 const translations = read('src/lib/i18n-homepage.ts');
 
 test('email signup records funnel milestones without sending identity fields to analytics', () => {
@@ -40,12 +40,23 @@ test('dashboard includes a dismissible three-step quick start instead of a dead 
   assert.match(quickStart, /localStorage/);
 });
 
-test('new pricing and quick-start copy stays covered by Arabic localization', () => {
+test('pricing keeps explicit English and Arabic conversion copy in the pricing surface', () => {
+  assert.match(pricing, /useLanguage/);
+  const requiredPairs = [
+    ['Transparent Pricing', 'أسعار واضحة'],
+    ['Pick the tool you need. See the price first.', 'اختر الأداة المناسبة وشاهد السعر أولًا.'],
+    ['Pricing is temporarily unavailable', 'الأسعار غير متاحة مؤقتًا'],
+    ['Product details', 'تفاصيل المنتج'],
+  ];
+
+  for (const [english, arabic] of requiredPairs) {
+    assert.ok(pricing.includes(english), `pricing phrase moved or changed: ${english}`);
+    assert.ok(pricing.includes(arabic), `missing Arabic pricing copy: ${english}`);
+  }
+});
+
+test('quick-start copy stays covered by shared Arabic localization', () => {
   const required = [
-    'Transparent Pricing',
-    'Pick the tool your store needs. See the price first.',
-    'Pricing is temporarily unavailable',
-    'Product details',
     'Quick start',
     'Get to your first useful workflow in three clear steps.',
     'Choose one workflow',
@@ -58,10 +69,7 @@ test('new pricing and quick-start copy stays covered by Arabic localization', ()
   ];
 
   for (const phrase of required) {
-    assert.ok(
-      pricing.includes(phrase) || quickStart.includes(phrase),
-      `conversion surface phrase moved or changed: ${phrase}`,
-    );
+    assert.ok(quickStart.includes(phrase), `quick-start phrase moved or changed: ${phrase}`);
     assert.ok(
       translations.includes(`'${phrase}'`) || translations.includes(`\"${phrase}\"`),
       `missing Arabic conversion translation: ${phrase}`,
