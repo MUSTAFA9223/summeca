@@ -146,7 +146,7 @@ export default function SaasProductSalesExperience({
 
         @media (max-width: 639px) {
           .summeca-saas-sales-shell main > section:first-of-type > div.relative {
-            padding-top: 1.5rem;
+            padding-top: 1rem;
             padding-bottom: 1.75rem;
           }
 
@@ -159,7 +159,7 @@ export default function SaasProductSalesExperience({
           .summeca-saas-sales-shell main > section:first-of-type > div.relative {
             align-items: start;
             gap: 2rem;
-            padding-top: 2.25rem;
+            padding-top: 1.5rem;
             padding-bottom: 2.25rem;
           }
 
