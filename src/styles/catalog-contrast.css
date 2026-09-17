@@ -75,3 +75,46 @@ select[aria-label='Sort products'] option {
   background-color: #ffffff;
   color: #062b35;
 }
+
+/* Homepage headline: keep the turquoise edge, but use a real fill for legibility. */
+.summeca-outline-text {
+  color: #e6fffb;
+  -webkit-text-stroke: 0.9px rgba(103, 232, 249, 0.78);
+  text-shadow: 0 0 24px rgba(34, 211, 238, 0.1);
+}
+
+html[data-site-theme='light'] .summeca-outline-text {
+  color: #063741;
+  -webkit-text-stroke: 0.85px rgba(0, 169, 165, 0.48);
+  text-shadow: 0 0 18px rgba(0, 169, 165, 0.06);
+}
+
+/* Keep non-SaaS product hero content, price and primary CTA in the first viewport. */
+main[class*='pt-[68px]'] > section:first-child[class*='min-h-[650px]'] {
+  min-height: 560px;
+}
+
+main[class*='pt-[68px]'] > section:first-child[class*='min-h-[650px]'] > div[class*='max-w-screen-xl'] {
+  gap: 2rem;
+  padding-top: 2.5rem;
+  padding-bottom: 2.5rem;
+}
+
+main[class*='pt-[68px]'] > section:first-child[class*='min-h-[650px]'] h1 {
+  margin-top: 1rem;
+}
+
+main[class*='pt-[68px]'] > section:first-child[class*='min-h-[650px]'] h1 + p {
+  margin-top: 1rem;
+}
+
+@media (max-width: 767px) {
+  main[class*='pt-[68px]'] > section:first-child[class*='min-h-[650px]'] {
+    min-height: auto;
+  }
+
+  main[class*='pt-[68px]'] > section:first-child[class*='min-h-[650px]'] > div[class*='max-w-screen-xl'] {
+    padding-top: 2rem;
+    padding-bottom: 2.25rem;
+  }
+}

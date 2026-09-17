@@ -97,9 +97,50 @@ export default function SaasProductSalesExperience({
   plans: SaasSalesPlan[];
 }) {
   return (
-    <>
+    <div className="summeca-saas-sales-shell">
+      <style>{`
+        @media (min-width: 1024px) {
+          .summeca-saas-sales-shell main > section:first-of-type > div.relative {
+            align-items: start;
+            gap: 2rem;
+            padding-top: 2.25rem;
+            padding-bottom: 2.25rem;
+          }
+
+          .summeca-saas-sales-shell main > section:first-of-type > div.relative > div:first-child > :nth-child(2) {
+            margin-top: 0.7rem;
+          }
+
+          .summeca-saas-sales-shell main > section:first-of-type > div.relative > div:first-child > :nth-child(3) {
+            margin-top: 0.55rem;
+            font-size: clamp(2.55rem, 4vw, 3.55rem);
+            line-height: 1.02;
+          }
+
+          .summeca-saas-sales-shell main > section:first-of-type > div.relative > div:first-child > :nth-child(4),
+          .summeca-saas-sales-shell main > section:first-of-type > div.relative > div:first-child > :nth-child(5),
+          .summeca-saas-sales-shell main > section:first-of-type > div.relative > div:first-child > :nth-child(6),
+          .summeca-saas-sales-shell main > section:first-of-type > div.relative > div:first-child > :nth-child(8),
+          .summeca-saas-sales-shell main > section:first-of-type > div.relative > div:first-child > :nth-child(9) {
+            margin-top: 0.8rem;
+          }
+
+          .summeca-saas-sales-shell main > section:first-of-type > div.relative > div:first-child > :nth-child(5) {
+            padding: 0.8rem 0.9rem;
+          }
+
+          .summeca-saas-sales-shell main > section:first-of-type > div.relative > div:first-child > :nth-child(5) ul {
+            margin-top: 0.55rem;
+          }
+
+          .summeca-saas-sales-shell #product-preview {
+            align-self: start;
+            margin-top: 0.25rem;
+          }
+        }
+      `}</style>
       <BaseSaasProductSalesExperience product={product} plans={plans} />
       <RealProductPreview product={product} />
-    </>
+    </div>
   );
 }

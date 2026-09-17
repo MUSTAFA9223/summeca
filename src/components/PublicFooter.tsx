@@ -29,9 +29,17 @@ const footerLinks = {
 
 function TwitterIcon({ size = 16 }: { size?: number }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
       <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.73-8.835L1.254 2.25H8.08l4.253 5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
     </svg>
+  );
+}
+
+function ProductHuntIcon() {
+  return (
+    <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[#ff6154] text-sm font-black text-white" aria-hidden="true">
+      P
+    </span>
   );
 }
 
@@ -57,22 +65,17 @@ export default function PublicFooter() {
               <a href="mailto:hello@summeca.com?subject=SUMMECA%20General%20Inquiry" aria-label="Email SUMMECA general inquiries" title="hello@summeca.com" className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/8 text-slate-400 transition hover:bg-primary/30 hover:text-white"><Mail size={15} /></a>
             </div>
             <a
-              href="https://www.producthunt.com/products/summeca?embed=true&utm_source=badge-featured&utm_medium=badge&utm_campaign=badge-summeca"
+              href="https://www.producthunt.com/products/summeca?utm_source=other&utm_medium=social"
               target="_blank"
               rel="noopener noreferrer"
               aria-label="View SUMMECA on Product Hunt"
-              className="mt-5 inline-flex max-w-full rounded-lg bg-white p-1 shadow-sm transition hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary motion-reduce:transition-none"
+              className="mt-5 inline-flex max-w-full items-center gap-3 rounded-xl border border-white/10 bg-white px-3.5 py-2.5 text-left text-[#1d2433] shadow-sm transition hover:-translate-y-0.5 hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary motion-reduce:transform-none motion-reduce:transition-none"
             >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1249344&theme=light&t=1789457265017"
-                alt="SUMMECA — AI, SaaS and digital tools for faster business on Product Hunt"
-                width="250"
-                height="54"
-                loading="lazy"
-                decoding="async"
-                className="h-auto max-w-full"
-              />
+              <ProductHuntIcon />
+              <span className="min-w-0 leading-tight">
+                <span className="block text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">Featured on</span>
+                <span className="mt-0.5 block text-sm font-black text-[#1d2433]">Product Hunt</span>
+              </span>
             </a>
           </div>
 

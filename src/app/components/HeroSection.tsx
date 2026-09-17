@@ -32,7 +32,7 @@ export default function HeroSection() {
 
   return (
     <section
-      className={`summeca-home-hero relative isolate min-h-[620px] overflow-hidden pt-[70px] lg:min-h-[660px] ${
+      className={`summeca-home-hero relative isolate min-h-[580px] overflow-hidden pt-[70px] lg:min-h-[620px] ${
         isLight ? 'bg-[#f3fafa] text-[#062b35]' : 'bg-[#06151c] text-white'
       }`}
     >
@@ -46,8 +46,8 @@ export default function HeroSection() {
         }`}
       />
 
-      <div className="relative z-10 mx-auto grid min-h-[550px] max-w-[1440px] grid-cols-1 items-center lg:min-h-[590px] lg:grid-cols-[46%_54%]">
-        <div className="relative px-6 pb-8 pt-10 sm:px-10 sm:pt-12 lg:px-12 lg:pb-14 lg:pt-14 xl:px-16">
+      <div className="relative z-10 mx-auto grid min-h-[510px] max-w-[1440px] grid-cols-1 items-center lg:min-h-[550px] lg:grid-cols-[46%_54%]">
+        <div className="relative px-6 pb-8 pt-9 sm:px-10 sm:pt-10 lg:px-12 lg:pb-10 lg:pt-11 xl:px-16">
           <div
             className={`summeca-reveal summeca-reveal-1 mb-5 inline-flex items-center gap-2.5 rounded-full px-4 py-2 text-[10px] font-bold uppercase tracking-[0.18em] backdrop-blur-xl ${
               isLight
@@ -128,9 +128,9 @@ export default function HeroSection() {
           </div>
         </div>
 
-        <div className="relative flex min-h-[430px] items-center self-stretch overflow-hidden px-5 py-8 sm:min-h-[500px] sm:px-8 lg:min-h-[590px] lg:overflow-visible lg:pl-0 lg:pr-12 xl:pr-16">
+        <div className="relative flex min-h-[400px] items-center self-stretch overflow-hidden px-3 py-5 sm:min-h-[450px] sm:px-6 lg:min-h-[550px] lg:overflow-visible lg:pl-0 lg:pr-10 xl:pr-14">
           <div
-            className={`pointer-events-none absolute inset-[10%] rounded-[28px] backdrop-blur-[2px] ${
+            className={`pointer-events-none absolute inset-x-[5%] inset-y-[15%] rounded-[28px] backdrop-blur-[2px] ${
               isLight
                 ? 'border border-[#00a9a5]/[0.12] bg-white/60 shadow-[inset_0_1px_0_rgba(255,255,255,0.95),0_42px_100px_rgba(6,43,53,0.08)]'
                 : 'border border-[#78e4df]/[0.08] bg-[#0c2731]/35 shadow-[inset_0_1px_0_rgba(164,255,244,0.05),0_42px_100px_rgba(0,0,0,0.22)]'
@@ -141,7 +141,7 @@ export default function HeroSection() {
               isLight ? 'bg-[#00a9a5]/10' : 'bg-[#20d9bd]/10'
             }`}
           />
-          <WorkspaceOverviewPreview className="relative z-10 w-full" />
+          <WorkspaceOverviewPreview className="relative z-10 w-full lg:scale-[1.035]" />
         </div>
       </div>
 
