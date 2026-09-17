@@ -24,6 +24,8 @@ const HOMEPAGE_AR_TRANSLATIONS: Record<string, string> = {
   'Handle invoices, customer follow-ups, and conversion work with focused tools instead of a bloated software stack. See the real product experience before you choose.': 'أدر الفواتير ومتابعة العملاء وتحسين التحويل بأدوات مركزة بدل مجموعة برمجيات معقدة. شاهد تجربة المنتج الحقيقية قبل أن تختار.',
   'Transparent production pricing': 'أسعار إنتاج واضحة',
   'Protected digital delivery': 'تسليم رقمي محمي',
+  'Transparent pricing': 'أسعار واضحة',
+  'Protected checkout': 'دفع محمي',
   'Customer support': 'دعم العملاء',
   'Real products, real interfaces': 'منتجات حقيقية وواجهات حقيقية',
   'Start with the store workflow slowing you down today.': 'ابدأ بسير العمل الذي يبطئ متجرك اليوم.',
