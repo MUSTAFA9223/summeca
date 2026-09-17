@@ -112,7 +112,7 @@ export default function PublicNav() {
                   </button>
 
                   {accountOpen && (
-                    <div className="glass-card-premium absolute right-0 top-full mt-2 w-64 rounded-2xl p-2 shadow-xl" role="menu">
+                    <div className="glass-card-premium absolute end-0 top-full mt-2 w-64 rounded-2xl p-2 shadow-xl" role="menu">
                       <div className="border-b border-border px-3 py-2.5">
                         <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Signed in as</div>
                         <div dir="auto" className="mt-0.5 truncate text-sm font-semibold text-foreground">{accountDisplayName}</div>
@@ -165,7 +165,7 @@ export default function PublicNav() {
                 <>
                   <div className="min-w-0 rounded-xl border border-border bg-secondary/40 px-3 py-3">
                     <div className="flex min-w-0 items-center gap-2 text-sm font-semibold text-foreground"><User size={15} className="shrink-0 text-primary" /><span dir="auto" className="min-w-0 flex-1 truncate text-start">{headerDisplayName}</span></div>
-                    {user.email && <div className="mt-1 truncate pl-[23px] text-xs text-muted-foreground" data-ltr>{user.email}</div>}
+                    {user.email && <div className="mt-1 truncate ps-[23px] text-xs text-muted-foreground" data-ltr>{user.email}</div>}
                   </div>
                   <Link href="/user-dashboard" className="btn-primary flex items-center justify-center gap-1.5 text-center text-sm" onClick={() => setMobileOpen(false)}><LayoutDashboard size={13} />Dashboard</Link>
                   <Link href="/user-dashboard/settings" className="btn-secondary flex items-center justify-center gap-1.5 text-center text-sm" onClick={() => setMobileOpen(false)}><Settings size={13} />Account settings</Link>
