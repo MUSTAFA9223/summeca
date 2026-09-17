@@ -8,9 +8,9 @@ const nav = read('src/components/PublicNav.tsx');
 const catalog = read('src/components/catalog/CatalogClient.tsx');
 const preview = read('src/components/catalog/ProductProofPreview.tsx');
 
-test('launch offer stays in document flow and can be dismissed without overlay bookkeeping', () => {
-  assert.doesNotMatch(banner, /ResizeObserver/);
-  assert.doesNotMatch(banner, /--launch-offer-height/);
+test('launch offer stays in document flow and can be dismissed without body overlay bookkeeping', () => {
+  assert.match(banner, /ResizeObserver/);
+  assert.match(banner, /--launch-offer-height/);
   assert.doesNotMatch(banner, /document\.body\.style\.paddingTop/);
   assert.match(banner, /Dismiss launch offer/);
   assert.match(nav, /sticky top-0/);
