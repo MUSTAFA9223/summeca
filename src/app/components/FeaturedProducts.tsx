@@ -33,15 +33,15 @@ interface Product {
 }
 
 const CATEGORY_LABELS: Record<string, string> = {
-  ai_tool: 'AI Assistant',
+  ai_tool: 'AI Workflow',
   api: 'Developer Tool',
   plugin: 'Extension',
-  template: 'Ready-to-use Kit',
-  dataset: 'Data Resource',
-  course: 'Learning Guide',
-  saas: 'Business Software',
-  saas_app: 'Business Software',
-  other: 'Business Software',
+  template: 'Business Template',
+  dataset: 'Digital Kit',
+  course: 'Digital Kit',
+  saas: 'Business SaaS',
+  saas_app: 'Business SaaS',
+  other: 'Digital Kit',
 };
 
 function categoryLabel(category: string) {
