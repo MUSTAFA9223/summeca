@@ -4,11 +4,13 @@ import { useEffect } from 'react';
 import Link from 'next/link';
 import { ArrowRight, LifeBuoy, LockKeyhole, ShieldCheck, Store, User } from 'lucide-react';
 import { WorkspaceOverviewPreview } from '@/components/catalog/ProductProofPreview';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { trackEvent } from '@/lib/analytics';
 
 export default function HeroSection() {
   const { theme } = useTheme();
+  const { isArabic } = useLanguage();
   const isLight = theme === 'light';
 
   useEffect(() => {
@@ -33,12 +35,38 @@ export default function HeroSection() {
   const headlineStyle = {
     color: isLight ? '#062b35' : '#e8fbfa',
     WebkitTextStroke: isLight
-      ? '1px rgba(0, 169, 165, 0.38)'
-      : '1px rgba(32, 217, 189, 0.42)',
+      ? '0.6px rgba(0, 169, 165, 0.34)'
+      : '0.6px rgba(32, 217, 189, 0.34)',
     textShadow: isLight
-      ? '0 8px 30px rgba(6, 43, 53, 0.06)'
-      : '0 0 32px rgba(34, 211, 238, 0.10)',
+      ? '0 10px 32px rgba(6, 43, 53, 0.055)'
+      : '0 0 30px rgba(34, 211, 238, 0.08)',
   };
+
+  const copy = isArabic
+    ? {
+        eyebrow: 'مصمم للأعمال والمتاجر الرقمية الصغيرة',
+        headlineOne: 'أدِر عملك الرقمي بسرعة أكبر',
+        headlineTwo: 'بأدوات عملية من SUMMECA.',
+        body: 'نظّم الفواتير ومتابعة العملاء وتحسين التحويل بأدوات مركزة، وشاهد تجربة المنتج الحقيقية قبل أن تختار.',
+        primary: 'استكشف أدوات SUMMECA',
+        secondary: 'ابدأ الآن',
+        pricing: 'أسعار واضحة',
+        checkout: 'دفع محمي',
+        access: 'وصول مرتبط بالحساب',
+        support: 'دعم العملاء',
+      }
+    : {
+        eyebrow: 'Built for modern small online businesses',
+        headlineOne: 'Run your online business faster',
+        headlineTwo: 'with practical digital tools.',
+        body: 'Handle invoices, customer follow-ups, and conversion work with focused tools, and see the real product experience before you choose.',
+        primary: 'Explore SUMMECA Tools',
+        secondary: 'Get Started',
+        pricing: 'Transparent pricing',
+        checkout: 'Protected checkout',
+        access: 'Account-based access',
+        support: 'Customer support',
+      };
 
   return (
     <section
@@ -56,22 +84,35 @@ export default function HeroSection() {
         }`}
       />
 
-      <div className="relative z-10 mx-auto grid min-h-[510px] max-w-[1440px] grid-cols-1 items-center lg:min-h-[550px] lg:grid-cols-[46%_54%]">
-        <div className="relative px-6 pb-8 pt-9 sm:px-10 sm:pt-10 lg:px-12 lg:pb-10 lg:pt-11 xl:px-16">
+      <div className="relative z-10 mx-auto grid min-h-[510px] max-w-[1440px] grid-cols-1 items-center lg:min-h-[550px] lg:grid-cols-[47%_53%]">
+        <div
+          className={`relative px-6 pb-8 pt-9 sm:px-10 sm:pt-10 lg:px-12 lg:pb-10 lg:pt-11 xl:px-16 ${
+            isArabic ? 'text-right' : 'text-left'
+          }`}
+          dir={isArabic ? 'rtl' : 'ltr'}
+        >
           <div
-            className={`summeca-reveal summeca-reveal-1 mb-5 inline-flex items-center gap-2.5 rounded-full px-4 py-2 text-[10px] font-bold uppercase tracking-[0.18em] backdrop-blur-xl ${
+            className={`summeca-reveal summeca-reveal-1 mb-5 inline-flex items-center gap-2.5 rounded-full px-4 py-2 text-[10px] font-bold tracking-[0.14em] backdrop-blur-xl ${
+              isArabic ? 'normal-case' : 'uppercase'
+            } ${
               isLight
                 ? 'border border-[#00a9a5]/20 bg-white/80 text-[#315b63] shadow-[0_8px_24px_rgba(6,43,53,0.05)]'
                 : 'border border-[#58ead8]/15 bg-[#58ead8]/[0.055] text-[#ccebed]'
             }`}
           >
             <Store size={14} className={isLight ? 'text-[#00a9a5]' : 'text-[#20d9bd]'} />
-            Built for small e-commerce stores
+            {copy.eyebrow}
           </div>
 
-          <h1 className="summeca-reveal summeca-reveal-2 max-w-[720px] text-[clamp(2.75rem,5vw,5.5rem)] font-black uppercase leading-[0.92] tracking-[-0.055em]">
-            <span className="summeca-outline-text block" style={headlineStyle}>Run your store faster</span>
-            <span className="summeca-outline-text mt-2 block" style={headlineStyle}>with practical digital tools.</span>
+          <h1
+            className={`summeca-reveal summeca-reveal-2 max-w-[760px] break-normal hyphens-none text-[clamp(2.65rem,4.7vw,4.95rem)] font-black ${
+              isArabic
+                ? 'leading-[1.12] tracking-normal'
+                : 'leading-[0.96] tracking-[-0.045em] sm:leading-[0.94]'
+            }`}
+          >
+            <span className="block" style={headlineStyle}>{copy.headlineOne}</span>
+            <span className="mt-2 block" style={headlineStyle}>{copy.headlineTwo}</span>
           </h1>
 
           <p
@@ -79,10 +120,10 @@ export default function HeroSection() {
               isLight ? 'text-[#5d7f86]' : 'text-[#9abec8]'
             }`}
           >
-            Handle invoices, customer follow-ups, and conversion work with focused tools instead of a bloated software stack. See the real product experience before you choose.
+            {copy.body}
           </p>
 
-          <div className="summeca-reveal summeca-reveal-4 mt-7 flex flex-col gap-3 sm:flex-row sm:items-center">
+          <div className={`summeca-reveal summeca-reveal-4 mt-7 flex flex-col gap-3 sm:flex-row sm:items-center ${isArabic ? 'sm:flex-row-reverse sm:justify-end' : ''}`}>
             <Link
               href="/products"
               onClick={() =>
@@ -92,10 +133,10 @@ export default function HeroSection() {
                   audience: 'small_ecommerce',
                 })
               }
-              className="group inline-flex min-h-11 items-center justify-center gap-3 rounded-full bg-gradient-to-r from-[#109f8d] via-[#20d9bd] to-[#4bcdf6] px-6 py-3 text-sm font-bold text-[#03231f] shadow-[0_14px_42px_rgba(32,217,189,0.22)] transition duration-300 hover:-translate-y-0.5 hover:shadow-[0_18px_52px_rgba(75,205,246,0.28)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#4bcdf6] motion-reduce:transform-none motion-reduce:transition-none"
+              className="group inline-flex min-h-11 items-center justify-center gap-3 rounded-full bg-gradient-to-r from-[#109f8d] via-[#20d9bd] to-[#4bcdf6] px-6 py-3 text-sm font-bold text-[#03231f] shadow-[0_14px_42px_rgba(32,217,189,0.22)] transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_18px_48px_rgba(75,205,246,0.24)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#4bcdf6] motion-reduce:transform-none motion-reduce:transition-none"
             >
-              View Products
-              <ArrowRight size={16} className="transition-transform duration-300 group-hover:translate-x-1 motion-reduce:transform-none motion-reduce:transition-none" />
+              {copy.primary}
+              <ArrowRight size={16} className={`transition-transform duration-200 group-hover:translate-x-0.5 motion-reduce:transform-none motion-reduce:transition-none ${isArabic ? 'rotate-180 group-hover:-translate-x-0.5' : ''}`} />
             </Link>
             <Link
               href="/sign-up-login-screen"
@@ -105,14 +146,12 @@ export default function HeroSection() {
                   destination: 'signup',
                 })
               }
-              className={`group inline-flex min-h-11 items-center justify-center gap-2 rounded-full px-6 py-3 text-sm font-bold backdrop-blur-xl transition duration-300 hover:-translate-y-0.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#4bcdf6] motion-reduce:transform-none motion-reduce:transition-none ${
-                isLight
-                  ? 'border border-[#00a9a5]/30 bg-white/[0.85] text-[#173f48] shadow-[0_8px_24px_rgba(6,43,53,0.05)] hover:border-[#00a9a5]/[0.55] hover:bg-[#e9f7f7] hover:text-[#007f7c]'
-                  : 'border border-[#65dfe0]/15 bg-[#65dfe0]/[0.055] text-[#e6faf9] hover:border-[#4bcdf6]/45 hover:bg-[#4bcdf6]/10 hover:text-white'
+              className={`group inline-flex min-h-11 items-center justify-center gap-2 px-3 py-3 text-sm font-bold underline-offset-4 transition duration-200 hover:underline focus-visible:rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-[#4bcdf6] motion-reduce:transition-none ${
+                isLight ? 'text-[#315b63] hover:text-[#007f7c]' : 'text-[#b9d9de] hover:text-white'
               }`}
             >
-              Get Started
-              <ArrowRight size={15} className={isLight ? 'text-[#00a9a5]' : 'text-[#4bcdf6]'} />
+              {copy.secondary}
+              <ArrowRight size={14} className={`${isLight ? 'text-[#00a9a5]' : 'text-[#4bcdf6]'} ${isArabic ? 'rotate-180' : ''}`} />
             </Link>
           </div>
 
@@ -122,39 +161,32 @@ export default function HeroSection() {
             }`}
           >
             <span className="inline-flex items-center gap-1.5">
-              <ShieldCheck size={14} className={isLight ? 'text-[#00a9a5]' : 'text-[#20d9bd]'} /> Transparent pricing
+              <ShieldCheck size={14} className={isLight ? 'text-[#00a9a5]' : 'text-[#20d9bd]'} /> {copy.pricing}
             </span>
             <span className="inline-flex items-center gap-1.5">
-              <LockKeyhole size={14} className={isLight ? 'text-[#00a9a5]' : 'text-[#20d9bd]'} /> Protected checkout
+              <LockKeyhole size={14} className={isLight ? 'text-[#00a9a5]' : 'text-[#20d9bd]'} /> {copy.checkout}
             </span>
             <span className="inline-flex items-center gap-1.5">
-              <User size={14} className={isLight ? 'text-[#00a9a5]' : 'text-[#20d9bd]'} /> Account-based access
+              <User size={14} className={isLight ? 'text-[#00a9a5]' : 'text-[#20d9bd]'} /> {copy.access}
             </span>
             <Link
               href="/support"
-              className={`inline-flex items-center gap-1.5 transition-colors ${
+              className={`inline-flex items-center gap-1.5 transition-colors duration-200 focus-visible:rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#4bcdf6] ${
                 isLight ? 'hover:text-[#008f8c]' : 'hover:text-white'
               }`}
             >
-              <LifeBuoy size={14} className={isLight ? 'text-[#149bb3]' : 'text-[#4bcdf6]'} /> Customer support
+              <LifeBuoy size={14} className={isLight ? 'text-[#149bb3]' : 'text-[#4bcdf6]'} /> {copy.support}
             </Link>
           </div>
         </div>
 
-        <div className="relative flex min-h-[400px] items-center self-stretch overflow-hidden px-3 py-5 sm:min-h-[450px] sm:px-6 lg:min-h-[550px] lg:overflow-visible lg:pl-0 lg:pr-10 xl:pr-14">
+        <div className="relative flex min-h-[390px] items-center self-stretch overflow-hidden px-4 py-5 sm:min-h-[440px] sm:px-8 lg:min-h-[550px] lg:overflow-visible lg:pl-1 lg:pr-10 xl:pr-14">
           <div
-            className={`pointer-events-none absolute inset-x-[5%] inset-y-[15%] rounded-[28px] backdrop-blur-[2px] ${
-              isLight
-                ? 'border border-[#00a9a5]/[0.12] bg-white/60 shadow-[inset_0_1px_0_rgba(255,255,255,0.95),0_42px_100px_rgba(6,43,53,0.08)]'
-                : 'border border-[#78e4df]/[0.08] bg-[#0c2731]/35 shadow-[inset_0_1px_0_rgba(164,255,244,0.05),0_42px_100px_rgba(0,0,0,0.22)]'
-            }`}
-          />
-          <div
-            className={`pointer-events-none absolute left-[50%] top-[48%] h-[48%] aspect-square -translate-x-1/2 -translate-y-1/2 rounded-full blur-[82px] ${
+            className={`pointer-events-none absolute left-[52%] top-[50%] h-[54%] aspect-square -translate-x-1/2 -translate-y-1/2 rounded-full blur-[82px] ${
               isLight ? 'bg-[#00a9a5]/10' : 'bg-[#20d9bd]/10'
             }`}
           />
-          <WorkspaceOverviewPreview className="relative z-10 w-full lg:scale-[1.035]" />
+          <WorkspaceOverviewPreview className="summeca-reveal summeca-reveal-3 relative z-10 w-full max-w-[760px] border-slate-700/70 shadow-[0_24px_70px_rgba(0,0,0,0.28)] lg:scale-[1.055]" />
         </div>
       </div>
 
