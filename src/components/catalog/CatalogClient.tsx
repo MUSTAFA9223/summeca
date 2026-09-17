@@ -126,7 +126,6 @@ function InteractiveProductCard({ product }: { product: Product }) {
       className="group relative block h-full rounded-[22px] outline-none transition duration-200 hover:-translate-y-1 focus-visible:ring-2 focus-visible:ring-cyan-300 focus-visible:ring-offset-4 focus-visible:ring-offset-[#0b1117] motion-reduce:transform-none"
     >
       <article className="relative flex h-full min-h-[480px] flex-col overflow-hidden rounded-[22px] border border-slate-700/80 bg-[#101820] p-4 shadow-[0_16px_42px_rgba(0,0,0,.24)] transition-colors duration-200 group-hover:border-cyan-300/35">
-
         <Product3DShowcase
           name={product.name}
           thumbnailUrl={product.thumbnail_url}
@@ -345,7 +344,7 @@ export default function CatalogClient({
             <select
               value={sort}
               onChange={(event) => setSort(event.target.value as SortMode)}
-              className="rounded-lg border border-white/10 bg-[#0b1117] px-3.5 py-2.5 text-xs font-bold text-slate-300 outline-none focus:border-cyan-300/35"
+              className="rounded-lg border border-white/10 bg-white/[0.035] px-3.5 py-2.5 text-xs font-bold text-slate-400 outline-none transition hover:border-cyan-300/25 hover:text-white focus:border-cyan-300/35"
               aria-label="Sort products"
             >
               <option value="featured">Featured</option>
