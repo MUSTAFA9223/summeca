@@ -4,7 +4,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const root = path.resolve(__dirname, '..');
-const pricing = fs.readFileSync(path.join(root, 'src/components/catalog/PricingCatalogClient.tsx'), 'utf8');
+const pricing = fs.readFileSync(path.join(root, 'src/components/catalog/PricingCatalogView.tsx'), 'utf8');
 const refundFaq = fs.readFileSync(path.join(root, 'src/components/catalog/PricingRefundFaq.tsx'), 'utf8');
 const refundPolicy = fs.readFileSync(path.join(root, 'src/app/refunds/page.tsx'), 'utf8');
 

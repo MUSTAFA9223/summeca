@@ -13,6 +13,7 @@ const productPreview = read('src/components/catalog/ProductProofPreview.tsx');
 const cryptoStatus = read('src/app/api/payment/crypto-status/route.ts');
 const publicCatalog = read('src/lib/catalog/publicCatalog.ts');
 const pricingCatalog = read('src/components/catalog/PricingCatalogClient.tsx');
+const pricingView = read('src/components/catalog/PricingCatalogView.tsx');
 const publicHomepageMarketing = `${homepage}\n${hero}`;
 
 test('public homepage marketing never links to admin routes', () => {
@@ -53,12 +54,14 @@ test('featured homepage products and prices come from active production records'
   assert.doesNotMatch(homepage, /\$(?:29|49|59|79|89|99|129|149)(?:\b|\.)/);
 });
 
-test('pricing is server rendered from the same production catalog used by storefront pages', () => {
+test('pricing fetches production catalog server-side and uses the shared effective-price helper', () => {
   assert.match(pricingCatalog, /getPublicCatalog/);
-  assert.match(pricingCatalog, /getEffectivePrice/);
+  assert.match(pricingCatalog, /<PricingCatalogView products=\{products\} \/>/);
+  assert.match(pricingView, /getEffectivePrice/);
   assert.doesNotMatch(pricingCatalog, /['"]use client['"]/);
   assert.doesNotMatch(pricingCatalog, /createClient/);
   assert.doesNotMatch(pricingCatalog, /useEffect|useState/);
+  assert.doesNotMatch(pricingView, /createClient/);
   assert.match(publicCatalog, /description,price,currency,billing_period,features/);
 });
 

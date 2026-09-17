@@ -7,7 +7,7 @@ const root = path.resolve(__dirname, '..');
 const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
 
 const hero = read('src/app/components/HeroSection.tsx');
-const pricing = read('src/components/catalog/PricingCatalogClient.tsx');
+const pricing = read('src/components/catalog/PricingCatalogView.tsx');
 const featured = read('src/app/components/FeaturedProducts.tsx');
 
 test('homepage hero keeps a readable filled headline and product-first CTA hierarchy', () => {
@@ -22,15 +22,15 @@ test('homepage hero keeps a readable filled headline and product-first CTA hiera
 });
 
 test('pricing uses customer-facing product types and explains access before checkout', () => {
-  assert.match(pricing, /ai_tool: 'AI Workflow'/);
-  assert.match(pricing, /template: 'Business Template'/);
-  assert.match(pricing, /saas_app: 'Business SaaS'/);
-  assert.match(pricing, /dataset: 'Digital Kit'/);
-  assert.match(pricing, /categoryLabel\(product\.category\)/);
+  assert.match(pricing, /ai_tool: \{ en: 'AI Workflow'/);
+  assert.match(pricing, /template: \{ en: 'Business Template'/);
+  assert.match(pricing, /saas_app: \{ en: 'Business SaaS'/);
+  assert.match(pricing, /dataset: \{ en: 'Digital Kit'/);
+  assert.match(pricing, /categoryLabel\(product\.category, isArabic\)/);
   assert.doesNotMatch(pricing, /product\.category\.replaceAll/);
   assert.match(pricing, /Which payment methods can I use\?/);
   assert.match(pricing, /When do I get access\?/);
-  assert.match(pricing, /Where can I check delivery details\?/);
+  assert.match(pricing, /How is delivery handled\?/);
 });
 
 test('featured product cards use the same customer-facing type language', () => {

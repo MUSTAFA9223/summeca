@@ -10,7 +10,7 @@ const banner = read('src/components/LaunchOfferBanner.tsx');
 const nav = read('src/components/PublicNav.tsx');
 const siteTheme = read('src/styles/site-theme.css');
 const catalog = read('src/components/catalog/CatalogClient.tsx');
-const pricing = read('src/components/catalog/PricingCatalogClient.tsx');
+const pricing = read('src/components/catalog/PricingCatalogView.tsx');
 const hero = read('src/app/components/HeroSection.tsx');
 const saasSales = read('src/components/catalog/SaasProductSalesExperience.tsx');
 
