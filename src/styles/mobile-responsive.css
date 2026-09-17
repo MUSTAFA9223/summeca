@@ -136,24 +136,6 @@ pre {
   }
 }
 
-@media (max-width: 1023px) {
-  .summeca-checkout-shell .sticky.top-24 {
-    position: static;
-  }
-
-  .summeca-checkout-shell .overflow-hidden > .p-5.flex.gap-4 {
-    flex-wrap: wrap;
-  }
-
-  .summeca-checkout-shell .overflow-hidden > .p-5.flex.gap-4 > .flex-1 {
-    min-width: min(12rem, 100%);
-  }
-
-  .summeca-checkout-shell code {
-    min-width: 0;
-  }
-}
-
 @media (max-width: 430px) {
   [data-public-nav="true"] > div:first-child {
     padding-left: 0.75rem;
@@ -164,24 +146,11 @@ pre {
     max-width: 9rem;
     overflow: hidden;
   }
-
-  .summeca-checkout-shell .pt-24.pb-20 {
-    padding-left: 1rem;
-    padding-right: 1rem;
-  }
 }
 
 @media (max-width: 360px) {
   [data-public-nav="true"] a[aria-label="SUMMECA home"] {
     max-width: 7.75rem;
-  }
-}
-
-@media (min-width: 1024px) {
-  .summeca-checkout-shell .sticky.top-24 {
-    max-height: calc(100dvh - 7rem);
-    overflow-y: auto;
-    overscroll-behavior: contain;
   }
 }
 
