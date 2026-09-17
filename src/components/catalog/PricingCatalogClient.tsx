@@ -6,6 +6,22 @@ import {
   type PublicCatalogPlan,
 } from '@/lib/catalog/publicCatalog';
 
+const CATEGORY_LABELS: Record<string, string> = {
+  ai_tool: 'AI Workflow',
+  api: 'Developer Tool',
+  plugin: 'Extension',
+  template: 'Business Template',
+  dataset: 'Digital Kit',
+  course: 'Digital Kit',
+  saas: 'Business SaaS',
+  saas_app: 'Business SaaS',
+  other: 'Digital Kit',
+};
+
+function categoryLabel(category: string) {
+  return CATEGORY_LABELS[category] ?? 'Digital Product';
+}
+
 function pricingFor(plan: PublicCatalogPlan) {
   try {
     return getEffectivePrice(plan);
@@ -91,7 +107,7 @@ export default async function PricingCatalogClient() {
                 <div className="flex flex-col gap-4 border-b border-border pb-6 sm:flex-row sm:items-end sm:justify-between">
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-wider text-primary">
-                      {product.category.replaceAll('_', ' ')}
+                      {categoryLabel(product.category)}
                     </p>
                     <h2 className="mt-1 text-2xl font-bold text-foreground">{product.name}</h2>
                     {product.short_desc && (
@@ -176,6 +192,27 @@ export default async function PricingCatalogClient() {
               Monthly and yearly labels describe the plan period shown by SUMMECA. Automatic renewal applies only when checkout and the payment provider explicitly state that a recurring billing agreement is being created. Access is granted only after a free order is completed or a paid transaction is verified server-side.
             </p>
           </div>
+        </div>
+
+        <div className="mt-10 grid gap-4 md:grid-cols-3" aria-label="Pricing frequently asked questions">
+          <article className="rounded-2xl border border-border bg-card p-5">
+            <h2 className="text-base font-black text-foreground">Which payment methods can I use?</h2>
+            <p className="mt-2 text-sm leading-6 text-muted-foreground">
+              The product page and checkout show only payment methods that are currently enabled for that offer.
+            </p>
+          </article>
+          <article className="rounded-2xl border border-border bg-card p-5">
+            <h2 className="text-base font-black text-foreground">When do I get access?</h2>
+            <p className="mt-2 text-sm leading-6 text-muted-foreground">
+              Access is released after the order is completed and, for paid orders, the payment is verified by SUMMECA on the server.
+            </p>
+          </article>
+          <article className="rounded-2xl border border-border bg-card p-5">
+            <h2 className="text-base font-black text-foreground">Where can I check delivery details?</h2>
+            <p className="mt-2 text-sm leading-6 text-muted-foreground">
+              Open the product details before checkout to see whether the offer opens inside your SUMMECA account or uses protected digital delivery.
+            </p>
+          </article>
         </div>
       </section>
     </main>
