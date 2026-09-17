@@ -69,7 +69,7 @@ function RealProductPreview({ product }: { product: SaasSalesProduct }) {
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border bg-secondary/30 px-4 py-3 sm:px-5">
           <span className="text-xs font-bold text-foreground">{product.name}</span>
           <span className="rounded-full bg-primary/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-primary sm:text-[11px]">
-            {showVideo ? '15-second real product walkthrough' : 'Actual product'}
+            {showVideo ? 'REAL PRODUCT DEMO' : 'ACTUAL PRODUCT'}
           </span>
         </div>
         {showVideo ? (
@@ -87,7 +87,7 @@ function RealProductPreview({ product }: { product: SaasSalesProduct }) {
               onPause={() => setPlaying(false)}
               onError={() => setVideoFailed(true)}
               className="h-full w-full object-contain"
-              aria-label={`${product.name} 15-second real product walkthrough`}
+              aria-label={`${product.name} real product demo`}
             />
             {!playing && (
               <button
