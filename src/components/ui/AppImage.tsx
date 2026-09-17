@@ -70,7 +70,6 @@ const AppImage = memo(function AppImage({
     const imageProps = useMemo(() => {
         const baseProps: any = {
             src: imageSrc,
-            alt,
             className: imageClassName,
             quality,
             placeholder,
@@ -91,13 +90,14 @@ const AppImage = memo(function AppImage({
         }
 
         return baseProps;
-    }, [imageSrc, alt, imageClassName, quality, placeholder, blurDataURL, resolvedUnoptimized, priority, loading, handleError, handleLoad, onClick]);
+    }, [imageSrc, imageClassName, quality, placeholder, blurDataURL, resolvedUnoptimized, priority, loading, handleError, handleLoad, onClick]);
 
     if (fill) {
         return (
             <div className="relative" style={{ width: '100%', height: '100%' }}>
                 <Image
                     {...imageProps}
+                    alt={alt}
                     fill
                     sizes={sizes || '(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw'}
                     style={{ objectFit: 'cover' }}
@@ -110,6 +110,7 @@ const AppImage = memo(function AppImage({
     return (
         <Image
             {...imageProps}
+            alt={alt}
             width={width || 400}
             height={height || 300}
             sizes={sizes}
