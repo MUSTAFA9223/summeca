@@ -2,6 +2,13 @@ const HOMEPAGE_AR_TRANSLATIONS: Record<string, string> = {
   'AI Tool': 'أداة ذكاء اصطناعي',
   'Digital Kit': 'حزمة رقمية',
   'SaaS App': 'تطبيق SaaS',
+  'Business SaaS': 'SaaS للأعمال',
+  'AI Workflow': 'سير عمل مدعوم بالذكاء الاصطناعي',
+  'Business Template': 'قالب أعمال',
+  'Developer Tool': 'أداة للمطورين',
+  'Extension': 'إضافة',
+  'Digital Product': 'منتج رقمي',
+  'Recommended': 'موصى به',
   'Explore InvoiceFlow': 'استكشف InvoiceFlow',
   'Explore LeadFollow': 'استكشف LeadFollow',
   'View Kit': 'عرض الحزمة',
@@ -54,6 +61,9 @@ const HOMEPAGE_AR_TRANSLATIONS: Record<string, string> = {
   'Start with one workflow, then add only what your store needs.': 'ابدأ بسير عمل واحد، ثم أضف فقط ما يحتاجه متجرك.',
   'Create an account to access your dashboard, or review live production pricing before you decide.': 'أنشئ حسابًا للوصول إلى لوحة التحكم، أو راجع أسعار الإنتاج المباشرة قبل أن تقرر.',
   'View Pricing': 'عرض الأسعار',
+  'Tools ready to use': 'أدوات جاهزة للاستخدام',
+  'Pick a product, review the real preview, and choose the plan that fits.': 'اختر منتجًا، وراجع المعاينة الحقيقية، ثم اختر الخطة المناسبة لك.',
+  '15-second real product walkthrough': 'عرض حقيقي للمنتج لمدة 15 ثانية',
 
   // Server-rendered pricing journey
   'Transparent Pricing': 'أسعار واضحة',
@@ -69,6 +79,12 @@ const HOMEPAGE_AR_TRANSLATIONS: Record<string, string> = {
   'One-time': 'مرة واحدة',
   'Review this offer': 'مراجعة هذا العرض',
   'Monthly and yearly labels describe the plan period shown by SUMMECA. Automatic renewal applies only when checkout and the payment provider explicitly state that a recurring billing agreement is being created. Access is granted only after a free order is completed or a paid transaction is verified server-side.': 'توضح التسميات الشهرية والسنوية مدة الخطة المعروضة من SUMMECA. لا ينطبق التجديد التلقائي إلا عندما توضح صفحة الدفع ومزود الدفع صراحة إنشاء اتفاق فوترة متكررة. ولا يُمنح الوصول إلا بعد إكمال طلب مجاني أو التحقق من معاملة مدفوعة على الخادم.',
+  'Which payment methods can I use?': 'ما وسائل الدفع التي يمكنني استخدامها؟',
+  'The product page and checkout show only payment methods that are currently enabled for that offer.': 'تعرض صفحة المنتج والدفع فقط وسائل الدفع المفعلة حاليًا لذلك العرض.',
+  'When do I get access?': 'متى أحصل على الوصول؟',
+  'Access is released after the order is completed and, for paid orders, the payment is verified by SUMMECA on the server.': 'يُمنح الوصول بعد اكتمال الطلب، وللطلبات المدفوعة بعد تحقق SUMMECA من الدفع على الخادم.',
+  'Where can I check delivery details?': 'أين أجد تفاصيل طريقة التسليم؟',
+  'Open the product details before checkout to see whether the offer opens inside your SUMMECA account or uses protected digital delivery.': 'افتح تفاصيل المنتج قبل الدفع لمعرفة ما إذا كان العرض يعمل داخل حساب SUMMECA أو يستخدم تسليمًا رقميًا محميًا.',
 
   // Lightweight dashboard onboarding
   'Quick start': 'بدء سريع',
