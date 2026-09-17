@@ -128,33 +128,58 @@ export function LanguageProvider({
   useEffect(() => {
     if (language !== 'ar' || !document.body) return undefined;
 
-    localizeNode(document.body);
+    let cancelled = false;
+    let firstFrame = 0;
+    let secondFrame = 0;
+    let observer: MutationObserver | null = null;
 
-    const observer = new MutationObserver((mutations) => {
-      for (const mutation of mutations) {
-        if (mutation.type === 'characterData') {
-          translateTextNode(mutation.target as Text);
-          continue;
-        }
+    const startLocalization = () => {
+      firstFrame = window.requestAnimationFrame(() => {
+        secondFrame = window.requestAnimationFrame(() => {
+          if (cancelled || !document.body) return;
 
-        if (mutation.type === 'attributes' && mutation.target instanceof Element) {
-          translateElementAttributes(mutation.target);
-          continue;
-        }
+          localizeNode(document.body);
 
-        mutation.addedNodes.forEach((node) => localizeNode(node));
-      }
-    });
+          observer = new MutationObserver((mutations) => {
+            for (const mutation of mutations) {
+              if (mutation.type === 'characterData') {
+                translateTextNode(mutation.target as Text);
+                continue;
+              }
 
-    observer.observe(document.body, {
-      subtree: true,
-      childList: true,
-      characterData: true,
-      attributes: true,
-      attributeFilter: [...TRANSLATABLE_ATTRIBUTES],
-    });
+              if (mutation.type === 'attributes' && mutation.target instanceof Element) {
+                translateElementAttributes(mutation.target);
+                continue;
+              }
 
-    return () => observer.disconnect();
+              mutation.addedNodes.forEach((node) => localizeNode(node));
+            }
+          });
+
+          observer.observe(document.body, {
+            subtree: true,
+            childList: true,
+            characterData: true,
+            attributes: true,
+            attributeFilter: [...TRANSLATABLE_ATTRIBUTES],
+          });
+        });
+      });
+    };
+
+    if (document.readyState === 'complete') {
+      startLocalization();
+    } else {
+      window.addEventListener('load', startLocalization, { once: true });
+    }
+
+    return () => {
+      cancelled = true;
+      window.removeEventListener('load', startLocalization);
+      if (firstFrame) window.cancelAnimationFrame(firstFrame);
+      if (secondFrame) window.cancelAnimationFrame(secondFrame);
+      observer?.disconnect();
+    };
   }, [language]);
 
   const setLanguage = useCallback(
