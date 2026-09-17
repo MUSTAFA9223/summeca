@@ -10,6 +10,7 @@ const accessibilityCss = read('src/styles/accessibility-motion-performance.css')
 const skipToContent = read('src/components/SkipToContent.tsx');
 const productShowcase = read('src/components/catalog/Product3DShowcase.tsx');
 const productVideo = read('src/components/catalog/ProductPageVideoPreview.tsx');
+const appImage = read('src/components/ui/AppImage.tsx');
 const notFound = read('src/app/not-found.tsx');
 
 test('root layout loads Prompt 11 accessibility and motion guardrails last', () => {
@@ -61,6 +62,11 @@ test('product screenshots reserve intrinsic space and preserve loading priority'
   assert.match(productShowcase, /height=\{675\}/);
   assert.match(productShowcase, /loading=\{hero \? 'eager' : 'lazy'\}/);
   assert.match(productShowcase, /decoding="async"/);
+});
+
+test('shared app image exposes explicit alt text in fill and fixed-size modes', () => {
+  assert.equal((appImage.match(/alt=\{alt\}/g) || []).length, 2);
+  assert.doesNotMatch(appImage, /const baseProps:[\s\S]*?\n\s*alt,/);
 });
 
 test('product video avoids heavy autoplay and reserves a stable aspect ratio', () => {
