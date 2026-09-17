@@ -11,7 +11,7 @@ test('LeadFollow drafts prefer concrete business facts over generic filler', () 
   assert.match(generate, /anchor the message to at least one concrete supplied business\/offer fact/);
   assert.match(generate, /do NOT fall back to vague phrases such as "our company", "what we do"/);
   assert.match(generate, /A stage named follow-up or revive does NOT prove that a conversation happened/);
-  assert.match(generate, /Do not output placeholders such as \[Company\]/);
+  assert.match(generate, /Never output placeholders such as \[Company\]/);
   assert.match(generate, /finish an email with a natural closing and that business name/);
   assert.match(generate, /Prior contact recorded by LeadFollow/);
 });
