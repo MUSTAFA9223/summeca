@@ -9,6 +9,12 @@ const PRODUCT_PATH = '/products/ecommerce-product-page-conversion-kit';
 const STORAGE_KEY = 'summeca:launch-offer-dismissed:2026-09-22';
 const HEIGHT_VAR = '--launch-offer-height';
 
+function setReservedHeight(height: number) {
+  const value = `${Math.max(0, height)}px`;
+  document.documentElement.style.setProperty(HEIGHT_VAR, value);
+  document.body.style.paddingTop = value;
+}
+
 export default function LaunchOfferBanner() {
   const { isArabic } = useLanguage();
   const bannerRef = useRef<HTMLElement>(null);
@@ -18,7 +24,7 @@ export default function LaunchOfferBanner() {
     try {
       if (window.localStorage.getItem(STORAGE_KEY) === '1') {
         setVisible(false);
-        document.documentElement.style.setProperty(HEIGHT_VAR, '0px');
+        setReservedHeight(0);
         return;
       }
     } catch {
@@ -26,7 +32,7 @@ export default function LaunchOfferBanner() {
     }
 
     if (!visible) {
-      document.documentElement.style.setProperty(HEIGHT_VAR, '0px');
+      setReservedHeight(0);
       return;
     }
 
@@ -35,7 +41,7 @@ export default function LaunchOfferBanner() {
 
     const syncHeight = () => {
       const height = Math.ceil(element.getBoundingClientRect().height);
-      document.documentElement.style.setProperty(HEIGHT_VAR, `${height}px`);
+      setReservedHeight(height);
     };
 
     syncHeight();
@@ -49,13 +55,15 @@ export default function LaunchOfferBanner() {
     };
   }, [visible]);
 
+  useEffect(() => () => setReservedHeight(0), []);
+
   function dismiss() {
     try {
       window.localStorage.setItem(STORAGE_KEY, '1');
     } catch {
       // Dismiss for this render even if storage is unavailable.
     }
-    document.documentElement.style.setProperty(HEIGHT_VAR, '0px');
+    setReservedHeight(0);
     setVisible(false);
   }
 
@@ -64,7 +72,7 @@ export default function LaunchOfferBanner() {
   return (
     <aside
       ref={bannerRef}
-      className="sticky top-0 z-[70] border-b border-[#45f2dc]/20 bg-[linear-gradient(100deg,#04242c_0%,#073743_45%,#075264_100%)] px-12 py-2.5 text-center text-xs font-bold text-[#e9fffb] shadow-[0_8px_30px_rgba(2,19,27,.22)] sm:px-14 sm:text-sm"
+      className="fixed inset-x-0 top-0 z-[80] border-b border-[#45f2dc]/20 bg-[linear-gradient(100deg,#04242c_0%,#073743_45%,#075264_100%)] px-12 py-2.5 text-center text-xs font-bold text-[#e9fffb] shadow-[0_8px_30px_rgba(2,19,27,.22)] sm:px-14 sm:text-sm"
       aria-label={isArabic ? 'عرض الإطلاق' : 'Launch offer'}
     >
       <span>
