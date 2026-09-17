@@ -11,6 +11,18 @@ type ProviderAvailability = {
   fastspring: boolean | null;
 };
 
+const FRIENDLY_CATEGORY_LABELS: Record<string, string> = {
+  'ai tool': 'AI Assistant',
+  api: 'Developer Tool',
+  plugin: 'Extension',
+  template: 'Ready-to-use Kit',
+  dataset: 'Data Resource',
+  course: 'Learning Guide',
+  saas: 'Business Software',
+  'saas app': 'Business Software',
+  other: 'Business Software',
+};
+
 function productSlug(pathname: string | null) {
   if (!pathname?.startsWith('/products/')) return null;
   return pathname.slice('/products/'.length).split('/')[0] || null;
@@ -30,12 +42,14 @@ async function providerAvailable(url: string): Promise<boolean | null> {
 export default function ProductPageEnhancements() {
   const pathname = usePathname();
   const slug = productSlug(pathname);
+  const isSaasProduct = slug === 'summeca-invoiceflow' || slug === 'summeca-leadfollow-ai';
   const [providerAvailability, setProviderAvailability] = useState<ProviderAvailability>({
     crypto: null,
     payoneer: null,
     fastspring: null,
   });
   const [trustTarget, setTrustTarget] = useState<HTMLElement | null>(null);
+  const [howTarget, setHowTarget] = useState<HTMLElement | null>(null);
   const [checkoutHref, setCheckoutHref] = useState<string | null>(null);
   const [checkoutLabel, setCheckoutLabel] = useState('Continue to checkout');
   const [showSticky, setShowSticky] = useState(false);
@@ -64,6 +78,19 @@ export default function ProductPageEnhancements() {
     return () => {
       alive = false;
     };
+  }, [slug]);
+
+  useEffect(() => {
+    if (!slug) return;
+    const frame = window.requestAnimationFrame(() => {
+      document.querySelectorAll<HTMLElement>('main section:first-of-type span').forEach((node) => {
+        const key = node.textContent?.trim().toLowerCase();
+        if (!key) return;
+        const replacement = FRIENDLY_CATEGORY_LABELS[key];
+        if (replacement) node.textContent = replacement;
+      });
+    });
+    return () => window.cancelAnimationFrame(frame);
   }, [slug]);
 
   useEffect(() => {
@@ -113,6 +140,35 @@ export default function ProductPageEnhancements() {
       setCheckoutHref(null);
     };
   }, [slug]);
+
+  useEffect(() => {
+    if (!slug || isSaasProduct) return;
+    let slot: HTMLElement | null = null;
+    const frame = window.requestAnimationFrame(() => {
+      const existing = document.getElementById('summeca-how-it-works-slot');
+      if (existing) {
+        slot = existing;
+        setHowTarget(existing);
+        return;
+      }
+
+      const videoSlot = document.getElementById('summeca-real-product-video-slot');
+      const firstSection = document.querySelector<HTMLElement>('main section');
+      const anchor = videoSlot ?? firstSection;
+      if (!anchor?.parentElement) return;
+
+      slot = document.createElement('div');
+      slot.id = 'summeca-how-it-works-slot';
+      anchor.insertAdjacentElement('afterend', slot);
+      setHowTarget(slot);
+    });
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+      slot?.remove();
+      setHowTarget(null);
+    };
+  }, [slug, isSaasProduct]);
 
   useEffect(() => {
     if (!slug) return;
@@ -170,16 +226,12 @@ export default function ProductPageEnhancements() {
           transition-property: transform, border-color, box-shadow, background-color;
           transition-duration: 220ms;
         }
-        main section article:hover {
-          transform: translateY(-3px);
-        }
+        main section article:hover { transform: translateY(-3px); }
         @media (prefers-reduced-motion: reduce) {
           main section h1,
           main section h2,
           main section article,
-          main #product-preview {
-            animation: none !important;
-          }
+          main #product-preview { animation: none !important; }
           main section article:hover { transform: none; }
         }
       `}</style>
@@ -198,6 +250,31 @@ export default function ProductPageEnhancements() {
           {languageCopy && <p className="mt-1.5 text-[10px] leading-4 text-muted-foreground">{languageCopy}</p>}
         </div>,
         trustTarget,
+      )}
+
+      {howTarget && !isSaasProduct && createPortal(
+        <section className="border-y border-border bg-secondary/15" aria-label="How it works">
+          <div className="mx-auto max-w-screen-xl px-6 py-12 lg:px-8">
+            <div className="mx-auto max-w-2xl text-center">
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-primary">How it works</p>
+              <h2 className="mt-2 text-2xl font-black tracking-tight text-foreground sm:text-3xl">From preview to access in three steps</h2>
+            </div>
+            <div className="mt-7 grid gap-4 md:grid-cols-3">
+              {[
+                ['1', 'Review the product', 'Check the real preview, included content, and active offer.'],
+                ['2', 'Choose your offer', 'Select the published plan or one-time option that fits.'],
+                ['3', 'Checkout and access', 'Complete protected checkout, then receive account access or the digital delivery after verification.'],
+              ].map(([number, title, text]) => (
+                <article key={number} className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-xs font-black text-primary-foreground">{number}</span>
+                  <h3 className="mt-4 font-black text-foreground">{title}</h3>
+                  <p className="mt-2 text-sm leading-6 text-muted-foreground">{text}</p>
+                </article>
+              ))}
+            </div>
+          </div>
+        </section>,
+        howTarget,
       )}
 
       {showSticky && checkoutHref && (
