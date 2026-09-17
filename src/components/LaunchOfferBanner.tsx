@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { X } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -11,6 +11,7 @@ const STORAGE_KEY = 'summeca:launch-offer-dismissed:2026-09-22';
 export default function LaunchOfferBanner() {
   const { isArabic } = useLanguage();
   const [visible, setVisible] = useState(true);
+  const bannerRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
     try {
@@ -21,6 +22,34 @@ export default function LaunchOfferBanner() {
       // Keep the offer visible when storage is unavailable.
     }
   }, []);
+
+  useEffect(() => {
+    const root = document.documentElement;
+    const banner = bannerRef.current;
+
+    if (!visible || !banner) {
+      root.style.setProperty('--launch-offer-height', '0px');
+      return;
+    }
+
+    const syncHeight = () => {
+      root.style.setProperty(
+        '--launch-offer-height',
+        `${Math.ceil(banner.getBoundingClientRect().height)}px`,
+      );
+    };
+
+    syncHeight();
+    const resizeObserver = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(syncHeight);
+    resizeObserver?.observe(banner);
+    window.addEventListener('resize', syncHeight);
+
+    return () => {
+      resizeObserver?.disconnect();
+      window.removeEventListener('resize', syncHeight);
+      root.style.setProperty('--launch-offer-height', '0px');
+    };
+  }, [visible, isArabic]);
 
   function dismiss() {
     try {
@@ -35,7 +64,8 @@ export default function LaunchOfferBanner() {
 
   return (
     <aside
-      className="relative z-[80] overflow-hidden border-b border-[#45f2dc]/20 bg-[linear-gradient(100deg,#04242c_0%,#073743_45%,#075264_100%)] px-12 py-2.5 text-center text-xs font-bold text-[#e9fffb] shadow-[0_8px_30px_rgba(2,19,27,.22)] sm:px-14 sm:text-sm"
+      ref={bannerRef}
+      className="relative z-[80] overflow-hidden border-b border-[#45f2dc]/20 bg-[linear-gradient(100deg,#04242c_0%,#073743_45%,#075264_100%)] px-4 py-2.5 pr-12 text-center text-xs font-bold leading-5 text-[#e9fffb] shadow-[0_8px_30px_rgba(2,19,27,.22)] sm:px-14 sm:pr-14 sm:text-sm"
       aria-label={isArabic ? 'عرض الإطلاق' : 'Launch offer'}
     >
       <span>
