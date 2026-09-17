@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { ArrowRight, CheckCircle2, Package, ShieldCheck } from 'lucide-react';
+import PricingRefundFaq from '@/components/catalog/PricingRefundFaq';
 import { getEffectivePrice } from '@/lib/pricing';
 import {
   getPublicCatalog,
@@ -213,16 +214,7 @@ export default async function PricingCatalogClient() {
               Open the product details before checkout to see whether the offer opens inside your SUMMECA account or uses protected digital delivery.
             </p>
           </article>
-          <article className="rounded-2xl border border-border bg-card p-5">
-            <h2 className="text-base font-black text-foreground">Can I request a refund?</h2>
-            <p className="mt-2 text-sm leading-6 text-muted-foreground">
-              Refund eligibility depends on the product, delivery state, request reason, payment method, and applicable law. Review the{' '}
-              <Link href="/refunds" className="font-semibold text-primary underline-offset-4 hover:underline">
-                Refund Policy
-              </Link>{' '}
-              before purchase; submitting a request does not guarantee approval.
-            </p>
-          </article>
+          <PricingRefundFaq />
         </div>
       </section>
     </main>
