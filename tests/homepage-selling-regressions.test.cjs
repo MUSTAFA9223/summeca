@@ -74,13 +74,15 @@ test('homepage does not advertise an unavailable payment provider as live', () =
   assert.match(cryptoStatus, /const available = Boolean/);
 });
 
-test('hero uses one dominant product-discovery CTA and keeps signup secondary', () => {
+test('hero leads with the two flagship apps and keeps the full catalog secondary', () => {
+  assert.match(hero, /href="\/products\/summeca-invoiceflow"/);
+  assert.match(hero, /Explore InvoiceFlow/);
+  assert.match(hero, /destination: 'summeca-invoiceflow'/);
+  assert.match(hero, /href="\/products\/summeca-leadfollow-ai"/);
+  assert.match(hero, /Explore LeadFollow AI/);
+  assert.match(hero, /destination: 'summeca-leadfollow-ai'/);
   assert.match(hero, /href="\/products"/);
-  assert.match(hero, /Explore SUMMECA Tools/);
-  assert.match(hero, /primary_cta_click/);
-  assert.match(hero, /href="\/sign-up-login-screen"/);
-  assert.match(hero, /Get Started/);
-  assert.match(hero, /secondary_cta_click/);
+  assert.match(hero, /View all products/);
   assert.match(hero, /homepage_view/);
 });
 
