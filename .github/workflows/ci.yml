@@ -57,6 +57,18 @@ jobs:
           --rule 'react/no-unescaped-entities: off'
           --rule 'no-control-regex: off'
 
+      - name: Regression diagnostics A-H
+        continue-on-error: true
+        run: node --test tests/{auth-*,catalog-*,compact-*,digital-*,email-*,generated-*,homepage-*}.test.cjs
+
+      - name: Regression diagnostics I-L
+        continue-on-error: true
+        run: node --test tests/{i18n-*,invoice-*,launch-*,leadfollow-*}.test.cjs
+
+      - name: Regression diagnostics M-Z
+        continue-on-error: true
+        run: node --test tests/{marketing-*,mobile-*,product-*,public-*,reddit-*,saas-*,security-*,sitemap-*,telegram-*,theme-*}.test.cjs
+
       - name: Security and launch regression tests
         run: node --test tests/*.test.cjs
 
