@@ -44,24 +44,26 @@ export default function HeroSection() {
 
   const copy = isArabic
     ? {
-        eyebrow: 'مصمم للأعمال والمتاجر الرقمية الصغيرة',
-        headlineOne: 'أدِر عملك الرقمي بسرعة أكبر',
-        headlineTwo: 'بأدوات عملية من SUMMECA.',
-        body: 'نظّم الفواتير ومتابعة العملاء وتحسين التحويل بأدوات مركزة، وشاهد تجربة المنتج الحقيقية قبل أن تختار.',
-        primary: 'استكشف أدوات SUMMECA',
-        secondary: 'ابدأ الآن',
+        eyebrow: 'تطبيقات عملية للأعمال والمتاجر الرقمية الصغيرة',
+        headlineOne: 'نظّم الفواتير ومتابعة العملاء',
+        headlineTwo: 'بتطبيقات SUMMECA العملية.',
+        body: 'ابدأ بـ InvoiceFlow لإدارة الفواتير أو LeadFollow AI لتنظيم متابعة العملاء. شاهد الواجهة الحقيقية، المزايا والسعر قبل أن تختار.',
+        invoiceFlow: 'استكشف InvoiceFlow',
+        leadFollow: 'استكشف LeadFollow AI',
+        allProducts: 'عرض كل المنتجات',
         pricing: 'أسعار واضحة',
         checkout: 'دفع محمي',
         access: 'وصول مرتبط بالحساب',
         support: 'دعم العملاء',
       }
     : {
-        eyebrow: 'Built for modern small online businesses',
-        headlineOne: 'Run your online business faster',
-        headlineTwo: 'with practical digital tools.',
-        body: 'Handle invoices, customer follow-ups, and conversion work with focused tools, and see the real product experience before you choose.',
-        primary: 'Explore SUMMECA Tools',
-        secondary: 'Get Started',
+        eyebrow: 'Practical apps for modern small online businesses',
+        headlineOne: 'Organize invoices and customer follow-ups',
+        headlineTwo: 'with focused SUMMECA apps.',
+        body: 'Start with InvoiceFlow for invoicing or LeadFollow AI for customer follow-up. See the real interface, features, and current price before you choose.',
+        invoiceFlow: 'Explore InvoiceFlow',
+        leadFollow: 'Explore LeadFollow AI',
+        allProducts: 'View all products',
         pricing: 'Transparent pricing',
         checkout: 'Protected checkout',
         access: 'Account-based access',
@@ -123,40 +125,59 @@ export default function HeroSection() {
             {copy.body}
           </p>
 
-          <div className={`summeca-reveal summeca-reveal-4 mt-7 flex flex-col gap-3 sm:flex-row sm:items-center ${isArabic ? 'sm:flex-row-reverse sm:justify-end' : ''}`}>
+          <div className={`summeca-reveal summeca-reveal-4 mt-7 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center ${isArabic ? 'sm:flex-row-reverse sm:justify-end' : ''}`}>
             <Link
-              href="/products"
+              href="/products/summeca-invoiceflow"
               onClick={() =>
                 trackEvent('primary_cta_click', {
                   placement: 'homepage_hero',
-                  destination: 'products',
+                  destination: 'summeca-invoiceflow',
                   audience: 'small_ecommerce',
                 })
               }
               className="group inline-flex min-h-11 items-center justify-center gap-3 rounded-full bg-gradient-to-r from-[#109f8d] via-[#20d9bd] to-[#4bcdf6] px-6 py-3 text-sm font-bold text-[#03231f] shadow-[0_14px_42px_rgba(32,217,189,0.22)] transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_18px_48px_rgba(75,205,246,0.24)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#4bcdf6] motion-reduce:transform-none motion-reduce:transition-none"
             >
-              {copy.primary}
+              {copy.invoiceFlow}
               <ArrowRight size={16} className={`transition-transform duration-200 group-hover:translate-x-0.5 motion-reduce:transform-none motion-reduce:transition-none ${isArabic ? 'rotate-180 group-hover:-translate-x-0.5' : ''}`} />
             </Link>
             <Link
-              href="/sign-up-login-screen"
+              href="/products/summeca-leadfollow-ai"
               onClick={() =>
                 trackEvent('secondary_cta_click', {
                   placement: 'homepage_hero',
-                  destination: 'signup',
+                  destination: 'summeca-leadfollow-ai',
+                  audience: 'small_ecommerce',
                 })
               }
-              className={`group inline-flex min-h-11 items-center justify-center gap-2 px-3 py-3 text-sm font-bold underline-offset-4 transition duration-200 hover:underline focus-visible:rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#4bcdf6] motion-reduce:transition-none ${
-                isLight ? 'text-[#315b63] hover:text-[#007f7c]' : 'text-[#b9d9de] hover:text-white'
+              className={`group inline-flex min-h-11 items-center justify-center gap-2 rounded-full border px-5 py-3 text-sm font-bold transition duration-200 hover:-translate-y-0.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#4bcdf6] motion-reduce:transform-none motion-reduce:transition-none ${
+                isLight
+                  ? 'border-[#00a9a5]/25 bg-white/70 text-[#24515a] hover:border-[#00a9a5]/45 hover:text-[#007f7c]'
+                  : 'border-[#74d8d8]/20 bg-[#0a2229]/65 text-[#d5eef0] hover:border-[#4bcdf6]/45 hover:text-white'
               }`}
             >
-              {copy.secondary}
+              {copy.leadFollow}
               <ArrowRight size={14} className={`${isLight ? 'text-[#00a9a5]' : 'text-[#4bcdf6]'} ${isArabic ? 'rotate-180' : ''}`} />
             </Link>
           </div>
 
+          <Link
+            href="/products"
+            onClick={() =>
+              trackEvent('product_catalog_click', {
+                placement: 'homepage_hero',
+                destination: 'products',
+              })
+            }
+            className={`summeca-reveal summeca-reveal-4 mt-3 inline-flex min-h-10 items-center gap-2 px-1 py-2 text-xs font-bold underline-offset-4 transition duration-200 hover:underline focus-visible:rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#4bcdf6] motion-reduce:transition-none ${
+              isLight ? 'text-[#5d7f86] hover:text-[#007f7c]' : 'text-[#9abec8] hover:text-white'
+            }`}
+          >
+            {copy.allProducts}
+            <ArrowRight size={13} className={`${isArabic ? 'rotate-180' : ''}`} />
+          </Link>
+
           <div
-            className={`summeca-reveal summeca-reveal-4 mt-6 flex max-w-2xl flex-wrap items-center gap-x-5 gap-y-2 border-t pt-4 text-[11px] font-semibold ${
+            className={`summeca-reveal summeca-reveal-4 mt-4 flex max-w-2xl flex-wrap items-center gap-x-5 gap-y-2 border-t pt-4 text-[11px] font-semibold ${
               isLight ? 'border-[#00a9a5]/15 text-[#5d7f86]' : 'border-[#74d8d8]/10 text-[#91b5bf]'
             }`}
           >
