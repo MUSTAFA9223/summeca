@@ -55,8 +55,9 @@ html[data-site-theme='light'] article[class~='bg-[#101820]'] .bg-slate-800\/60 {
   background-color: rgba(30, 50, 59, 0.78) !important;
 }
 
-/* Match the Featured sort control to the selected All category pill. */
-select[aria-label='Sort products'] {
+/* Match the Featured sort control to the selected All category pill in EN and AR. */
+select[aria-label='Sort products'],
+select[aria-label='ترتيب المنتجات'] {
   background-color: #67e8f9 !important;
   border-color: #67e8f9 !important;
   color: #041014 !important;
@@ -65,13 +66,16 @@ select[aria-label='Sort products'] {
 }
 
 select[aria-label='Sort products']:hover,
-select[aria-label='Sort products']:focus {
+select[aria-label='Sort products']:focus,
+select[aria-label='ترتيب المنتجات']:hover,
+select[aria-label='ترتيب المنتجات']:focus {
   background-color: #67e8f9 !important;
   border-color: #67e8f9 !important;
   color: #041014 !important;
 }
 
-select[aria-label='Sort products'] option {
+select[aria-label='Sort products'] option,
+select[aria-label='ترتيب المنتجات'] option {
   background-color: #ffffff;
   color: #062b35;
 }
