@@ -101,7 +101,7 @@ export default function ProductPageVideoPreview() {
           <span className="rounded-full border border-cyan-300/20 bg-cyan-300/10 px-3 py-1 text-[10px] font-extrabold tracking-[0.2em] text-cyan-100 sm:text-xs">
             REAL PRODUCT PREVIEW
           </span>
-          <span className="text-xs font-semibold text-slate-400">6-second walkthrough</span>
+          <span className="text-xs font-semibold text-slate-400">Short product walkthrough</span>
         </div>
         <video
           aria-label={video.label}
