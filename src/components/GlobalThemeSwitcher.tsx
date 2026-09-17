@@ -44,6 +44,11 @@ export function ThemeSwitcher({ compact = false }: { compact?: boolean }) {
 export default function GlobalThemeSwitcher() {
   const pathname = usePathname();
   const [hasHostedSwitcher, setHasHostedSwitcher] = useState<boolean | null>(null);
+  const isAuthSurface = Boolean(
+    pathname?.startsWith('/sign-up-login-screen') ||
+      pathname?.startsWith('/reset-password') ||
+      pathname?.startsWith('/auth/'),
+  );
 
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
@@ -53,12 +58,15 @@ export default function GlobalThemeSwitcher() {
     return () => window.cancelAnimationFrame(frame);
   }, [pathname]);
 
-  if (hasHostedSwitcher !== false) return null;
+  if (hasHostedSwitcher !== false || isAuthSurface) return null;
 
   return (
     <div
       className="fixed bottom-2 left-2 z-[115] print:hidden sm:bottom-4 sm:left-4"
-      style={{ bottom: 'max(.5rem, env(safe-area-inset-bottom))' }}
+      style={{
+        bottom: 'max(.5rem, env(safe-area-inset-bottom))',
+        left: 'max(.5rem, env(safe-area-inset-left))',
+      }}
     >
       <div className="sm:hidden"><ThemeSwitcher compact /></div>
       <div className="hidden sm:block"><ThemeSwitcher /></div>
