@@ -19,9 +19,9 @@ import { getPublicCatalog } from '@/lib/catalog/publicCatalog';
 
 export const revalidate = 300;
 export const metadata = {
-  title: { absolute: 'SUMMECA — Digital Tools for Small E-Commerce Stores' },
+  title: { absolute: 'SUMMECA — Digital Tools for Small Online Businesses' },
   description:
-    'Practical SUMMECA tools for small e-commerce stores: invoicing, customer follow-up, conversion workflows, and ready-to-use digital products with transparent production pricing.',
+    'Practical SUMMECA tools for small online businesses: invoicing, customer follow-up, conversion workflows, ready-to-use digital kits, and business templates with transparent production pricing.',
   alternates: { canonical: '/' },
 };
 
@@ -49,28 +49,23 @@ type PublishedProduct = {
   product_plans: ProductPlan[] | null;
 };
 
-type CatalogKind = 'ai' | 'saas' | 'digital';
-
 const FEATURED_PRODUCT_ORDER = [
   'summeca-invoiceflow',
   'summeca-leadfollow-ai',
   'conversion-rescue-kit-pro',
+  'ecommerce-product-page-conversion-kit',
   'conversion-rescue-kit-starter',
   'conversion-rescue-kit-ultimate',
 ];
 
-const AI_CATEGORIES = ['ai_tool', 'api', 'plugin'];
-const DIGITAL_CATEGORIES = ['template', 'dataset'];
-
-function catalogKind(category: string): CatalogKind {
-  if (AI_CATEGORIES.includes(category)) return 'ai';
-  if (DIGITAL_CATEGORIES.includes(category)) return 'digital';
-  return 'saas';
-}
-
-function categoryLabel(category: string) {
-  if (catalogKind(category) === 'ai') return 'AI-assisted workspace';
-  if (catalogKind(category) === 'digital') return 'Downloadable digital kit';
+function productTypeLabel(product: PublishedProduct) {
+  if (product.slug === 'summeca-invoiceflow') return 'SaaS workspace';
+  if (product.slug === 'summeca-leadfollow-ai') return 'AI-assisted workspace';
+  if (product.slug === 'ecommerce-product-page-conversion-kit') return 'Business Template';
+  if (product.category === 'template' || product.category === 'dataset') {
+    return 'Downloadable digital kit';
+  }
+  if (['ai_tool', 'api', 'plugin'].includes(product.category)) return 'AI-assisted workspace';
   return 'SaaS workspace';
 }
 
@@ -139,21 +134,21 @@ function ProductCard({ product }: { product: PublishedProduct }) {
     product.short_desc || product.description || 'Explore the product page for current details.';
 
   return (
-    <article className="group flex h-full flex-col overflow-hidden rounded-[22px] border border-border bg-card shadow-sm transition duration-300 hover:-translate-y-1 hover:border-primary/35 hover:shadow-lg motion-reduce:transform-none motion-reduce:transition-none">
+    <article className="group flex h-full min-h-[400px] flex-col overflow-hidden rounded-[22px] border border-border bg-card shadow-sm transition duration-200 hover:-translate-y-1 hover:border-primary/35 hover:shadow-lg focus-within:border-primary/40 motion-reduce:transform-none motion-reduce:transition-none">
       <div className="relative overflow-hidden bg-[#0c1218] p-3">
         <ProductProofPreview name={product.name} />
         <span className="absolute left-5 top-5 rounded-md border border-white/15 bg-[#101820]/90 px-2.5 py-1 text-[9px] font-800 uppercase tracking-[0.14em] text-cyan-200 shadow-sm backdrop-blur">
-          {categoryLabel(product.category)}
+          {productTypeLabel(product)}
         </span>
       </div>
 
       <div className="flex flex-1 flex-col p-4 sm:p-5">
         <h3 className="text-lg font-800 tracking-tight text-foreground">{product.name}</h3>
-        <p className="mt-2 max-h-12 overflow-hidden text-sm leading-6 text-muted-foreground">
+        <p className="mt-2 line-clamp-2 min-h-12 text-sm leading-6 text-muted-foreground">
           {description}
         </p>
 
-        <div className="mt-5 flex items-center justify-between gap-3 border-t border-border pt-4">
+        <div className="mt-auto flex items-end justify-between gap-3 border-t border-border pt-4">
           <div className="min-w-0">
             <p className="text-[9px] font-700 uppercase tracking-[0.13em] text-muted-foreground">
               Starting at
@@ -176,7 +171,7 @@ function ProductCard({ product }: { product: PublishedProduct }) {
           </div>
           <Link
             href={`/products/${product.slug}`}
-            className="inline-flex min-h-10 shrink-0 items-center justify-center gap-1.5 rounded-xl bg-foreground px-3.5 py-2 text-[11px] font-800 text-background transition hover:bg-primary hover:text-primary-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary motion-reduce:transition-none"
+            className="inline-flex min-h-10 shrink-0 items-center justify-center gap-1.5 rounded-xl bg-foreground px-3.5 py-2 text-[11px] font-800 text-background transition duration-200 hover:bg-primary hover:text-primary-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary motion-reduce:transition-none"
           >
             {productCta(product)} <ArrowRight size={13} />
           </Link>
@@ -188,7 +183,7 @@ function ProductCard({ product }: { product: PublishedProduct }) {
 
 export default async function HomePage() {
   const products: PublishedProduct[] = (await getPublicCatalog())
-    .slice(0, 8)
+    .slice(0, 12)
     .map((product) => ({
       id: product.id,
       name: product.name,
@@ -203,12 +198,50 @@ export default async function HomePage() {
 
   const featuredProducts = [...products]
     .sort((a, b) => productRank(a) - productRank(b))
-    .slice(0, 3);
+    .slice(0, 4);
 
   return (
     <div className="min-h-screen overflow-x-clip bg-background">
       <PublicNav />
-      <main>
+      <main className="summeca-home-motion-scope">
+        <style>{`
+          .summeca-home-hero .summeca-hero-orb {
+            animation: none !important;
+            will-change: auto !important;
+          }
+          .summeca-home-hero .summeca-reveal {
+            animation-duration: 200ms !important;
+            animation-timing-function: ease-out !important;
+            transform: translateY(10px);
+          }
+          .summeca-home-hero .summeca-reveal-1 { animation-delay: 0ms !important; }
+          .summeca-home-hero .summeca-reveal-2 { animation-delay: 35ms !important; }
+          .summeca-home-hero .summeca-reveal-3 { animation-delay: 70ms !important; }
+          .summeca-home-hero .summeca-reveal-4 { animation-delay: 90ms !important; }
+          .summeca-home-hero .summeca-reveal-5 { animation-delay: 110ms !important; }
+          .summeca-home-motion-scope article,
+          .summeca-home-motion-scope a[class*='rounded-2xl'][class*='bg-card'],
+          .summeca-home-motion-scope div[class*='rounded-2xl'][class*='bg-card'] {
+            transition-duration: 200ms !important;
+            transition-timing-function: ease !important;
+          }
+          body.summeca-home-theme .summeca-home-motion-scope article:hover,
+          body.summeca-home-theme .summeca-home-motion-scope a[class*='rounded-2xl'][class*='bg-card']:hover,
+          body.summeca-home-theme .summeca-home-motion-scope div[class*='rounded-2xl'][class*='bg-card']:hover {
+            transform: translateY(-4px) !important;
+          }
+          @media (prefers-reduced-motion: reduce) {
+            .summeca-home-hero .summeca-reveal,
+            .summeca-home-hero .summeca-hero-orb,
+            .summeca-home-motion-scope article,
+            .summeca-home-motion-scope a,
+            .summeca-home-motion-scope div {
+              animation: none !important;
+              transition: none !important;
+              transform: none !important;
+            }
+          }
+        `}</style>
         <HeroSection />
 
         <section
@@ -229,7 +262,7 @@ export default async function HomePage() {
             </div>
             <Link
               href="/products"
-              className="inline-flex min-h-10 items-center gap-2 self-start text-sm font-700 text-primary hover:underline sm:self-auto"
+              className="inline-flex min-h-10 items-center gap-2 self-start text-sm font-700 text-primary transition-colors duration-200 hover:underline focus-visible:rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary sm:self-auto motion-reduce:transition-none"
             >
               View all products <ArrowRight size={14} />
             </Link>
@@ -245,7 +278,7 @@ export default async function HomePage() {
               </p>
             </div>
           ) : (
-            <div className="mt-7 grid gap-4 md:grid-cols-3">
+            <div className="mt-7 grid items-stretch gap-4 sm:grid-cols-2 xl:grid-cols-4">
               {featuredProducts.map((product) => (
                 <ProductCard key={product.id} product={product} />
               ))}
@@ -276,7 +309,7 @@ export default async function HomePage() {
             <div className="mt-7 grid gap-4 md:grid-cols-3">
               <Link
                 href="/products/summeca-invoiceflow"
-                className="group rounded-2xl border border-border bg-card p-5 transition hover:-translate-y-0.5 hover:border-primary/35 hover:shadow-md motion-reduce:transform-none motion-reduce:transition-none"
+                className="group rounded-2xl border border-border bg-card p-5 transition duration-200 hover:-translate-y-0.5 hover:border-primary/35 hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary motion-reduce:transform-none motion-reduce:transition-none"
               >
                 <div className="flex items-center gap-3">
                   <LayoutDashboard size={20} className="text-primary" />
@@ -291,7 +324,7 @@ export default async function HomePage() {
               </Link>
               <Link
                 href="/products/summeca-leadfollow-ai"
-                className="group rounded-2xl border border-border bg-card p-5 transition hover:-translate-y-0.5 hover:border-primary/35 hover:shadow-md motion-reduce:transform-none motion-reduce:transition-none"
+                className="group rounded-2xl border border-border bg-card p-5 transition duration-200 hover:-translate-y-0.5 hover:border-primary/35 hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary motion-reduce:transform-none motion-reduce:transition-none"
               >
                 <div className="flex items-center gap-3">
                   <BrainCircuit size={20} className="text-primary" />
@@ -306,7 +339,7 @@ export default async function HomePage() {
               </Link>
               <Link
                 href="/products/conversion-rescue-kit-pro"
-                className="group rounded-2xl border border-border bg-card p-5 transition hover:-translate-y-0.5 hover:border-primary/35 hover:shadow-md motion-reduce:transform-none motion-reduce:transition-none"
+                className="group rounded-2xl border border-border bg-card p-5 transition duration-200 hover:-translate-y-0.5 hover:border-primary/35 hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary motion-reduce:transform-none motion-reduce:transition-none"
               >
                 <div className="flex items-center gap-3">
                   <FileText size={20} className="text-primary" />
@@ -386,13 +419,13 @@ export default async function HomePage() {
             <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
               <Link
                 href="/sign-up-login-screen"
-                className="btn-primary inline-flex min-h-11 items-center justify-center gap-2 px-6 py-3"
+                className="btn-primary inline-flex min-h-11 items-center justify-center gap-2 px-6 py-3 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
               >
                 Get Started <ArrowRight size={15} />
               </Link>
               <Link
                 href="/pricing"
-                className="inline-flex min-h-11 items-center justify-center rounded-xl border border-border bg-card px-6 py-3 text-sm font-700 text-foreground transition hover:border-primary/35 hover:text-primary motion-reduce:transition-none"
+                className="inline-flex min-h-11 items-center justify-center rounded-xl border border-border bg-card px-6 py-3 text-sm font-700 text-foreground transition duration-200 hover:border-primary/35 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary motion-reduce:transition-none"
               >
                 View Pricing
               </Link>

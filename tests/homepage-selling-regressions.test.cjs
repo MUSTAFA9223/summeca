@@ -48,10 +48,11 @@ test('featured homepage products and prices come from active production records'
   assert.match(homepage, /summeca-invoiceflow/);
   assert.match(homepage, /summeca-leadfollow-ai/);
   assert.match(homepage, /conversion-rescue-kit-pro/);
+  assert.match(homepage, /ecommerce-product-page-conversion-kit/);
   assert.match(homepage, /conversion-rescue-kit-starter/);
   assert.match(homepage, /conversion-rescue-kit-ultimate/);
   assert.match(homepage, /Starting at/);
-  assert.doesNotMatch(homepage, /\$(?:29|49|59|79|89|99|129|149)(?:\b|\.)/);
+  assert.doesNotMatch(homepage, /\$(?:29|39|49|59|79|89|99|129|149)(?:\b|\.)/);
 });
 
 test('pricing fetches production catalog server-side and uses the shared effective-price helper', () => {
@@ -73,13 +74,14 @@ test('homepage does not advertise an unavailable payment provider as live', () =
   assert.match(cryptoStatus, /const available = Boolean/);
 });
 
-test('hero sends shoppers directly to signup or product discovery and records funnel intent', () => {
+test('hero uses one dominant product-discovery CTA and keeps signup secondary', () => {
+  assert.match(hero, /href="\/products"/);
+  assert.match(hero, /Explore SUMMECA Tools/);
+  assert.match(hero, /primary_cta_click/);
   assert.match(hero, /href="\/sign-up-login-screen"/);
   assert.match(hero, /Get Started/);
-  assert.match(hero, /href="\/products"/);
-  assert.match(hero, /View Products/);
+  assert.match(hero, /secondary_cta_click/);
   assert.match(hero, /homepage_view/);
-  assert.match(hero, /primary_cta_click/);
 });
 
 test('homepage and authentication show product evidence instead of a cursor-following robot', () => {
