@@ -181,6 +181,50 @@ html[data-site-theme='light'] [class~='bg-[#070b10]'] [class*='shadow-[0_-12px_3
   box-shadow: 0 -10px 30px rgba(15, 23, 42, 0.08) !important;
 }
 
+/* Public header layout: keep the in-flow launch banner and sticky header from overlapping. */
+[data-public-nav='true'] {
+  margin-bottom: 0 !important;
+  border-bottom-color: var(--border) !important;
+  background-color: color-mix(in srgb, var(--background) 95%, transparent) !important;
+  backdrop-filter: blur(10px) !important;
+  -webkit-backdrop-filter: blur(10px) !important;
+}
+
+/* Legacy 68/70px padding compensated for the old negative header margin. The header now owns its height in flow. */
+html [data-public-nav='true'] + main[class*='pt-[68px]'] {
+  padding-top: 0 !important;
+}
+
+html [data-public-nav='true'] + .summeca-home-hero {
+  padding-top: 0 !important;
+}
+
+html .summeca-saas-sales-shell main {
+  padding-top: 0 !important;
+}
+
+/* Keep the compact account menu direction-safe without changing account/menu behavior. */
+[data-public-nav='true'] button[aria-haspopup='menu'] {
+  max-width: 9.375rem;
+  min-width: 0;
+}
+
+html[dir='rtl'] [data-public-nav='true'] .glass-card-premium[role='menu'] {
+  right: auto;
+  left: 0;
+}
+
+html[dir='rtl'] [data-public-nav='true'] > div.absolute [data-ltr] {
+  padding-left: 0 !important;
+  padding-right: 23px !important;
+}
+
+@media (max-width: 1023px) {
+  [data-public-nav='true'] > div:first-child > div {
+    min-width: 0;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   html[data-site-theme] *,
   html[data-site-theme] *::before,
