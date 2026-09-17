@@ -15,9 +15,7 @@ export function ThemeSwitcher({ compact = false }: { compact?: boolean }) {
 
   return (
     <div
-      className={`flex items-center gap-1 rounded-full border border-border bg-card/90 shadow-[0_14px_40px_rgba(2,8,23,.16)] backdrop-blur-xl ${
-        compact ? 'p-1' : 'p-1.5'
-      }`}
+      className={`flex items-center gap-1 rounded-full border border-border bg-card/90 shadow-[0_14px_40px_rgba(2,8,23,.16)] backdrop-blur-xl ${compact ? 'p-1' : 'p-1.5'}`}
       role="group"
       aria-label="Color theme"
       data-i18n-skip
@@ -32,13 +30,7 @@ export function ThemeSwitcher({ compact = false }: { compact?: boolean }) {
             aria-pressed={selected}
             aria-label={`${label} theme`}
             title={`${label} theme`}
-            className={`inline-flex items-center justify-center rounded-full text-xs font-bold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
-              compact ? 'h-8 w-8 p-0' : 'h-9 gap-2 px-3'
-            } ${
-              selected
-                ? 'bg-primary text-primary-foreground shadow-sm'
-                : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
-            }`}
+            className={`inline-flex items-center justify-center rounded-full text-xs font-bold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${compact ? 'h-8 w-8 p-0' : 'h-9 gap-2 px-3'} ${selected ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:bg-secondary hover:text-foreground'}`}
           >
             <Icon size={14} />
             <span className={compact ? 'sr-only' : 'hidden sm:inline'}>{label}</span>
@@ -65,10 +57,11 @@ export default function GlobalThemeSwitcher() {
 
   return (
     <div
-      className="fixed bottom-4 left-4 z-[115] print:hidden"
-      style={{ bottom: 'max(1rem, env(safe-area-inset-bottom))' }}
+      className="fixed bottom-2 left-2 z-[115] print:hidden sm:bottom-4 sm:left-4"
+      style={{ bottom: 'max(.5rem, env(safe-area-inset-bottom))' }}
     >
-      <ThemeSwitcher />
+      <div className="sm:hidden"><ThemeSwitcher compact /></div>
+      <div className="hidden sm:block"><ThemeSwitcher /></div>
     </div>
   );
 }
