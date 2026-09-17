@@ -32,6 +32,22 @@ interface Product {
   plans?: Plan[];
 }
 
+const CATEGORY_LABELS: Record<string, string> = {
+  ai_tool: 'AI Assistant',
+  api: 'Developer Tool',
+  plugin: 'Extension',
+  template: 'Ready-to-use Kit',
+  dataset: 'Data Resource',
+  course: 'Learning Guide',
+  saas: 'Business Software',
+  saas_app: 'Business Software',
+  other: 'Business Software',
+};
+
+function categoryLabel(category: string) {
+  return CATEGORY_LABELS[category] ?? 'Digital Product';
+}
+
 function pricingFor(plan: Plan) {
   try {
     return getEffectivePrice(plan);
@@ -91,54 +107,84 @@ export default function FeaturedProducts() {
       } else {
         const rows = (data ?? []) as Product[];
         const withOffer = rows.filter((product) => lowestPlan(product.plans));
+        const recommended = withOffer.find((product) => product.slug === 'summeca-invoiceflow') ?? null;
         const featured = withOffer.filter((product) => Boolean(product.metadata?.featured || product.metadata?.is_featured));
-        setProducts((featured.length ? featured : withOffer).slice(0, 4));
+        const ordered = [
+          ...(recommended ? [recommended] : []),
+          ...featured.filter((product) => product.id !== recommended?.id),
+          ...withOffer.filter((product) => product.id !== recommended?.id && !featured.some((item) => item.id === product.id)),
+        ];
+        setProducts(ordered.slice(0, 4));
       }
       setLoading(false);
     }
-    load();
+    void load();
     return () => { alive = false; };
   }, [supabase]);
 
   return (
-    <section className="bg-white py-24">
+    <section className="bg-white py-20 sm:py-24">
+      <style>{`
+        @keyframes summeca-featured-enter {
+          from { opacity: 0; transform: translateY(10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .summeca-featured-enter { animation: summeca-featured-enter .5s cubic-bezier(.2,.8,.2,1) both; }
+        @media (prefers-reduced-motion: reduce) { .summeca-featured-enter { animation: none; } }
+      `}</style>
       <div className="mx-auto max-w-screen-xl px-6 lg:px-8">
-        <div className="mb-12 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
-          <div>
+        <div className="mb-10 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+          <div className="summeca-featured-enter">
             <div className="mb-3 inline-flex items-center gap-1.5 rounded-full border border-primary/15 bg-primary/8 px-3 py-1">
               <Sparkles size={11} className="text-primary" />
               <span className="text-xs font-semibold uppercase tracking-wider text-primary">Featured Products</span>
             </div>
-            <h2 className="text-3xl font-extrabold text-foreground">Published offers from SUMMECA</h2>
-            <p className="mt-2 max-w-md text-sm text-secondary-foreground">Only active products with a real production plan are shown here.</p>
+            <h2 className="text-3xl font-extrabold text-foreground">Tools ready to use</h2>
+            <p className="mt-2 max-w-md text-sm text-secondary-foreground">Pick a product, review the real preview, and choose the plan that fits.</p>
           </div>
-          <Link href="/products" className="flex items-center gap-1.5 whitespace-nowrap text-sm font-semibold text-primary hover:underline">View all products <ArrowRight size={14} /></Link>
+          <Link href="/products" className="flex items-center gap-1.5 whitespace-nowrap text-sm font-semibold text-primary transition hover:gap-2 hover:underline">View all products <ArrowRight size={14} /></Link>
         </div>
 
         {loading ? (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{[0, 1, 2, 3].map((item) => <div key={item} className="h-56 animate-pulse rounded-2xl border border-border bg-secondary/30" />)}</div>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{[0, 1, 2, 3].map((item) => <div key={item} className="h-72 animate-pulse rounded-2xl border border-border bg-secondary/30" />)}</div>
         ) : products.length === 0 ? (
           <div className="rounded-2xl border border-border bg-secondary/20 p-10 text-center">
             <Package size={24} className="mx-auto mb-3 text-primary" />
-            <p className="font-bold text-foreground">The first production product is being prepared.</p>
-            <p className="mt-1 text-sm text-muted-foreground">No demo product or placeholder price is being advertised.</p>
+            <p className="font-bold text-foreground">New products are being prepared.</p>
+            <p className="mt-1 text-sm text-muted-foreground">Only active offers are shown here.</p>
           </div>
         ) : (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {products.map((product) => {
+          <div className="grid items-stretch gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {products.map((product, index) => {
               const plan = lowestPlan(product.plans)!;
               const pricing = pricingFor(plan);
+              const recommended = product.slug === 'summeca-invoiceflow';
               return (
-                <Link key={product.id} href={`/products/${product.slug}`} className="group rounded-2xl border border-border bg-card p-5 transition hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-lg">
-                  <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-xl bg-primary/8">
-                    {product.thumbnail_url ? <img src={product.thumbnail_url} alt="" className="h-full w-full object-cover" /> : <Package size={20} className="text-primary" />}
+                <Link
+                  key={product.id}
+                  href={`/products/${product.slug}`}
+                  className={`summeca-featured-enter group relative flex h-full min-h-[310px] flex-col rounded-2xl border bg-card p-5 transition duration-200 hover:-translate-y-1 hover:shadow-xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary motion-reduce:transform-none ${recommended ? 'border-primary/35 shadow-md shadow-primary/10' : 'border-border hover:border-primary/30'}`}
+                  style={{ animationDelay: `${index * 65}ms` }}
+                >
+                  {recommended && (
+                    <span className="absolute right-4 top-4 rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-primary">
+                      Recommended
+                    </span>
+                  )}
+                  <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-xl bg-primary/8 transition duration-200 group-hover:scale-[1.03] motion-reduce:transform-none">
+                    {product.thumbnail_url ? <img src={product.thumbnail_url} alt={`${product.name} preview`} className="h-full w-full object-cover" /> : <Package size={22} className="text-primary" />}
                   </div>
-                  <p className="mt-4 text-[11px] font-semibold uppercase tracking-wider text-primary">{product.category.replaceAll('_', ' ')}</p>
-                  <h3 className="mt-1 text-sm font-bold text-foreground group-hover:text-primary">{product.name}</h3>
-                  <p className="mt-2 line-clamp-2 min-h-10 text-xs leading-5 text-muted-foreground">{product.short_desc || product.description || 'Product details available on the product page.'}</p>
-                  <div className="mt-5 border-t border-border pt-4">
-                    {pricing.onSale && <span className="mr-1.5 text-[10px] text-muted-foreground line-through">{money(pricing.regularPrice, plan.currency)}</span>}
-                    <span className={`text-sm font-bold ${pricing.finalPrice === 0 ? 'text-success' : 'text-foreground'}`}>{money(pricing.finalPrice, plan.currency)}{pricing.finalPrice > 0 && <span className="text-xs font-normal text-muted-foreground">{suffix(plan.billing_period)}</span>}</span>
+                  <p className="mt-4 text-[10px] font-bold uppercase tracking-[0.15em] text-primary">{categoryLabel(product.category)}</p>
+                  <h3 className="mt-1 text-base font-black leading-6 text-foreground transition-colors group-hover:text-primary">{product.name}</h3>
+                  <p className="mt-2 line-clamp-2 min-h-10 text-xs leading-5 text-muted-foreground">{product.short_desc || product.description || 'See the product preview and included features.'}</p>
+                  <div className="mt-auto border-t border-border pt-4">
+                    <div className="flex items-baseline gap-1.5">
+                      {pricing.onSale && <span className="text-[10px] text-muted-foreground line-through">{money(pricing.regularPrice, plan.currency)}</span>}
+                      <span className={`text-base font-black ${pricing.finalPrice === 0 ? 'text-success' : 'text-foreground'}`}>{money(pricing.finalPrice, plan.currency)}{pricing.finalPrice > 0 && <span className="text-xs font-normal text-muted-foreground">{suffix(plan.billing_period)}</span>}</span>
+                    </div>
+                    <span className="mt-3 flex min-h-10 items-center justify-center gap-2 rounded-lg border border-primary/20 bg-primary/8 px-3 text-xs font-black text-primary transition group-hover:bg-primary group-hover:text-primary-foreground">
+                      View product <ArrowRight size={13} />
+                    </span>
                   </div>
                 </Link>
               );
