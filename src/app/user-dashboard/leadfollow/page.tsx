@@ -29,6 +29,7 @@ type LeadStatus = 'new' | 'contacted' | 'replied' | 'won' | 'lost';
 type Lead = { id: string; name: string; company: string; email: string; phone: string; source: string; status: LeadStatus; notes: string; next_follow_up_at: string | null; last_contacted_at: string | null; created_at: string };
 type Message = { id: string; lead_id: string; channel: string; stage: string; tone: string; language: string; output_text: string; created_at: string };
 type Pagination = { page: number; pageSize: number; total: number; totalPages: number; hasPrevious: boolean; hasNext: boolean };
+type MailboxConnection = { provider: 'google' | 'microsoft'; email: string; status: string };
 type Data = { access: Access; profile: Profile | null; leads: Lead[]; messages: Message[]; counts: { leads: number; due: number; pipeline: Record<string, number> }; pagination: Pagination; usage: { used: number; limit: number; tokens: number; periodStart: string } };
 type Metric = [label: string, value: number, icon: LucideIcon];
 
@@ -86,6 +87,10 @@ function displayDateTime(value: string | null) {
   }).format(date);
 }
 
+function providerLabel(provider: MailboxConnection['provider']) {
+  return provider === 'google' ? 'Google' : 'Microsoft';
+}
+
 export default function LeadFollowPage() {
   const [data, setData] = useState<Data | null>(null);
   const [loading, setLoading] = useState(true);
@@ -94,6 +99,8 @@ export default function LeadFollowPage() {
   const [sendingEmail, setSendingEmail] = useState(false);
   const [forbidden, setForbidden] = useState<Access | null>(null);
   const [profile, setProfile] = useState<Profile>(emptyProfile);
+  const [mailboxConnection, setMailboxConnection] = useState<MailboxConnection | null>(null);
+  const [mailboxLoading, setMailboxLoading] = useState(true);
   const [showLeadForm, setShowLeadForm] = useState(false);
   const [leadPage, setLeadPage] = useState(1);
   const [leadForm, setLeadForm] = useState({ name: '', company: '', email: '', phone: '', source: '', notes: '', nextFollowUpAt: '' });
@@ -108,6 +115,24 @@ export default function LeadFollowPage() {
   const [emailPermissionConfirmed, setEmailPermissionConfirmed] = useState(false);
   const [emailSentAt, setEmailSentAt] = useState('');
   const [followUpValue, setFollowUpValue] = useState('');
+
+  const loadMailbox = useCallback(async () => {
+    setMailboxLoading(true);
+    try {
+      const response = await fetch('/api/leadfollow/email-connections', { cache: 'no-store' });
+      if (!response.ok) {
+        setMailboxConnection(null);
+        return;
+      }
+      const payload = await response.json();
+      const connection = payload.connection as MailboxConnection | null;
+      setMailboxConnection(connection?.status === 'active' ? connection : null);
+    } catch {
+      setMailboxConnection(null);
+    } finally {
+      setMailboxLoading(false);
+    }
+  }, []);
 
   const load = useCallback(async (page: number) => {
     setLoading(true);
@@ -133,8 +158,10 @@ export default function LeadFollowPage() {
   }, []);
 
   useEffect(() => { void load(leadPage); }, [leadPage, load]);
+  useEffect(() => { void loadMailbox(); }, [loadMailbox]);
 
   const selectedLead = useMemo(() => data?.leads.find((lead) => lead.id === selectedLeadId) ?? null, [data?.leads, selectedLeadId]);
+  const salesContextReady = Boolean(profile.business_name.trim() && profile.offer.trim() && profile.value_proposition.trim());
   const metrics = useMemo<Metric[]>(() => data ? [
     ['Leads', data.counts.leads, Users],
     ['Due now', data.counts.due, CalendarClock],
@@ -293,6 +320,9 @@ export default function LeadFollowPage() {
       if (!response.ok) throw new Error(payload.error || 'Email could not be sent.');
       setEmailSentAt(payload.sentAt || new Date().toISOString());
       setEmailPermissionConfirmed(false);
+      if ((payload.provider === 'google' || payload.provider === 'microsoft') && payload.senderEmail) {
+        setMailboxConnection({ provider: payload.provider, email: payload.senderEmail, status: 'active' });
+      }
       toast.success(`Email sent to ${selectedLead.email}.`);
       await load(leadPage);
     } catch (error) {
@@ -341,6 +371,10 @@ export default function LeadFollowPage() {
           <div className="flex flex-wrap gap-2">
             <span className="rounded-full bg-primary/10 px-3 py-2 text-xs font-bold text-primary">{data.access.planName} · Lifetime</span>
             <span className="rounded-full border border-border bg-card px-3 py-2 text-xs font-semibold">AI drafts: {data.usage.used}/{data.usage.limit} this month</span>
+            <Link href="/user-dashboard/leadfollow/mailbox" className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-2 text-xs font-semibold text-foreground hover:border-primary/40 hover:text-primary">
+              <Mail size={13}/>
+              {mailboxLoading ? 'Checking mailbox…' : mailboxConnection ? `${providerLabel(mailboxConnection.provider)} · ${mailboxConnection.email}` : 'Connect mailbox'}
+            </Link>
             <button onClick={() => setShowLeadForm((value) => !value)} className="btn-primary inline-flex items-center gap-2 px-4 py-2"><Plus size={15}/> Add lead</button>
           </div>
         </header>
@@ -378,6 +412,9 @@ export default function LeadFollowPage() {
           <form onSubmit={saveProfile} className="rounded-2xl border border-border bg-card p-6">
             <div className="flex items-center gap-2"><Target size={18} className="text-primary"/><h2 className="font-bold">Your sales context</h2></div>
             <p className="mt-1 text-xs leading-5 text-muted-foreground">Set this once so drafts stay grounded in your real offer. LeadFollow will not invent missing claims.</p>
+            <div className={`mt-4 rounded-xl border px-3 py-2.5 text-xs leading-5 ${salesContextReady ? 'border-emerald-500/25 bg-emerald-500/[0.06] text-emerald-700 dark:text-emerald-300' : 'border-amber-500/25 bg-amber-500/[0.06] text-amber-700 dark:text-amber-300'}`}>
+              {salesContextReady ? 'Draft context ready — LeadFollow can name your business, offer, and value proposition instead of using generic sales copy.' : 'For specific, professional drafts, add at least your business name, offer, and value proposition before generating.'}
+            </div>
             <div className="mt-5 space-y-3">
               <input className="form-input w-full" placeholder="Business name" value={profile.business_name} onChange={(e) => setProfile({ ...profile, business_name: e.target.value })}/>
               <textarea className="form-input w-full" placeholder="What do you sell? Include factual scope and price only if you want it used." value={profile.offer} onChange={(e) => setProfile({ ...profile, offer: e.target.value })}/>
@@ -414,8 +451,14 @@ export default function LeadFollowPage() {
 
                 {latestDraftChannel === 'email' && (
                   <div className="mt-4 space-y-3 rounded-xl border border-border bg-card p-4">
-                    <div className="flex items-center gap-2 text-xs font-bold text-primary"><Mail size={14}/> Direct email delivery</div>
-                    <div className="text-xs text-muted-foreground">To: <span dir="ltr" className="font-semibold text-foreground">{selectedLead?.email || 'No email on this lead'}</span></div>
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 text-xs font-bold text-primary"><Mail size={14}/> Direct email delivery</div>
+                      <Link href="/user-dashboard/leadfollow/mailbox" className="text-xs font-semibold text-primary hover:underline">Manage mailbox</Link>
+                    </div>
+                    <div className="rounded-lg border border-border/70 bg-background px-3 py-2.5 text-xs leading-5 text-muted-foreground">
+                      <div>From: {mailboxLoading ? <span>Checking mailbox…</span> : mailboxConnection ? <><span className="font-semibold text-foreground">{profile.business_name || providerLabel(mailboxConnection.provider)}</span>{' '}<span dir="ltr" className="font-semibold text-foreground">&lt;{mailboxConnection.email}&gt;</span>{' '}<span>· {providerLabel(mailboxConnection.provider)}</span></> : <span className="font-semibold text-foreground">SUMMECA fallback delivery</span>}</div>
+                      <div>To: <span dir="ltr" className="font-semibold text-foreground">{selectedLead?.email || 'No email on this lead'}</span></div>
+                    </div>
                     <input
                       className="form-input w-full"
                       value={emailSubject}
@@ -432,7 +475,12 @@ export default function LeadFollowPage() {
                     />
                     <label className="flex items-start gap-2 text-xs leading-5 text-muted-foreground">
                       <input type="checkbox" className="mt-1" checked={emailPermissionConfirmed} onChange={(event) => setEmailPermissionConfirmed(event.target.checked)} />
-                      <span>I confirm I have permission or a lawful basis to email this lead. The message will use my connected mailbox when available; otherwise SUMMECA will use its configured fallback delivery and route replies to my account email.</span>
+                      <span>
+                        I confirm I have permission or a lawful basis to email this lead.{' '}
+                        {mailboxConnection
+                          ? <>This message will be sent from <span dir="ltr" className="font-semibold text-foreground">{mailboxConnection.email}</span> through {providerLabel(mailboxConnection.provider)}, so replies return to that mailbox.</>
+                          : <>No connected mailbox is active; SUMMECA fallback delivery will route replies to my account email.</>}
+                      </span>
                     </label>
                     <button
                       type="button"
