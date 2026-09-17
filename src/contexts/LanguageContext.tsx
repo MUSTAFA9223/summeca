@@ -10,7 +10,6 @@ import {
   type ReactNode,
 } from 'react';
 import {
-  isAppLanguage,
   LANGUAGE_COOKIE_KEY,
   LANGUAGE_STORAGE_KEY,
   type AppLanguage,
@@ -111,36 +110,22 @@ function localizeNode(root: Node) {
   }
 }
 
-function readCookieLanguage(): AppLanguage | null {
-  if (typeof document === 'undefined') return null;
-  const cookie = document.cookie
-    .split(';')
-    .map((part) => part.trim())
-    .find((part) => part.startsWith(`${LANGUAGE_COOKIE_KEY}=`));
-  const value = cookie?.split('=')[1] ?? null;
-  return isAppLanguage(value) ? value : null;
-}
-
 function persistLanguage(language: AppLanguage) {
   window.localStorage.setItem(LANGUAGE_STORAGE_KEY, language);
   const secure = window.location.protocol === 'https:' ? '; Secure' : '';
   document.cookie = `${LANGUAGE_COOKIE_KEY}=${language}; Path=/; Max-Age=31536000; SameSite=Lax${secure}`;
 }
 
-export function LanguageProvider({ children }: { children: ReactNode }) {
-  const [language, setLanguageState] = useState<AppLanguage>('en');
+export function LanguageProvider({
+  children,
+  initialLanguage = 'en',
+}: {
+  children: ReactNode;
+  initialLanguage?: AppLanguage;
+}) {
+  const [language] = useState<AppLanguage>(initialLanguage);
 
   useEffect(() => {
-    const stored = window.localStorage.getItem(LANGUAGE_STORAGE_KEY);
-    const preferred = isAppLanguage(stored) ? stored : readCookieLanguage();
-    if (preferred) setLanguageState(preferred);
-  }, []);
-
-  useEffect(() => {
-    document.documentElement.lang = language;
-    document.documentElement.dir = language === 'ar' ? 'rtl' : 'ltr';
-    document.documentElement.dataset.language = language;
-
     if (language !== 'ar' || !document.body) return undefined;
 
     localizeNode(document.body);
