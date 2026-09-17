@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import Link from 'next/link';
-import { ArrowRight, LifeBuoy, LockKeyhole, ShieldCheck, Store } from 'lucide-react';
+import { ArrowRight, LifeBuoy, LockKeyhole, ShieldCheck, Store, User } from 'lucide-react';
 import { WorkspaceOverviewPreview } from '@/components/catalog/ProductProofPreview';
 import { useTheme } from '@/contexts/ThemeContext';
 import { trackEvent } from '@/lib/analytics';
@@ -29,6 +29,16 @@ export default function HeroSection() {
       audience: 'small_ecommerce',
     });
   }, []);
+
+  const headlineStyle = {
+    color: isLight ? '#062b35' : '#e8fbfa',
+    WebkitTextStroke: isLight
+      ? '1px rgba(0, 169, 165, 0.38)'
+      : '1px rgba(32, 217, 189, 0.42)',
+    textShadow: isLight
+      ? '0 8px 30px rgba(6, 43, 53, 0.06)'
+      : '0 0 32px rgba(34, 211, 238, 0.10)',
+  };
 
   return (
     <section
@@ -60,8 +70,8 @@ export default function HeroSection() {
           </div>
 
           <h1 className="summeca-reveal summeca-reveal-2 max-w-[720px] text-[clamp(2.75rem,5vw,5.5rem)] font-black uppercase leading-[0.92] tracking-[-0.055em]">
-            <span className="summeca-outline-text block">Run your store faster</span>
-            <span className="summeca-outline-text mt-2 block">with practical digital tools.</span>
+            <span className="summeca-outline-text block" style={headlineStyle}>Run your store faster</span>
+            <span className="summeca-outline-text mt-2 block" style={headlineStyle}>with practical digital tools.</span>
           </h1>
 
           <p
@@ -74,25 +84,25 @@ export default function HeroSection() {
 
           <div className="summeca-reveal summeca-reveal-4 mt-7 flex flex-col gap-3 sm:flex-row sm:items-center">
             <Link
-              href="/sign-up-login-screen"
+              href="/products"
               onClick={() =>
                 trackEvent('primary_cta_click', {
                   placement: 'homepage_hero',
-                  destination: 'signup',
+                  destination: 'products',
                   audience: 'small_ecommerce',
                 })
               }
               className="group inline-flex min-h-11 items-center justify-center gap-3 rounded-full bg-gradient-to-r from-[#109f8d] via-[#20d9bd] to-[#4bcdf6] px-6 py-3 text-sm font-bold text-[#03231f] shadow-[0_14px_42px_rgba(32,217,189,0.22)] transition duration-300 hover:-translate-y-0.5 hover:shadow-[0_18px_52px_rgba(75,205,246,0.28)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#4bcdf6] motion-reduce:transform-none motion-reduce:transition-none"
             >
-              Get Started
+              View Products
               <ArrowRight size={16} className="transition-transform duration-300 group-hover:translate-x-1 motion-reduce:transform-none motion-reduce:transition-none" />
             </Link>
             <Link
-              href="/products"
+              href="/sign-up-login-screen"
               onClick={() =>
                 trackEvent('secondary_cta_click', {
                   placement: 'homepage_hero',
-                  destination: 'products',
+                  destination: 'signup',
                 })
               }
               className={`group inline-flex min-h-11 items-center justify-center gap-2 rounded-full px-6 py-3 text-sm font-bold backdrop-blur-xl transition duration-300 hover:-translate-y-0.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#4bcdf6] motion-reduce:transform-none motion-reduce:transition-none ${
@@ -101,21 +111,24 @@ export default function HeroSection() {
                   : 'border border-[#65dfe0]/15 bg-[#65dfe0]/[0.055] text-[#e6faf9] hover:border-[#4bcdf6]/45 hover:bg-[#4bcdf6]/10 hover:text-white'
               }`}
             >
-              View Products
+              Get Started
               <ArrowRight size={15} className={isLight ? 'text-[#00a9a5]' : 'text-[#4bcdf6]'} />
             </Link>
           </div>
 
           <div
-            className={`summeca-reveal summeca-reveal-4 mt-6 flex max-w-xl flex-wrap items-center gap-x-5 gap-y-2 border-t pt-4 text-[11px] font-semibold ${
+            className={`summeca-reveal summeca-reveal-4 mt-6 flex max-w-2xl flex-wrap items-center gap-x-5 gap-y-2 border-t pt-4 text-[11px] font-semibold ${
               isLight ? 'border-[#00a9a5]/15 text-[#5d7f86]' : 'border-[#74d8d8]/10 text-[#91b5bf]'
             }`}
           >
             <span className="inline-flex items-center gap-1.5">
-              <ShieldCheck size={14} className={isLight ? 'text-[#00a9a5]' : 'text-[#20d9bd]'} /> Transparent production pricing
+              <ShieldCheck size={14} className={isLight ? 'text-[#00a9a5]' : 'text-[#20d9bd]'} /> Transparent pricing
             </span>
             <span className="inline-flex items-center gap-1.5">
-              <LockKeyhole size={14} className={isLight ? 'text-[#00a9a5]' : 'text-[#20d9bd]'} /> Protected digital delivery
+              <LockKeyhole size={14} className={isLight ? 'text-[#00a9a5]' : 'text-[#20d9bd]'} /> Protected checkout
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <User size={14} className={isLight ? 'text-[#00a9a5]' : 'text-[#20d9bd]'} /> Account-based access
             </span>
             <Link
               href="/support"
