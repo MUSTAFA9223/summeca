@@ -1,6 +1,13 @@
 html[dir='rtl'] body {
   direction: rtl;
   font-family: Tahoma, Arial, var(--font-plus-jakarta-sans), sans-serif;
+  line-height: 1.7;
+  word-break: normal;
+  overflow-wrap: break-word;
+}
+
+html[dir='rtl'] [class*='tracking-'] {
+  letter-spacing: normal !important;
 }
 
 html[dir='rtl'] .text-left {
