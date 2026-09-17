@@ -27,7 +27,6 @@ const navLinks = [
 export default function PublicNav() {
   const { user, loading, signOut } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [scrolled, setScrolled] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
   const accountMenuRef = useRef<HTMLDivElement>(null);
 
@@ -35,14 +34,14 @@ export default function PublicNav() {
     user?.user_metadata?.full_name?.trim() ||
     user?.user_metadata?.name?.trim() ||
     user?.email?.split('@')[0] ||
-    'Account';
-  const displayName = rawDisplayName.length > 24 ? `${rawDisplayName.slice(0, 24)}…` : rawDisplayName;
-
-  useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 12);
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
-  }, []);
+    'SUMMECA';
+  const firstDisplayName = rawDisplayName.split(/[\s._-]+/).filter(Boolean)[0] || 'SUMMECA';
+  const headerDisplayName = firstDisplayName.length > 16
+    ? `${firstDisplayName.slice(0, 16)}…`
+    : firstDisplayName;
+  const accountDisplayName = rawDisplayName.length > 36
+    ? `${rawDisplayName.slice(0, 36)}…`
+    : rawDisplayName;
 
   useEffect(() => {
     const onPointerDown = (event: PointerEvent) => {
@@ -72,7 +71,7 @@ export default function PublicNav() {
   return (
     <header
       data-public-nav="true"
-      className={`fixed left-0 right-0 z-50 transition-[top,background-color,box-shadow,border-color] duration-300 ${scrolled ? 'border-b border-primary/8 bg-white/95 shadow-sm shadow-primary/5 backdrop-blur-xl' : 'bg-transparent'}`}
+      className="fixed left-0 right-0 z-50 border-b border-primary/10 bg-background/90 shadow-sm shadow-primary/5 backdrop-blur-xl transition-[top,background-color,box-shadow,border-color] duration-300"
       style={{ top: 'var(--launch-offer-height, 0px)' }}
     >
       <div className="mx-auto max-w-screen-xl px-5 sm:px-6 lg:px-8">
@@ -103,12 +102,12 @@ export default function PublicNav() {
                   <button
                     type="button"
                     onClick={() => setAccountOpen((open) => !open)}
-                    className="flex max-w-[200px] items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold text-secondary-foreground transition hover:bg-secondary/80 hover:text-foreground"
+                    className="flex max-w-[150px] items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold text-secondary-foreground transition hover:bg-secondary/80 hover:text-foreground"
                     aria-haspopup="menu"
                     aria-expanded={accountOpen}
                   >
                     <User size={15} className="shrink-0 text-primary" />
-                    <span className="truncate">{displayName}</span>
+                    <span className="truncate">{headerDisplayName}</span>
                     <ChevronDown size={13} className={`shrink-0 transition-transform ${accountOpen ? 'rotate-180 text-primary' : ''}`} />
                   </button>
 
@@ -116,7 +115,7 @@ export default function PublicNav() {
                     <div className="glass-card-premium absolute right-0 top-full mt-2 w-64 rounded-2xl p-2 shadow-xl" role="menu">
                       <div className="border-b border-border px-3 py-2.5">
                         <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Signed in as</div>
-                        <div className="mt-0.5 truncate text-sm font-semibold text-foreground">{displayName}</div>
+                        <div className="mt-0.5 truncate text-sm font-semibold text-foreground">{accountDisplayName}</div>
                         {user.email && <div className="mt-0.5 truncate text-xs text-muted-foreground" data-ltr>{user.email}</div>}
                       </div>
                       <Link href="/user-dashboard" onClick={() => setAccountOpen(false)} className="mt-1 flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-medium text-secondary-foreground transition hover:bg-secondary/70 hover:text-foreground" role="menuitem">
@@ -151,7 +150,7 @@ export default function PublicNav() {
       </div>
 
       {mobileOpen && (
-        <div className="border-t border-border bg-white/98 shadow-xl backdrop-blur-xl lg:hidden">
+        <div className="border-t border-border bg-background/98 shadow-xl backdrop-blur-xl lg:hidden">
           <div className="h-0.5 bg-gradient-to-r from-primary via-accent to-transparent" />
           <div className="space-y-1 px-4 py-4">
             {navLinks.map((item) => (
@@ -165,7 +164,7 @@ export default function PublicNav() {
               ) : user ? (
                 <>
                   <div className="rounded-xl border border-border bg-secondary/40 px-3 py-3">
-                    <div className="flex items-center gap-2 text-sm font-semibold text-foreground"><User size={15} className="text-primary" /><span className="truncate">{displayName}</span></div>
+                    <div className="flex items-center gap-2 text-sm font-semibold text-foreground"><User size={15} className="text-primary" /><span className="truncate">{headerDisplayName}</span></div>
                     {user.email && <div className="mt-1 truncate pl-[23px] text-xs text-muted-foreground" data-ltr>{user.email}</div>}
                   </div>
                   <Link href="/user-dashboard" className="btn-primary flex items-center justify-center gap-1.5 text-center text-sm" onClick={() => setMobileOpen(false)}><LayoutDashboard size={13} />Dashboard</Link>
