@@ -71,8 +71,7 @@ export default function PublicNav() {
   return (
     <header
       data-public-nav="true"
-      className="fixed left-0 right-0 z-50 border-b border-primary/10 bg-background/90 shadow-sm shadow-primary/5 backdrop-blur-xl transition-[top,background-color,box-shadow,border-color] duration-300"
-      style={{ top: 'var(--launch-offer-height, 0px)' }}
+      className="sticky top-0 z-50 -mb-[70px] border-b border-primary/10 bg-background/90 shadow-sm shadow-primary/5 backdrop-blur-xl transition-[background-color,box-shadow,border-color] duration-300"
     >
       <div className="mx-auto max-w-screen-xl px-5 sm:px-6 lg:px-8">
         <div className="flex h-[70px] items-center justify-between">
@@ -98,16 +97,17 @@ export default function PublicNav() {
               <div className="h-9 w-24 animate-pulse rounded-lg bg-secondary/70" aria-label="Loading account" />
             ) : user ? (
               <>
-                <div ref={accountMenuRef} className="relative">
+                <div ref={accountMenuRef} className="relative min-w-0">
                   <button
                     type="button"
                     onClick={() => setAccountOpen((open) => !open)}
-                    className="flex max-w-[150px] items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold text-secondary-foreground transition hover:bg-secondary/80 hover:text-foreground"
+                    className="flex min-w-0 max-w-[150px] items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold text-secondary-foreground transition hover:bg-secondary/80 hover:text-foreground"
                     aria-haspopup="menu"
                     aria-expanded={accountOpen}
+                    title={rawDisplayName}
                   >
                     <User size={15} className="shrink-0 text-primary" />
-                    <span className="truncate">{headerDisplayName}</span>
+                    <span dir="auto" className="min-w-0 flex-1 truncate text-start">{headerDisplayName}</span>
                     <ChevronDown size={13} className={`shrink-0 transition-transform ${accountOpen ? 'rotate-180 text-primary' : ''}`} />
                   </button>
 
@@ -115,7 +115,7 @@ export default function PublicNav() {
                     <div className="glass-card-premium absolute right-0 top-full mt-2 w-64 rounded-2xl p-2 shadow-xl" role="menu">
                       <div className="border-b border-border px-3 py-2.5">
                         <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Signed in as</div>
-                        <div className="mt-0.5 truncate text-sm font-semibold text-foreground">{accountDisplayName}</div>
+                        <div dir="auto" className="mt-0.5 truncate text-sm font-semibold text-foreground">{accountDisplayName}</div>
                         {user.email && <div className="mt-0.5 truncate text-xs text-muted-foreground" data-ltr>{user.email}</div>}
                       </div>
                       <Link href="/user-dashboard" onClick={() => setAccountOpen(false)} className="mt-1 flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-medium text-secondary-foreground transition hover:bg-secondary/70 hover:text-foreground" role="menuitem">
@@ -150,7 +150,7 @@ export default function PublicNav() {
       </div>
 
       {mobileOpen && (
-        <div className="border-t border-border bg-background/[0.98] shadow-xl backdrop-blur-xl lg:hidden">
+        <div className="absolute inset-x-0 top-full border-t border-border bg-background/[0.98] shadow-xl backdrop-blur-xl lg:hidden">
           <div className="h-0.5 bg-gradient-to-r from-primary via-accent to-transparent" />
           <div className="space-y-1 px-4 py-4">
             {navLinks.map((item) => (
@@ -163,8 +163,8 @@ export default function PublicNav() {
                 <div className="h-10 animate-pulse rounded-xl bg-secondary/70" aria-label="Loading account" />
               ) : user ? (
                 <>
-                  <div className="rounded-xl border border-border bg-secondary/40 px-3 py-3">
-                    <div className="flex items-center gap-2 text-sm font-semibold text-foreground"><User size={15} className="text-primary" /><span className="truncate">{headerDisplayName}</span></div>
+                  <div className="min-w-0 rounded-xl border border-border bg-secondary/40 px-3 py-3">
+                    <div className="flex min-w-0 items-center gap-2 text-sm font-semibold text-foreground"><User size={15} className="shrink-0 text-primary" /><span dir="auto" className="min-w-0 flex-1 truncate text-start">{headerDisplayName}</span></div>
                     {user.email && <div className="mt-1 truncate pl-[23px] text-xs text-muted-foreground" data-ltr>{user.email}</div>}
                   </div>
                   <Link href="/user-dashboard" className="btn-primary flex items-center justify-center gap-1.5 text-center text-sm" onClick={() => setMobileOpen(false)}><LayoutDashboard size={13} />Dashboard</Link>
