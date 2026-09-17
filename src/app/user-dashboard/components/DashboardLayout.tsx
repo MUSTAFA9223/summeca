@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import DashboardSidebar from './DashboardSidebar';
 import DashboardTopbar from './DashboardTopbar';
+import LeadFollowEnglishDateTimeInputs from './LeadFollowEnglishDateTimeInputs';
 import { useAuth } from '@/contexts/AuthContext';
 
 interface DashboardLayoutProps {
@@ -42,6 +43,8 @@ export default function DashboardLayout({ children, activeRoute }: DashboardLayo
 
   return (
     <div className="min-h-screen bg-[#F8FAFB] flex">
+      {activeRoute === 'leadfollow' && <LeadFollowEnglishDateTimeInputs />}
+
       <DashboardSidebar
         collapsed={sidebarCollapsed}
         onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
