@@ -3,6 +3,15 @@ import { chromium } from 'playwright';
 const baseUrl = process.env.CURRENT_DEV_BASE_URL || 'http://127.0.0.1:4174';
 const browser = await chromium.launch({ headless: true });
 const context = await browser.newContext({ viewport: { width: 390, height: 844 }, locale: 'ar' });
+
+await context.route(`${baseUrl}/**`, async (route) => {
+  const response = await route.fetch();
+  const headers = { ...response.headers() };
+  delete headers['content-security-policy'];
+  delete headers['content-security-policy-report-only'];
+  await route.fulfill({ response, headers });
+});
+
 await context.addCookies([{ name: 'summeca_language', value: 'ar', url: baseUrl, sameSite: 'Lax' }]);
 await context.addInitScript(() => {
   localStorage.setItem('summeca.language', 'ar');
