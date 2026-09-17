@@ -16,9 +16,9 @@ test('homepage reserves a responsive stage for product interface evidence', () =
   assert.match(hero, /WorkspaceOverviewPreview/);
   assert.match(hero, /grid-cols-1/);
   assert.match(hero, /lg:grid-cols-\[46%_54%\]/);
-  assert.match(hero, /min-h-\[430px\]/);
-  assert.match(hero, /sm:min-h-\[500px\]/);
-  assert.match(hero, /lg:min-h-\[590px\]/);
+  assert.match(hero, /min-h-\[400px\]/);
+  assert.match(hero, /sm:min-h-\[450px\]/);
+  assert.match(hero, /lg:min-h-\[550px\]/);
   assert.match(productPreview, /data-workspace-preview="true"/);
 });
 
