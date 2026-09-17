@@ -284,7 +284,12 @@ export default function ProductPageEnhancements() {
       )}
 
       {showSticky && checkoutHref && (
-        <div className="fixed inset-x-3 bottom-3 z-[105] sm:inset-x-auto sm:right-4 sm:w-auto" data-i18n-skip dir={isArabic ? 'rtl' : 'ltr'}>
+        <div
+          className="fixed inset-x-3 z-[105] sm:inset-x-auto sm:right-4 sm:w-auto"
+          style={{ bottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}
+          data-i18n-skip
+          dir={isArabic ? 'rtl' : 'ltr'}
+        >
           <a
             href={checkoutHref}
             className="flex min-h-12 items-center justify-center gap-2 rounded-xl border border-primary/20 bg-primary px-5 text-sm font-black text-primary-foreground shadow-[0_16px_45px_rgba(0,0,0,.28)] transition duration-200 hover:-translate-y-0.5 hover:brightness-105 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary motion-reduce:transform-none"
