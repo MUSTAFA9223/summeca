@@ -123,7 +123,7 @@ export default function FeaturedProducts() {
   }, [supabase]);
 
   return (
-    <section className="bg-white py-20 sm:py-24">
+    <section className="bg-background py-20 sm:py-24">
       <style>{`
         @keyframes summeca-featured-enter {
           from { opacity: 0; transform: translateY(10px); }
