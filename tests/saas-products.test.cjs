@@ -86,8 +86,8 @@ test('LeadFollow AI reserves quota atomically and forbids fabricated sales claim
   assert.match(quota, /requests_count < p_limit/);
   assert.match(quota, /grant execute on function public\.reserve_leadfollow_ai_request.*service_role/i);
   assert.match(leadGenerate, /reserve_leadfollow_ai_request/);
-  assert.match(leadGenerate, /Never invent testimonials, results, discounts, deadlines, guarantees, credentials, relationships, or product facts/);
-  assert.match(leadGenerate, /Never claim the recipient visited, opened, clicked, requested, or agreed/);
+  assert.match(leadGenerate, /Never invent testimonials, results, discounts, deadlines, guarantees, credentials, relationships, product facts/);
+  assert.match(leadGenerate, /Never claim the recipient visited, opened, clicked, requested, replied, agreed to something, or had a conversation/);
   assert.match(leadGenerate, /generateText\(/);
 });
 
