@@ -10,12 +10,18 @@ const hero = read('src/app/components/HeroSection.tsx');
 const pricing = read('src/components/catalog/PricingCatalogView.tsx');
 const featured = read('src/app/components/FeaturedProducts.tsx');
 
-test('homepage hero keeps a readable filled headline and product-first CTA hierarchy', () => {
+test('homepage hero keeps a readable filled headline and flagship product CTA hierarchy', () => {
   assert.match(hero, /color: isLight \? '#062b35' : '#e8fbfa'/);
   assert.match(hero, /WebkitTextStroke/);
-  assert.match(hero, /href="\/products"[\s\S]*?primary_cta_click/);
-  assert.match(hero, /primary: 'Explore SUMMECA Tools'/);
-  assert.match(hero, /primary: 'استكشف أدوات SUMMECA'/);
+  assert.match(hero, /href="\/products\/summeca-invoiceflow"[\s\S]*?primary_cta_click/);
+  assert.match(hero, /invoiceFlow: 'Explore InvoiceFlow'/);
+  assert.match(hero, /invoiceFlow: 'استكشف InvoiceFlow'/);
+  assert.match(hero, /href="\/products\/summeca-leadfollow-ai"[\s\S]*?secondary_cta_click/);
+  assert.match(hero, /leadFollow: 'Explore LeadFollow AI'/);
+  assert.match(hero, /leadFollow: 'استكشف LeadFollow AI'/);
+  assert.match(hero, /href="\/products"/);
+  assert.match(hero, /allProducts: 'View all products'/);
+  assert.match(hero, /allProducts: 'عرض كل المنتجات'/);
   assert.match(hero, /Transparent pricing/);
   assert.match(hero, /Protected checkout/);
   assert.match(hero, /Account-based access/);
