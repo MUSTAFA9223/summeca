@@ -68,9 +68,16 @@ function RealProductPreview({ product }: { product: SaasSalesProduct }) {
       >
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border bg-secondary/30 px-4 py-3 sm:px-5">
           <span className="text-xs font-bold text-foreground">{product.name}</span>
-          <span className="rounded-full bg-primary/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-primary sm:text-[11px]">
-            {showVideo ? 'REAL PRODUCT DEMO' : 'ACTUAL PRODUCT'}
-          </span>
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            {showVideo && (
+              <span className="text-[10px] font-semibold text-muted-foreground sm:text-[11px]">
+                6-second real product walkthrough
+              </span>
+            )}
+            <span className="rounded-full bg-primary/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-primary sm:text-[11px]">
+              {showVideo ? 'REAL PRODUCT DEMO' : 'ACTUAL PRODUCT'}
+            </span>
+          </div>
         </div>
         {showVideo ? (
           <div className="relative aspect-video overflow-hidden bg-black">
@@ -87,19 +94,24 @@ function RealProductPreview({ product }: { product: SaasSalesProduct }) {
               onPause={() => setPlaying(false)}
               onError={() => setVideoFailed(true)}
               className="h-full w-full object-contain"
-              aria-label={`${product.name} real product demo`}
+              aria-label={`${product.name} real product demo, 6 seconds`}
             />
             {!playing && (
               <button
                 type="button"
                 onClick={playVideo}
-                aria-label={`Play ${product.name} demo`}
+                aria-label={`Play ${product.name} 6-second demo`}
                 className="group absolute inset-0 flex items-center justify-center bg-black/20 transition hover:bg-black/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-4px] focus-visible:outline-primary"
               >
                 <span className="flex h-20 w-20 items-center justify-center rounded-full border border-white/25 bg-white/95 text-slate-950 shadow-2xl transition duration-200 group-hover:scale-105 motion-reduce:transform-none">
                   <Play size={32} className="ml-1 fill-current" />
                 </span>
               </button>
+            )}
+            {!playing && (
+              <span className="pointer-events-none absolute bottom-3 right-3 rounded-md bg-black/70 px-2 py-1 text-[11px] font-bold text-white">
+                0:06
+              </span>
             )}
           </div>
         ) : (
@@ -128,6 +140,21 @@ export default function SaasProductSalesExperience({
   return (
     <div className="summeca-saas-sales-shell">
       <style>{`
+        .summeca-saas-sales-shell main {
+          padding-top: 70px !important;
+        }
+
+        @media (max-width: 639px) {
+          .summeca-saas-sales-shell main > section:first-of-type > div.relative {
+            padding-top: 1.5rem;
+            padding-bottom: 1.75rem;
+          }
+
+          .summeca-saas-sales-shell #product-preview {
+            margin-top: 0.25rem;
+          }
+        }
+
         @media (min-width: 1024px) {
           .summeca-saas-sales-shell main > section:first-of-type > div.relative {
             align-items: start;
