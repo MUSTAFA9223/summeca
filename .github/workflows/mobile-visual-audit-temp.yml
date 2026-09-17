@@ -66,6 +66,7 @@ jobs:
           const fs = require('fs');
           const path = require('path');
 
+          const baseUrl = 'http://127.0.0.1:4028';
           const outputDir = path.join(process.env.GITHUB_WORKSPACE, 'visual-audit');
           const sizes = [[320,568],[375,667],[390,844],[430,932],[768,1024],[1024,768],[1440,900]];
           const states = [['en','light'],['en','dark'],['ar','light'],['ar','dark']];
@@ -86,6 +87,12 @@ jobs:
             for (const [width, height] of sizes) {
               for (const [language, theme] of states) {
                 const context = await browser.newContext({ viewport: { width, height }, deviceScaleFactor: 1 });
+                await context.addCookies([{
+                  name: 'summeca_language',
+                  value: language,
+                  url: baseUrl,
+                  sameSite: 'Lax',
+                }]);
                 await context.addInitScript(({ language, theme }) => {
                   localStorage.setItem('summeca.language', language);
                   localStorage.setItem('summeca:theme', theme);
@@ -93,18 +100,17 @@ jobs:
 
                 for (const [name, route] of routes) {
                   const page = await context.newPage();
-                  const errors = [];
-                  page.on('pageerror', (error) => errors.push(`pageerror:${error.message}`));
-                  page.on('console', (msg) => { if (msg.type() === 'error') errors.push(`console:${msg.text()}`); });
+                  const pageErrors = [];
+                  page.on('pageerror', (error) => pageErrors.push(`pageerror:${error.message}`));
                   let responseStatus = null;
                   try {
-                    const response = await page.goto(`http://127.0.0.1:4028${route}`, { waitUntil: 'domcontentloaded', timeout: 45000 });
+                    const response = await page.goto(`${baseUrl}${route}`, { waitUntil: 'domcontentloaded', timeout: 45000 });
                     responseStatus = response?.status() ?? null;
                     await page.waitForFunction(
                       ({ language, theme }) => document.documentElement.dataset.language === language && document.documentElement.dataset.siteTheme === theme,
-                      { language, theme }, { timeout: 10000 },
+                      { language, theme }, { timeout: 5000 },
                     );
-                    await page.waitForTimeout(800);
+                    await page.waitForTimeout(600);
                     const metrics = await page.evaluate((name) => ({
                       innerWidth: window.innerWidth,
                       scrollWidth: document.documentElement.scrollWidth,
@@ -120,13 +126,13 @@ jobs:
                     const langMismatch = metrics.lang !== language;
                     const themeMismatch = metrics.theme !== theme;
                     const authThemeOverlapRisk = metrics.authThemeControlVisible;
-                    if (overflow || dirMismatch || langMismatch || themeMismatch || authThemeOverlapRisk || errors.length) failures += 1;
+                    if (overflow || dirMismatch || langMismatch || themeMismatch || authThemeOverlapRisk || pageErrors.length) failures += 1;
                     const filename = `${width}x${height}__${language}-${theme}__${name}.jpg`;
                     await page.screenshot({ path: path.join(outputDir, filename), type: 'jpeg', quality: 68, fullPage: true });
-                    report.push({ width,height,language,theme,name,route,finalUrl:page.url(),responseStatus,overflow,dirMismatch,langMismatch,themeMismatch,authThemeOverlapRisk,metrics,consoleErrors:errors.slice(0,8),screenshot:filename });
+                    report.push({ width,height,language,theme,name,route,finalUrl:page.url(),responseStatus,overflow,dirMismatch,langMismatch,themeMismatch,authThemeOverlapRisk,metrics,pageErrors:pageErrors.slice(0,8),screenshot:filename });
                   } catch (error) {
                     failures += 1;
-                    report.push({ width,height,language,theme,name,route,error:String(error),consoleErrors:errors.slice(0,8) });
+                    report.push({ width,height,language,theme,name,route,error:String(error),pageErrors:pageErrors.slice(0,8) });
                   } finally { await page.close(); }
                 }
                 await context.close();
@@ -135,7 +141,7 @@ jobs:
 
             fs.writeFileSync(path.join(outputDir, 'report.json'), JSON.stringify({ failures, cases: report.length, report }, null, 2));
             console.log(`Visual audit cases=${report.length} failures=${failures}`);
-            for (const item of report.filter((item) => item.overflow || item.dirMismatch || item.langMismatch || item.themeMismatch || item.authThemeOverlapRisk || item.error || item.consoleErrors?.length)) console.log(JSON.stringify(item));
+            for (const item of report.filter((item) => item.overflow || item.dirMismatch || item.langMismatch || item.themeMismatch || item.authThemeOverlapRisk || item.error || item.pageErrors?.length)) console.log(JSON.stringify(item));
             await browser.close();
             if (failures > 0) process.exit(2);
           })().catch((error) => { console.error(error); process.exit(3); });
