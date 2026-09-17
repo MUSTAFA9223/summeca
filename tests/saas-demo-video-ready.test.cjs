@@ -18,9 +18,9 @@ test('SaaS sales pages are ready for verified real product demo videos', () => {
   assert.match(salesExperience, /<video/);
   assert.match(salesExperience, /preload="metadata"/);
   assert.match(salesExperience, /REAL PRODUCT DEMO/);
-  assert.match(salesExperience, /6-second real product walkthrough/);
-  assert.match(salesExperience, /0:06/);
-  assert.match(salesExperience, /aria-label=\{`Play \$\{product\.name\} 6-second demo`\}/);
+  assert.match(salesExperience, /15-second real product walkthrough/);
+  assert.match(salesExperience, /0:15/);
+  assert.match(salesExperience, /aria-label=\{`Play \$\{product\.name\} 15-second demo`\}/);
   assert.match(salesExperience, /videoFailed/);
   assert.match(salesExperience, /ACTUAL PRODUCT/);
   assert.doesNotMatch(salesExperience, /autoPlay/);
