@@ -28,16 +28,21 @@ test('homepage keeps four featured production products and stays focused on stor
   assert.doesNotMatch(home, /Browse by category/);
 });
 
-test('hero is concise, bilingual, store-specific, and shows real product workspace previews', () => {
+test('hero is concise, bilingual, product-specific, and shows real product workspace previews', () => {
   assert.match(hero, /min-h-\[580px\]/);
   assert.match(hero, /lg:min-h-\[620px\]/);
-  assert.match(hero, /Built for modern small online businesses/);
-  assert.match(hero, /Run your online business faster/);
-  assert.match(hero, /Explore SUMMECA Tools/);
-  assert.match(hero, /Get Started/);
-  assert.match(hero, /مصمم للأعمال والمتاجر الرقمية الصغيرة/);
-  assert.match(hero, /أدِر عملك الرقمي بسرعة أكبر/);
-  assert.match(hero, /استكشف أدوات SUMMECA/);
+  assert.match(hero, /Practical apps for modern small online businesses/);
+  assert.match(hero, /Organize invoices and customer follow-ups/);
+  assert.match(hero, /with focused SUMMECA apps\./);
+  assert.match(hero, /Explore InvoiceFlow/);
+  assert.match(hero, /Explore LeadFollow AI/);
+  assert.match(hero, /View all products/);
+  assert.match(hero, /تطبيقات عملية للأعمال والمتاجر الرقمية الصغيرة/);
+  assert.match(hero, /نظّم الفواتير ومتابعة العملاء/);
+  assert.match(hero, /بتطبيقات SUMMECA العملية\./);
+  assert.match(hero, /استكشف InvoiceFlow/);
+  assert.match(hero, /استكشف LeadFollow AI/);
+  assert.match(hero, /عرض كل المنتجات/);
   assert.match(hero, /dir=\{isArabic \? 'rtl' : 'ltr'\}/);
   assert.match(hero, /WorkspaceOverviewPreview/);
   assert.doesNotMatch(hero, /SplineNexbotScene/);
