@@ -28,6 +28,12 @@ function mailboxProvider(value: unknown): LeadFollowMailboxProvider | null {
   return value === 'google' || value === 'microsoft' ? value : null;
 }
 
+function safeDisplayName(value: unknown) {
+  return typeof value === 'string'
+    ? value.replace(/[\r\n]+/g, ' ').trim().slice(0, 120)
+    : '';
+}
+
 export async function POST(request: NextRequest) {
   const requestOrigin = request.headers.get('origin');
   if (requestOrigin && requestOrigin !== new URL(request.url).origin) {
@@ -83,7 +89,11 @@ export async function POST(request: NextRequest) {
   }
 
   const service = createServiceClient();
-  const [{ data: message, error: messageError }, { data: connection, error: connectionError }] = await Promise.all([
+  const [
+    { data: message, error: messageError },
+    { data: connection, error: connectionError },
+    { data: senderProfile, error: profileError },
+  ] = await Promise.all([
     service
       .from('leadfollow_messages')
       .select('id, lead_id, channel, output_text')
@@ -95,14 +105,21 @@ export async function POST(request: NextRequest) {
       .select('id, provider, email, encrypted_refresh_token, status')
       .eq('user_id', user.id)
       .maybeSingle(),
+    service
+      .from('leadfollow_profiles')
+      .select('business_name')
+      .eq('user_id', user.id)
+      .maybeSingle(),
   ]);
 
   if (messageError || !message) return json({ error: 'Email draft not found.' }, 404);
   if (message.channel !== 'email') return json({ error: 'Only drafts generated for the Email channel can be sent by email.' }, 400);
   if (connectionError) return json({ error: 'Unable to load your connected mailbox.' }, 500);
+  if (profileError) return json({ error: 'Unable to load your sales context.' }, 500);
 
   const provider = mailboxProvider(connection?.provider);
   const senderEmail = (connection?.email ?? '').trim().toLowerCase();
+  const senderBusinessName = safeDisplayName(senderProfile?.business_name);
   const connectedMailbox = Boolean(
     connection && connection.status === 'active' && provider && EMAIL_PATTERN.test(senderEmail),
   );
@@ -135,13 +152,7 @@ export async function POST(request: NextRequest) {
     if (!EMAIL_PATTERN.test(fallbackReplyTo)) {
       return json({ error: 'Your SUMMECA account needs a valid reply-to email before sending.' }, 400);
     }
-    const { data: profile, error: profileError } = await service
-      .from('leadfollow_profiles')
-      .select('business_name')
-      .eq('user_id', user.id)
-      .maybeSingle();
-    if (profileError) return json({ error: 'Unable to load your sales context.' }, 500);
-    fallbackBusinessName = (profile?.business_name ?? '').trim();
+    fallbackBusinessName = senderBusinessName;
     if (!fallbackBusinessName) {
       return json({ error: 'Save your business name in Sales Context before sending email.' }, 400);
     }
@@ -233,6 +244,7 @@ export async function POST(request: NextRequest) {
         provider: provider!,
         accessToken: refreshed.access_token!,
         senderEmail,
+        senderName: senderBusinessName,
         recipientEmail: recipient,
         subject,
         body: messageBody,
@@ -353,6 +365,7 @@ export async function POST(request: NextRequest) {
     sentAt,
     recipient,
     senderEmail: connectedMailbox ? senderEmail : fallbackReplyTo,
+    senderName: senderBusinessName || '',
     provider: senderProvider,
   });
 }
