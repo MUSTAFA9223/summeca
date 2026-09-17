@@ -10,6 +10,7 @@ import '../styles/i18n.css';
 import '../styles/customer-feedback-refresh.css';
 import '../styles/summeca-light-premium.css';
 import '../styles/catalog-contrast.css';
+import '../styles/accessibility-motion-performance.css';
 import { Toaster } from 'sonner';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { LanguageProvider } from '@/contexts/LanguageContext';
@@ -22,6 +23,7 @@ import VisitorTracker from '@/components/VisitorTracker';
 import LaunchOfferBanner from '@/components/LaunchOfferBanner';
 import ProductPageEnhancements from '@/components/catalog/ProductPageEnhancements';
 import ProductPageVideoPreview from '@/components/catalog/ProductPageVideoPreview';
+import SkipToContent from '@/components/SkipToContent';
 import { isAppLanguage, LANGUAGE_COOKIE_KEY } from '@/lib/i18n';
 
 const plusJakartaSans = Plus_Jakarta_Sans({
@@ -176,6 +178,7 @@ export default async function RootLayout({
         </Suspense>
         <ThemeProvider>
           <LanguageProvider initialLanguage={language}>
+            <SkipToContent />
             <AuthProvider>
               <LaunchOfferBanner />
               {children}
