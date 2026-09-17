@@ -128,33 +128,60 @@ export function LanguageProvider({
   useEffect(() => {
     if (language !== 'ar' || !document.body) return undefined;
 
-    localizeNode(document.body);
+    let observer: MutationObserver | null = null;
+    let firstFrame = 0;
+    let secondFrame = 0;
+    let cancelled = false;
 
-    const observer = new MutationObserver((mutations) => {
-      for (const mutation of mutations) {
-        if (mutation.type === 'characterData') {
-          translateTextNode(mutation.target as Text);
-          continue;
+    const startLocalization = () => {
+      if (cancelled || !document.body) return;
+
+      localizeNode(document.body);
+
+      observer = new MutationObserver((mutations) => {
+        for (const mutation of mutations) {
+          if (mutation.type === 'characterData') {
+            translateTextNode(mutation.target as Text);
+            continue;
+          }
+
+          if (mutation.type === 'attributes' && mutation.target instanceof Element) {
+            translateElementAttributes(mutation.target);
+            continue;
+          }
+
+          mutation.addedNodes.forEach((node) => localizeNode(node));
         }
+      });
 
-        if (mutation.type === 'attributes' && mutation.target instanceof Element) {
-          translateElementAttributes(mutation.target);
-          continue;
-        }
+      observer.observe(document.body, {
+        subtree: true,
+        childList: true,
+        characterData: true,
+        attributes: true,
+        attributeFilter: [...TRANSLATABLE_ATTRIBUTES],
+      });
+    };
 
-        mutation.addedNodes.forEach((node) => localizeNode(node));
-      }
-    });
+    const scheduleAfterHydration = () => {
+      firstFrame = window.requestAnimationFrame(() => {
+        secondFrame = window.requestAnimationFrame(startLocalization);
+      });
+    };
 
-    observer.observe(document.body, {
-      subtree: true,
-      childList: true,
-      characterData: true,
-      attributes: true,
-      attributeFilter: [...TRANSLATABLE_ATTRIBUTES],
-    });
+    if (document.readyState === 'complete') {
+      scheduleAfterHydration();
+    } else {
+      window.addEventListener('load', scheduleAfterHydration, { once: true });
+    }
 
-    return () => observer.disconnect();
+    return () => {
+      cancelled = true;
+      window.removeEventListener('load', scheduleAfterHydration);
+      if (firstFrame) window.cancelAnimationFrame(firstFrame);
+      if (secondFrame) window.cancelAnimationFrame(secondFrame);
+      observer?.disconnect();
+    };
   }, [language]);
 
   const setLanguage = useCallback(
