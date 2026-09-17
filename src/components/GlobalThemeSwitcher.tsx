@@ -58,7 +58,10 @@ export default function GlobalThemeSwitcher() {
   return (
     <div
       className="fixed bottom-2 left-2 z-[115] print:hidden sm:bottom-4 sm:left-4"
-      style={{ bottom: 'max(.5rem, env(safe-area-inset-bottom))' }}
+      style={{
+        bottom: 'max(clamp(.5rem, 2vw, 1rem), env(safe-area-inset-bottom))',
+        left: 'max(clamp(.5rem, 2vw, 1rem), env(safe-area-inset-left))',
+      }}
     >
       <div className="sm:hidden"><ThemeSwitcher compact /></div>
       <div className="hidden sm:block"><ThemeSwitcher /></div>

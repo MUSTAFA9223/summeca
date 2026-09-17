@@ -14,12 +14,14 @@ const pricing = read('src/components/catalog/PricingCatalogView.tsx');
 const hero = read('src/app/components/HeroSection.tsx');
 const saasSales = read('src/components/catalog/SaasProductSalesExperience.tsx');
 
-test('launch offer stays in document flow and preserves dismissal state', () => {
+test('launch offer stays in document flow, preserves dismissal state, and exposes its measured height', () => {
   assert.match(banner, /className="relative z-\[80\]/);
   assert.match(banner, /window\.localStorage\.getItem\(STORAGE_KEY\)/);
   assert.match(banner, /window\.localStorage\.setItem\(STORAGE_KEY, '1'\)/);
   assert.doesNotMatch(banner, /document\.body\.style\.paddingTop/);
-  assert.doesNotMatch(banner, /ResizeObserver/);
+  assert.match(banner, /ResizeObserver/);
+  assert.match(banner, /--launch-offer-height/);
+  assert.match(banner, /getBoundingClientRect\(\)\.height/);
 });
 
 test('public header owns its real layout height with a readable light glass surface', () => {
