@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import PublicNav from '@/components/PublicNav';
 import PublicFooter from '@/components/PublicFooter';
+import HomepagePurchaseGuide from '@/components/home/HomepagePurchaseGuide';
 import HeroSection from '@/app/components/HeroSection';
 import ProductProofPreview from '@/components/catalog/ProductProofPreview';
 import { getEffectivePrice } from '@/lib/pricing';
@@ -68,9 +69,9 @@ function catalogKind(category: string): CatalogKind {
 }
 
 function categoryLabel(category: string) {
-  if (catalogKind(category) === 'ai') return 'AI Tool';
-  if (catalogKind(category) === 'digital') return 'Digital Kit';
-  return 'SaaS App';
+  if (catalogKind(category) === 'ai') return 'AI-assisted workspace';
+  if (catalogKind(category) === 'digital') return 'Downloadable digital kit';
+  return 'SaaS workspace';
 }
 
 function pricingFor(plan: ProductPlan) {
@@ -368,6 +369,8 @@ export default async function HomePage() {
             </div>
           </div>
         </section>
+
+        <HomepagePurchaseGuide />
 
         <section className="border-t border-border bg-secondary/20">
           <div className="mx-auto max-w-5xl px-6 py-12 text-center sm:py-14">

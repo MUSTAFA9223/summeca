@@ -12,9 +12,9 @@ const provider = fs.readFileSync(path.join(root, 'src/contexts/LanguageContext.t
 const normalizedMarketing = `${homepage}\n${hero}\n${nav}`.replace(/\s+/g, ' ');
 
 const visibleHomepagePhrases = [
-  'AI Tool',
-  'Digital Kit',
-  'SaaS App',
+  'AI-assisted workspace',
+  'Downloadable digital kit',
+  'SaaS workspace',
   'For Stores',
   'Products',
   'Pricing',
