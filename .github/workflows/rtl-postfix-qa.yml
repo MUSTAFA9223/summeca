@@ -1,0 +1,65 @@
+name: RTL Postfix QA
+on:
+  push:
+    branches: [qa/rtl-visual-postfix-2026-09-17]
+permissions:
+  contents: read
+jobs:
+  checkout-qa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+      - name: Install Playwright
+        run: |
+          mkdir -p /tmp/rtl-postfix && cd /tmp/rtl-postfix
+          npm init -y >/dev/null 2>&1
+          npm install playwright@1.55.0 --no-audit --no-fund
+          npx playwright install chromium --with-deps
+      - name: Verify live Arabic checkout
+        env:
+          NODE_PATH: /tmp/rtl-postfix/node_modules
+        run: |
+          mkdir -p rtl-postfix/screenshots
+          node <<'NODE'
+          const fs = require('fs');
+          const { chromium } = require('playwright');
+          const sizes = [['320x568',320,568],['375x667',375,667],['390x844',390,844],['430x932',430,932],['768x1024',768,1024],['1024x768',1024,768],['1440x900',1440,900]];
+          const results=[];
+          (async()=>{
+            const browser=await chromium.launch({headless:true});
+            for (const [name,width,height] of sizes) {
+              for (const theme of ['light', ...(name==='390x844'||name==='1440x900'?['dark']:[])]) {
+                const context=await browser.newContext({viewport:{width,height},locale:'ar',colorScheme:theme});
+                await context.addCookies([{name:'summeca_language',value:'ar',domain:'summeca.com',path:'/',secure:true,sameSite:'Lax'}]);
+                await context.addInitScript(({theme})=>{localStorage.setItem('summeca.language','ar');localStorage.setItem('summeca:theme',theme);},{theme});
+                const page=await context.newPage();
+                const errors=[];
+                page.on('pageerror',e=>errors.push(`pageerror:${e.message||e}`));
+                page.on('console',m=>{if(m.type()==='error') errors.push(`console:${m.text()}`)});
+                const response=await page.goto('https://summeca.com/checkout',{waitUntil:'domcontentloaded',timeout:30000});
+                await page.waitForTimeout(1800);
+                const metrics=await page.evaluate(()=>({lang:document.documentElement.lang,dir:document.documentElement.dir,dataLanguage:document.documentElement.dataset.language||null,overflow:Math.max(document.documentElement.scrollWidth,document.body.scrollWidth)>document.documentElement.clientWidth+2}));
+                const hydrationErrors=errors.filter(e=>/React error #418|hydration|hydrated|mismatch/i.test(e));
+                await page.screenshot({path:`rtl-postfix/screenshots/checkout__${name}__${theme}.png`,fullPage:true});
+                results.push({name,theme,status:response?.status()??null,...metrics,hydrationErrors,allErrors:errors});
+                await context.close();
+              }
+            }
+            await browser.close();
+            const summary={cases:results.length,rtlFailures:results.filter(r=>r.lang!=='ar'||r.dir!=='rtl'||r.dataLanguage!=='ar').length,overflowFailures:results.filter(r=>r.overflow).length,hydrationErrorCases:results.filter(r=>r.hydrationErrors.length).length};
+            fs.writeFileSync('rtl-postfix/report.json',JSON.stringify({summary,results},null,2));
+            console.log(JSON.stringify(summary,null,2));
+            if(summary.rtlFailures||summary.overflowFailures||summary.hydrationErrorCases) process.exit(2);
+          })().catch(e=>{console.error(e);process.exit(1)});
+          NODE
+      - name: Upload postfix evidence
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: rtl-postfix-production
+          path: rtl-postfix
+          retention-days: 14
