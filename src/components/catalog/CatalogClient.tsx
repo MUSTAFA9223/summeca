@@ -5,6 +5,7 @@ import Link from 'next/link';
 import {
   ArrowRight,
   Boxes,
+  Check,
   FileText,
   LayoutDashboard,
   Package,
@@ -12,9 +13,11 @@ import {
   ShieldCheck,
   Sparkles,
   Star,
+  X,
   Zap,
 } from 'lucide-react';
 import Product3DShowcase from '@/components/catalog/Product3DShowcase';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { getEffectivePrice } from '@/lib/pricing';
 import type { PublicCatalogProduct } from '@/lib/catalog/publicCatalog';
 
@@ -48,7 +51,8 @@ interface CatalogClientProps {
 }
 
 const AI_CATEGORIES = ['ai_tool', 'api', 'plugin'];
-const DIGITAL_CATEGORIES = ['template', 'dataset'];
+const DIGITAL_KIT_CATEGORIES = ['dataset', 'course', 'other', 'digital_kit'];
+const TEMPLATE_CATEGORIES = ['template'];
 
 const CATEGORY_LABELS: Record<string, string> = {
   ai_tool: 'AI Workflow',
@@ -57,19 +61,93 @@ const CATEGORY_LABELS: Record<string, string> = {
   template: 'Business Template',
   dataset: 'Digital Kit',
   course: 'Digital Kit',
+  digital_kit: 'Digital Kit',
   saas: 'Business SaaS',
   saas_app: 'Business SaaS',
   other: 'Digital Kit',
 };
 
-function categoryLabel(category: string) {
-  return CATEGORY_LABELS[category] ?? 'Digital Product';
+const CATALOG_AR: Record<string, string> = {
+  'SUMMECA Catalog': 'كتالوج SUMMECA',
+  Catalog: 'الكتالوج',
+  'Published digital products': 'المنتجات الرقمية المنشورة',
+  'Browse only production offers currently published by SUMMECA. Prices, currencies, billing periods, and sale pricing come directly from the active product plans used at checkout.':
+    'تصفّح عروض SUMMECA المنشورة حاليًا فقط. الأسعار والعملات وفترات الفوترة وأسعار التخفيض تأتي مباشرة من خطط المنتجات النشطة المستخدمة عند الدفع.',
+  'Actual product previews': 'معاينات حقيقية للمنتجات',
+  'Protected checkout': 'دفع محمي',
+  'Dedicated landing pages': 'صفحات مخصصة لكل منتج',
+  'View pricing': 'عرض الأسعار',
+  'Search products': 'ابحث في المنتجات',
+  'Clear search': 'مسح البحث',
+  'All products': 'كل المنتجات',
+  'AI workflows': 'سير عمل بالذكاء الاصطناعي',
+  'Business SaaS': 'برمجيات SaaS للأعمال',
+  'Digital kits & templates': 'الحزم والقوالب الرقمية',
+  Recommended: 'موصى به',
+  Featured: 'مميز',
+  Newest: 'الأحدث',
+  'Price: low to high': 'السعر: من الأقل إلى الأعلى',
+  'Price: high to low': 'السعر: من الأعلى إلى الأقل',
+  product: 'منتج',
+  products: 'منتجات',
+  'Starting at': 'يبدأ من',
+  'No active offer': 'لا يوجد عرض نشط',
+  Free: 'مجاني',
+  'View product': 'عرض المنتج',
+  'No products match your search.': 'لا توجد منتجات تطابق بحثك.',
+  'Try a different search or remove the active filters.': 'جرّب بحثًا مختلفًا أو أزل الفلاتر النشطة.',
+  'Clear search and filters': 'مسح البحث والفلاتر',
+  'AI Workflow': 'سير عمل بالذكاء الاصطناعي',
+  'Digital Kit': 'حزمة رقمية',
+  'Business Template': 'قالب أعمال',
+  'Developer Tool': 'أداة للمطورين',
+  Extension: 'إضافة',
+  'Digital Product': 'منتج رقمي',
+  'SaaS workspace': 'مساحة عمل SaaS',
+  'AI-assisted workspace': 'مساحة عمل بمساعدة الذكاء الاصطناعي',
+  'Downloadable digital kit': 'حزمة رقمية قابلة للتنزيل',
+  'Business template': 'قالب أعمال',
+  'See the real preview, included features, and current offer.': 'شاهد المعاينة الحقيقية والميزات المضمنة والعرض الحالي.',
+};
+
+function normalizedCategory(category: string) {
+  return category.trim().toLowerCase();
+}
+
+function categoryLabel(product: Product) {
+  if (product.slug === 'summeca-invoiceflow') return 'Business SaaS';
+  if (product.slug === 'summeca-leadfollow-ai') return 'AI Workflow';
+  return CATEGORY_LABELS[normalizedCategory(product.category)] ?? 'Digital Product';
 }
 
 function kindForCategory(category: string): Exclude<CatalogKind, 'all'> {
-  if (AI_CATEGORIES.includes(category)) return 'ai';
-  if (DIGITAL_CATEGORIES.includes(category)) return 'digital';
+  const normalized = normalizedCategory(category);
+  if (AI_CATEGORIES.includes(normalized)) return 'ai';
+  if (DIGITAL_KIT_CATEGORIES.includes(normalized) || TEMPLATE_CATEGORIES.includes(normalized)) {
+    return 'digital';
+  }
   return 'saas';
+}
+
+function productTypeLabel(product: Product) {
+  if (product.slug === 'summeca-invoiceflow') return 'SaaS workspace';
+  if (product.slug === 'summeca-leadfollow-ai') return 'AI-assisted workspace';
+
+  const category = normalizedCategory(product.category);
+  if (TEMPLATE_CATEGORIES.includes(category)) return 'Business template';
+  if (DIGITAL_KIT_CATEGORIES.includes(category)) return 'Downloadable digital kit';
+  if (AI_CATEGORIES.includes(category)) return 'AI-assisted workspace';
+  return 'SaaS workspace';
+}
+
+function catalogPriority(product: Product) {
+  if (product.slug === 'summeca-invoiceflow') return 0;
+  if (product.slug === 'summeca-leadfollow-ai') return 1;
+
+  const category = normalizedCategory(product.category);
+  if (DIGITAL_KIT_CATEGORIES.includes(category)) return 2;
+  if (TEMPLATE_CATEGORIES.includes(category)) return 3;
+  return 4;
 }
 
 function pricingFor(plan: ProductPlan) {
@@ -124,108 +202,129 @@ function isRecommended(product: Product) {
   return product.slug === 'summeca-invoiceflow';
 }
 
-function InteractiveProductCard({ product, index }: { product: Product; index: number }) {
+function InteractiveProductCard({
+  product,
+  index,
+  isArabic,
+  localize,
+}: {
+  product: Product;
+  index: number;
+  isArabic: boolean;
+  localize: (value: string) => string;
+}) {
   const plan = lowestPlan(product.plans as ProductPlan[] | undefined);
   const price = plan ? pricingFor(plan) : null;
   const type = kindForCategory(product.category);
   const Icon = type === 'ai' ? Zap : type === 'digital' ? FileText : LayoutDashboard;
   const recommended = isRecommended(product);
+  const displayCategory = localize(categoryLabel(product));
+  const displayType = localize(productTypeLabel(product));
+  const description = localize(
+    product.short_desc ||
+      product.description ||
+      'See the real preview, included features, and current offer.'
+  );
 
   return (
     <Link
       href={`/products/${product.slug}`}
+      aria-label={`${localize('View product')}: ${localize(product.name)}`}
       className="summeca-catalog-enter group relative block h-full rounded-[22px] outline-none transition duration-200 hover:-translate-y-1 focus-visible:ring-2 focus-visible:ring-cyan-300 focus-visible:ring-offset-4 focus-visible:ring-offset-[#0b1117] motion-reduce:transform-none"
       style={{ animationDelay: `${Math.min(index, 8) * 55}ms` }}
     >
       <article
-        className={`relative flex h-full min-h-[480px] flex-col overflow-hidden rounded-[22px] border bg-[#101820] p-4 shadow-[0_16px_42px_rgba(0,0,0,.24)] transition duration-200 group-hover:shadow-[0_22px_54px_rgba(0,0,0,.34)] ${
+        className={`relative flex h-full min-h-[510px] flex-col overflow-hidden rounded-[22px] border bg-[#101820] p-4 shadow-[0_16px_42px_rgba(0,0,0,.24)] transition duration-200 group-hover:shadow-[0_22px_54px_rgba(0,0,0,.34)] ${
           recommended
             ? 'border-cyan-300/45 ring-1 ring-cyan-300/10'
             : 'border-slate-700/80 group-hover:border-cyan-300/35'
         }`}
       >
         <Product3DShowcase
-          name={product.name}
+          name={localize(product.name)}
           thumbnailUrl={product.thumbnail_url}
           category={product.category}
-          eyebrow={categoryLabel(product.category)}
+          eyebrow={displayCategory}
           variant="card"
           className="relative z-10"
         />
 
         <div className="relative z-20 flex flex-1 flex-col px-2 pb-2 pt-5">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <p className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-[0.17em] text-cyan-300">
-                <Icon size={12} />
-                {categoryLabel(product.category)}
+          <div className="flex min-w-0 items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-[0.13em] text-cyan-300">
+                <Icon size={12} aria-hidden="true" />
+                <span>{displayCategory}</span>
               </p>
-              <h2 className="mt-2 text-xl font-black leading-6 tracking-tight text-white transition-colors group-hover:text-cyan-100">
-                {product.name}
+              <p className="mt-1 text-xs font-semibold text-slate-500">{displayType}</p>
+              <h2 className="mt-2 line-clamp-2 text-xl font-black leading-6 tracking-tight text-white transition-colors group-hover:text-cyan-100">
+                {localize(product.name)}
               </h2>
             </div>
             {recommended ? (
               <span className="shrink-0 rounded-md border border-cyan-300/25 bg-cyan-300/12 px-2.5 py-1 text-[9px] font-black uppercase tracking-wider text-cyan-100">
-                Recommended
+                {localize('Recommended')}
               </span>
             ) : isFeatured(product) ? (
               <span className="shrink-0 rounded-md border border-cyan-300/20 bg-cyan-300/10 px-2.5 py-1 text-[9px] font-black uppercase tracking-wider text-cyan-200">
-                Featured
+                {localize('Featured')}
               </span>
             ) : null}
           </div>
 
-          <p className="mt-3 line-clamp-2 min-h-[42px] text-sm leading-5 text-slate-400">
-            {product.short_desc ||
-              product.description ||
-              'See the real preview, included features, and current offer.'}
+          <p className="mt-3 line-clamp-3 min-h-[60px] text-sm leading-5 text-slate-400">
+            {description}
           </p>
 
-          <div className="mt-4 flex flex-wrap items-center gap-2">
+          <div className="mt-4 flex min-h-8 flex-wrap items-start gap-2">
             {(product.tags ?? []).slice(0, 3).map((tag) => (
               <span
                 key={tag}
-                className="rounded-md border border-slate-700 bg-slate-800/60 px-2.5 py-1 text-[10px] font-semibold text-slate-400"
+                className="max-w-full truncate rounded-md border border-slate-700 bg-slate-800/60 px-2.5 py-1 text-[10px] font-semibold text-slate-400"
               >
-                {tag}
+                {localize(tag)}
               </span>
             ))}
             {(product.avg_rating ?? 0) > 0 && (
               <span className="inline-flex items-center gap-1.5 text-xs text-slate-400">
-                <Star size={12} className="fill-current text-amber-400" />
+                <Star size={12} className="fill-current text-amber-400" aria-hidden="true" />
                 <span className="font-bold text-white">{product.avg_rating?.toFixed(1)}</span>
                 <span>({product.review_count})</span>
               </span>
             )}
           </div>
 
-          <div className="mt-auto flex items-end justify-between gap-4 border-t border-white/[0.08] pt-5">
-            <div>
-              <p className="mb-1 text-[9px] font-black uppercase tracking-[0.16em] text-slate-500">
-                Starting at
-              </p>
-              {!plan || !price ? (
-                <span className="text-sm font-semibold text-slate-400">No active offer</span>
-              ) : price.finalPrice === 0 ? (
-                <span className="text-xl font-black text-emerald-300">Free</span>
-              ) : (
-                <div className="flex flex-wrap items-baseline gap-1.5">
-                  {price.onSale && (
-                    <span className="text-[11px] text-slate-500 line-through">
-                      {money(price.regularPrice, plan.currency)}
-                    </span>
-                  )}
-                  <span className="text-2xl font-black tracking-tight text-white">
-                    {money(price.finalPrice, plan.currency)}
-                    <span className="ml-0.5 text-xs font-normal text-slate-500">
-                      {billingSuffix(plan.billing_period)}
-                    </span>
+          <div className="mt-auto border-t border-white/[0.08] pt-5">
+            <p className="mb-1 text-[9px] font-black uppercase tracking-[0.14em] text-slate-500">
+              {localize('Starting at')}
+            </p>
+            {!plan || !price ? (
+              <span className="text-sm font-semibold text-slate-400">{localize('No active offer')}</span>
+            ) : price.finalPrice === 0 ? (
+              <span className="text-xl font-black text-emerald-300">{localize('Free')}</span>
+            ) : (
+              <div dir="ltr" className="flex flex-wrap items-baseline gap-1.5">
+                {price.onSale && (
+                  <span className="text-[11px] text-slate-500 line-through">
+                    {money(price.regularPrice, plan.currency)}
                   </span>
-                </div>
-              )}
-            </div>
-            <span className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-cyan-300 px-4 text-xs font-black text-[#062027] transition duration-200 group-hover:bg-cyan-200 group-hover:shadow-[0_8px_24px_rgba(34,211,238,.16)]">
-              View product <ArrowRight size={14} />
+                )}
+                <span className="text-2xl font-black tracking-tight text-white">
+                  {money(price.finalPrice, plan.currency)}
+                  <span className="ml-0.5 text-xs font-normal text-slate-500">
+                    {billingSuffix(plan.billing_period)}
+                  </span>
+                </span>
+              </div>
+            )}
+
+            <span className="mt-4 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-cyan-300 px-4 text-xs font-black text-[#062027] transition duration-200 group-hover:bg-cyan-200 group-hover:shadow-[0_8px_24px_rgba(34,211,238,.16)]">
+              {localize('View product')}
+              <ArrowRight
+                size={14}
+                aria-hidden="true"
+                className={isArabic ? 'rotate-180' : undefined}
+              />
             </span>
           </div>
         </div>
@@ -241,9 +340,15 @@ export default function CatalogClient({
   eyebrow = 'Catalog',
   initialProducts,
 }: CatalogClientProps) {
+  const { isArabic, t } = useLanguage();
   const [query, setQuery] = useState('');
   const [sort, setSort] = useState<SortMode>('featured');
   const [filter, setFilter] = useState<CatalogKind>(kind);
+
+  const localize = (value: string) => {
+    if (!isArabic) return value;
+    return CATALOG_AR[value] ?? t(value);
+  };
 
   const products: Product[] = initialProducts;
 
@@ -253,12 +358,19 @@ export default function CatalogClient({
       if (effectiveFilter !== 'all' && kindForCategory(product.category) !== effectiveFilter) {
         return false;
       }
-      const q = query.trim().toLowerCase();
+      const q = query.trim().toLocaleLowerCase(isArabic ? 'ar' : 'en');
       if (!q) return true;
-      return (
-        product.name.toLowerCase().includes(q) ||
-        (product.short_desc ?? '').toLowerCase().includes(q) ||
-        (product.tags ?? []).some((tag) => tag.toLowerCase().includes(q))
+      const searchable = [
+        product.name,
+        localize(product.name),
+        product.short_desc ?? '',
+        product.short_desc ? localize(product.short_desc) : '',
+        categoryLabel(product),
+        productTypeLabel(product),
+        ...(product.tags ?? []),
+      ];
+      return searchable.some((value) =>
+        value.toLocaleLowerCase(isArabic ? 'ar' : 'en').includes(q)
       );
     })
     .sort((a, b) => {
@@ -266,8 +378,8 @@ export default function CatalogClient({
         return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
       }
       if (sort === 'featured') {
-        const recommendedDelta = Number(isRecommended(b)) - Number(isRecommended(a));
-        if (recommendedDelta) return recommendedDelta;
+        const priorityDelta = catalogPriority(a) - catalogPriority(b);
+        if (priorityDelta) return priorityDelta;
         const featuredDelta = Number(isFeatured(b)) - Number(isFeatured(a));
         if (featuredDelta) return featuredDelta;
         return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
@@ -279,14 +391,29 @@ export default function CatalogClient({
       return sort === 'price_asc' ? aPrice - bPrice : bPrice - aPrice;
     });
 
+  const resetSearchAndFilters = () => {
+    setQuery('');
+    if (kind === 'all') setFilter('all');
+  };
+
+  const filterOptions: Array<{ value: CatalogKind; label: string }> = [
+    { value: 'all', label: 'All products' },
+    { value: 'ai', label: 'AI workflows' },
+    { value: 'saas', label: 'Business SaaS' },
+    { value: 'digital', label: 'Digital kits & templates' },
+  ];
+
   return (
-    <main className="min-h-[75vh] bg-[#070b10] pt-[68px] text-white">
+    <main
+      dir={isArabic ? 'rtl' : 'ltr'}
+      className="min-h-[75vh] overflow-x-clip bg-[#070b10] pt-[68px] text-white"
+    >
       <style>{`
         @keyframes summeca-catalog-enter {
           from { opacity: 0; transform: translateY(12px); }
           to { opacity: 1; transform: translateY(0); }
         }
-        .summeca-catalog-enter { animation: summeca-catalog-enter .5s cubic-bezier(.2,.8,.2,1) both; }
+        .summeca-catalog-enter { animation: summeca-catalog-enter .22s cubic-bezier(.2,.8,.2,1) both; }
         @media (prefers-reduced-motion: reduce) { .summeca-catalog-enter { animation: none; } }
       `}</style>
 
@@ -305,113 +432,154 @@ export default function CatalogClient({
             maskImage: 'linear-gradient(to bottom, black, transparent 82%)',
           }}
         />
-        <div className="relative mx-auto max-w-screen-xl px-6 py-16 lg:px-8 lg:py-24">
-          <div className="summeca-catalog-enter inline-flex items-center gap-2 rounded-full border border-cyan-300/15 bg-cyan-300/[0.06] px-4 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-cyan-300">
-            <Sparkles size={13} /> {eyebrow}
+        <div className="relative mx-auto max-w-screen-xl px-4 py-12 sm:px-6 sm:py-16 lg:px-8 lg:py-20">
+          <div className="summeca-catalog-enter inline-flex items-center gap-2 rounded-full border border-cyan-300/15 bg-cyan-300/[0.06] px-4 py-2 text-[10px] font-black uppercase tracking-[0.16em] text-cyan-300">
+            <Sparkles size={13} aria-hidden="true" /> {localize(eyebrow)}
           </div>
           <div className="mt-5 grid gap-8 lg:grid-cols-[1fr_auto] lg:items-end">
             <div className="summeca-catalog-enter max-w-4xl" style={{ animationDelay: '45ms' }}>
-              <h1 className="text-4xl font-black leading-[0.98] tracking-[-0.04em] text-white sm:text-5xl lg:text-6xl">
-                {title}
+              <h1 className="text-4xl font-black leading-[1.02] tracking-[-0.035em] text-white sm:text-5xl lg:text-6xl">
+                {localize(title)}
               </h1>
               <p className="mt-5 max-w-2xl text-base leading-7 text-slate-400 sm:text-lg">
-                {description}
+                {localize(description)}
               </p>
               <div className="mt-7 flex flex-wrap gap-3 text-xs font-bold text-slate-300">
                 <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.035] px-3.5 py-2">
-                  <Boxes size={14} className="text-cyan-300" /> Actual product previews
+                  <Boxes size={14} className="text-cyan-300" aria-hidden="true" />
+                  {localize('Actual product previews')}
                 </span>
                 <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.035] px-3.5 py-2">
-                  <ShieldCheck size={14} className="text-cyan-300" /> Protected checkout
+                  <ShieldCheck size={14} className="text-cyan-300" aria-hidden="true" />
+                  {localize('Protected checkout')}
                 </span>
                 <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.035] px-3.5 py-2">
-                  <Sparkles size={14} className="text-cyan-300" /> Dedicated landing pages
+                  <Sparkles size={14} className="text-cyan-300" aria-hidden="true" />
+                  {localize('Dedicated landing pages')}
                 </span>
               </div>
             </div>
             <Link
               href="/pricing"
-              className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-5 py-3 text-sm font-bold text-slate-200 transition hover:-translate-y-0.5 hover:border-cyan-300/30 hover:text-cyan-200 motion-reduce:transform-none"
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-5 py-3 text-sm font-bold text-slate-200 transition duration-200 hover:-translate-y-0.5 hover:border-cyan-300/30 hover:text-cyan-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-300 motion-reduce:transform-none"
             >
-              View pricing <ArrowRight size={14} />
+              {localize('View pricing')}
+              <ArrowRight
+                size={14}
+                aria-hidden="true"
+                className={isArabic ? 'rotate-180' : undefined}
+              />
             </Link>
           </div>
         </div>
       </section>
 
-      <section className="mx-auto max-w-screen-xl px-6 py-10 lg:px-8 lg:py-16">
+      <section className="mx-auto max-w-screen-xl px-4 py-10 sm:px-6 lg:px-8 lg:py-16">
         <div className="mb-9 flex flex-col gap-4">
-          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            <div className="relative w-full md:max-w-md">
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div role="search" className="relative w-full md:max-w-md">
               <Search
-                className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500"
+                aria-hidden="true"
+                className={`absolute top-1/2 -translate-y-1/2 text-slate-500 ${
+                  isArabic ? 'right-3.5' : 'left-3.5'
+                }`}
                 size={16}
               />
               <input
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
-                placeholder="Search products"
-                aria-label="Search products"
-                className="w-full rounded-lg border border-white/10 bg-white/[0.035] py-3 pl-10 pr-4 text-sm text-white outline-none transition placeholder:text-slate-600 focus:border-cyan-300/40 focus:bg-white/[0.05]"
+                placeholder={localize('Search products')}
+                aria-label={localize('Search products')}
+                className={`min-h-11 w-full rounded-lg border border-white/10 bg-white/[0.035] py-3 text-sm text-white outline-none transition placeholder:text-slate-600 focus:border-cyan-300/50 focus:bg-white/[0.05] focus-visible:ring-2 focus-visible:ring-cyan-300/30 ${
+                  isArabic ? 'pl-11 pr-10 text-right' : 'pl-10 pr-11 text-left'
+                }`}
               />
+              {query && (
+                <button
+                  type="button"
+                  onClick={() => setQuery('')}
+                  aria-label={localize('Clear search')}
+                  title={localize('Clear search')}
+                  className={`absolute top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-md text-slate-500 transition hover:bg-white/[0.06] hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-cyan-300 ${
+                    isArabic ? 'left-1.5' : 'right-1.5'
+                  }`}
+                >
+                  <X size={15} aria-hidden="true" />
+                </button>
+              )}
             </div>
 
-            <div className="-mx-1 overflow-x-auto px-1 pb-1">
+            <div className="-mx-1 overflow-x-auto overscroll-x-contain px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               <div className="flex min-w-max items-center gap-2 whitespace-nowrap">
                 {kind === 'all' &&
-                  (['all', 'ai', 'saas', 'digital'] as CatalogKind[]).map((value) => (
-                    <button
-                      key={value}
-                      type="button"
-                      onClick={() => setFilter(value)}
-                      aria-pressed={filter === value}
-                      className={`shrink-0 rounded-lg px-3.5 py-2.5 text-xs font-bold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-300 ${
-                        filter === value
-                          ? 'bg-cyan-300 text-[#041014] shadow-[0_8px_24px_rgba(34,211,238,.18)]'
-                          : 'border border-white/10 bg-white/[0.035] text-slate-400 hover:border-cyan-300/25 hover:text-white'
-                      }`}
-                    >
-                      {value === 'all'
-                        ? 'All'
-                        : value === 'ai'
-                          ? 'AI'
-                          : value === 'saas'
-                            ? 'Software'
-                            : 'Digital products'}
-                    </button>
-                  ))}
+                  filterOptions.map((option) => {
+                    const selected = filter === option.value;
+                    return (
+                      <button
+                        key={option.value}
+                        type="button"
+                        onClick={() => setFilter(option.value)}
+                        aria-pressed={selected}
+                        className={`inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-lg px-3.5 py-2.5 text-xs font-bold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-300 ${
+                          selected
+                            ? 'border border-cyan-200 bg-cyan-300 text-[#041014] shadow-[0_8px_24px_rgba(34,211,238,.18)]'
+                            : 'border border-white/10 bg-white/[0.035] text-slate-400 hover:border-cyan-300/25 hover:text-white'
+                        }`}
+                      >
+                        {selected && <Check size={13} aria-hidden="true" />}
+                        {localize(option.label)}
+                      </button>
+                    );
+                  })}
                 <select
                   value={sort}
                   onChange={(event) => setSort(event.target.value as SortMode)}
-                  className="shrink-0 rounded-lg border border-white/10 bg-white/[0.035] px-3.5 py-2.5 text-xs font-bold text-slate-400 outline-none transition hover:border-cyan-300/25 hover:text-white focus:border-cyan-300/35"
-                  aria-label="Sort products"
+                  className="min-h-11 shrink-0 rounded-lg border border-white/10 bg-[#101820] px-3.5 py-2.5 text-xs font-bold text-slate-300 outline-none transition hover:border-cyan-300/25 hover:text-white focus:border-cyan-300/50 focus-visible:ring-2 focus-visible:ring-cyan-300/30"
+                  aria-label={localize('Recommended')}
                 >
-                  <option value="featured">Recommended</option>
-                  <option value="newest">Newest</option>
-                  <option value="price_asc">Price: low to high</option>
-                  <option value="price_desc">Price: high to low</option>
+                  <option value="featured">{localize('Recommended')}</option>
+                  <option value="newest">{localize('Newest')}</option>
+                  <option value="price_asc">{localize('Price: low to high')}</option>
+                  <option value="price_desc">{localize('Price: high to low')}</option>
                 </select>
               </div>
             </div>
           </div>
 
-          <p className="text-sm font-semibold text-slate-400" aria-live="polite">
-            {visible.length} {visible.length === 1 ? 'product' : 'products'}
+          <p className="text-sm font-semibold text-slate-400" aria-live="polite" aria-atomic="true">
+            {visible.length} {localize(visible.length === 1 ? 'product' : 'products')}
           </p>
         </div>
 
         {visible.length === 0 ? (
-          <div className="rounded-[32px] border border-white/10 bg-white/[0.03] p-12 text-center">
-            <Package className="mx-auto text-cyan-300" size={34} />
-            <h2 className="mt-4 text-xl font-black text-white">No matching products</h2>
+          <div className="rounded-[28px] border border-white/10 bg-white/[0.03] px-5 py-12 text-center sm:p-12">
+            <Package className="mx-auto text-cyan-300" size={34} aria-hidden="true" />
+            <h2 className="mt-4 text-xl font-black text-white">
+              {localize('No products match your search.')}
+            </h2>
             <p className="mx-auto mt-2 max-w-lg text-sm leading-6 text-slate-400">
-              Try another search or filter. Only active published offers appear here.
+              {localize('Try a different search or remove the active filters.')}
             </p>
+            {(query || (kind === 'all' && filter !== 'all')) && (
+              <button
+                type="button"
+                onClick={resetSearchAndFilters}
+                className="mt-5 inline-flex min-h-11 items-center justify-center rounded-lg border border-cyan-300/30 bg-cyan-300/10 px-4 py-2.5 text-sm font-bold text-cyan-100 transition hover:bg-cyan-300/15 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-300"
+              >
+                {localize('Clear search and filters')}
+              </button>
+            )}
           </div>
         ) : (
-          <div className="grid items-stretch gap-8 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid items-stretch gap-6 sm:grid-cols-2 lg:grid-cols-3 lg:gap-8">
             {visible.map((product, index) => (
-              <InteractiveProductCard key={product.id} product={product} index={index} />
+              <InteractiveProductCard
+                key={product.id}
+                product={product}
+                index={index}
+                isArabic={isArabic}
+                localize={localize}
+              />
             ))}
           </div>
         )}
