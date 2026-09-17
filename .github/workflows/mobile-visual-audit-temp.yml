@@ -39,18 +39,22 @@ jobs:
           npm install --no-audit --no-fund playwright@1.55.0
           npx playwright install --with-deps chromium
 
-      - name: Start SUMMECA locally
+      - name: Build SUMMECA production bundle for visual audit
+        shell: bash
+        run: npx next build
+
+      - name: Start SUMMECA production server locally
         shell: bash
         run: |
-          nohup npm run dev > /tmp/summeca-dev.log 2>&1 &
-          echo $! > /tmp/summeca-dev.pid
+          nohup npx next start -p 4028 > /tmp/summeca-start.log 2>&1 &
+          echo $! > /tmp/summeca-start.pid
           for i in $(seq 1 90); do
             if curl --fail --silent http://127.0.0.1:4028/ >/dev/null; then
               exit 0
             fi
             sleep 2
           done
-          cat /tmp/summeca-dev.log
+          cat /tmp/summeca-start.log
           exit 1
 
       - name: Capture responsive matrix and assert no horizontal overflow
@@ -115,7 +119,14 @@ jobs:
                   try {
                     const response = await page.goto(`http://127.0.0.1:4028${route}`, { waitUntil: 'domcontentloaded', timeout: 45000 });
                     responseStatus = response?.status() ?? null;
-                    await page.waitForTimeout(2200);
+                    await page.waitForFunction(
+                      ({ language, theme }) =>
+                        document.documentElement.dataset.language === language &&
+                        document.documentElement.dataset.siteTheme === theme,
+                      { language, theme },
+                      { timeout: 10000 },
+                    );
+                    await page.waitForTimeout(800);
 
                     const metrics = await page.evaluate(() => ({
                       innerWidth: window.innerWidth,
@@ -128,8 +139,9 @@ jobs:
                     }));
                     const overflow = Math.max(metrics.scrollWidth, metrics.bodyScrollWidth) > metrics.innerWidth + 1;
                     const dirMismatch = language === 'ar' ? metrics.dir !== 'rtl' : metrics.dir !== 'ltr';
+                    const langMismatch = metrics.lang !== language;
                     const themeMismatch = metrics.theme !== theme;
-                    if (overflow || dirMismatch || themeMismatch) failures += 1;
+                    if (overflow || dirMismatch || langMismatch || themeMismatch) failures += 1;
 
                     const filename = `${width}x${height}__${language}-${theme}__${name}.jpg`;
                     await page.screenshot({
@@ -149,6 +161,7 @@ jobs:
                       responseStatus,
                       overflow,
                       dirMismatch,
+                      langMismatch,
                       themeMismatch,
                       metrics,
                       consoleErrors: errors.slice(0, 8),
@@ -167,7 +180,7 @@ jobs:
 
             fs.writeFileSync(path.join(outputDir, 'report.json'), JSON.stringify({ failures, cases: report.length, report }, null, 2));
             console.log(`Visual audit cases=${report.length} failures=${failures}`);
-            for (const item of report.filter((item) => item.overflow || item.dirMismatch || item.themeMismatch || item.error)) {
+            for (const item of report.filter((item) => item.overflow || item.dirMismatch || item.langMismatch || item.themeMismatch || item.error)) {
               console.log(JSON.stringify(item));
             }
             await browser.close();
@@ -189,6 +202,6 @@ jobs:
           if-no-files-found: warn
           retention-days: 7
 
-      - name: Show dev server log on failure
+      - name: Show production server log on failure
         if: failure()
-        run: tail -n 250 /tmp/summeca-dev.log || true
+        run: tail -n 250 /tmp/summeca-start.log || true
