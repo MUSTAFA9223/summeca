@@ -24,11 +24,17 @@ const publicRoutes = [
 
 export const revalidate = 3600;
 
+function validDate(value: string | null | undefined) {
+  if (!value) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const now = new Date();
+  // Static routes intentionally omit lastModified. Using the current time here would
+  // falsely tell crawlers that every public page changed whenever this sitemap revalidates.
   const entries: MetadataRoute.Sitemap = publicRoutes.map((route) => ({
     url: `${siteUrl}${route.path}`,
-    lastModified: now,
     changeFrequency: route.changeFrequency,
     priority: route.priority,
   }));
@@ -55,9 +61,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
     for (const product of data ?? []) {
       if (!product.slug) continue;
+      const lastModified = validDate(product.updated_at);
       entries.push({
         url: `${siteUrl}/products/${encodeURIComponent(product.slug)}`,
-        lastModified: product.updated_at ? new Date(product.updated_at) : now,
+        ...(lastModified ? { lastModified } : {}),
         changeFrequency: 'weekly',
         priority: 0.8,
       });
