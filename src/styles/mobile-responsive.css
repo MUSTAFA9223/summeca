@@ -68,8 +68,51 @@ pre {
   }
 
   .btn-primary,
-  .btn-secondary {
+  .btn-secondary,
+  .form-input {
     min-height: 44px;
+  }
+
+  /* Public header controls stay tappable without forcing horizontal overflow. */
+  [data-language-switcher="true"] button {
+    min-width: 40px;
+    min-height: 40px;
+  }
+
+  [data-public-nav="true"] button[aria-label="Toggle mobile menu"] {
+    width: 44px;
+    height: 44px;
+  }
+
+  [data-public-nav="true"] > div.absolute {
+    max-height: calc(100dvh - 70px - var(--launch-offer-height, 0px) - env(safe-area-inset-bottom));
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  [data-public-nav="true"] > div.absolute a,
+  [data-public-nav="true"] > div.absolute button {
+    min-height: 44px;
+  }
+
+  aside[aria-label="Launch offer"] > button,
+  aside[aria-label="عرض الإطلاق"] > button {
+    width: 44px;
+    height: 44px;
+  }
+
+  /* Homepage and product-page headlines should wrap before they clip at phone widths. */
+  .summeca-home-hero h1 {
+    font-size: clamp(2.05rem, 10vw, 2.75rem);
+    line-height: 0.98;
+    overflow-wrap: anywhere;
+  }
+
+  .summeca-saas-sales-shell h1 {
+    font-size: clamp(2rem, 9.5vw, 2.75rem);
+    line-height: 1.02;
+    overflow-wrap: anywhere;
   }
 
   /* Catalog card price/action row: stack at narrow phone widths. */
@@ -82,6 +125,23 @@ pre {
   .summeca-catalog-enter article .mt-auto.flex.items-end.justify-between > span {
     width: 100%;
     justify-content: center;
+  }
+
+  /* Checkout stays one natural document flow on phones; desktop keeps the sticky summary. */
+  .summeca-checkout-shell .sticky.top-24 {
+    position: static;
+  }
+
+  .summeca-checkout-shell .overflow-hidden > .p-5.flex.gap-4 {
+    flex-wrap: wrap;
+  }
+
+  .summeca-checkout-shell .overflow-hidden > .p-5.flex.gap-4 > .flex-1 {
+    min-width: min(12rem, 100%);
+  }
+
+  .summeca-checkout-shell code {
+    min-width: 0;
   }
 
   /* Keep the sales assistant trigger clear of phone safe areas. */
@@ -109,11 +169,24 @@ pre {
     max-width: 9rem;
     overflow: hidden;
   }
+
+  .summeca-checkout-shell .pt-24.pb-20 {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
 }
 
 @media (max-width: 360px) {
   [data-public-nav="true"] a[aria-label="SUMMECA home"] {
     max-width: 7.75rem;
+  }
+}
+
+@media (min-width: 768px) {
+  .summeca-checkout-shell .sticky.top-24 {
+    max-height: calc(100dvh - 7rem);
+    overflow-y: auto;
+    overscroll-behavior: contain;
   }
 }
 
