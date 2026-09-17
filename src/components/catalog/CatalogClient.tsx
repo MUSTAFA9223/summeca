@@ -79,6 +79,7 @@ const CATALOG_AR: Record<string, string> = {
   'View pricing': 'عرض الأسعار',
   'Search products': 'ابحث في المنتجات',
   'Clear search': 'مسح البحث',
+  'Sort products': 'ترتيب المنتجات',
   'All products': 'كل المنتجات',
   'AI workflows': 'سير عمل بالذكاء الاصطناعي',
   'Business SaaS': 'برمجيات SaaS للأعمال',
@@ -535,7 +536,8 @@ export default function CatalogClient({
                   value={sort}
                   onChange={(event) => setSort(event.target.value as SortMode)}
                   className="min-h-11 shrink-0 rounded-lg border border-white/10 bg-[#101820] px-3.5 py-2.5 text-xs font-bold text-slate-300 outline-none transition hover:border-cyan-300/25 hover:text-white focus:border-cyan-300/50 focus-visible:ring-2 focus-visible:ring-cyan-300/30"
-                  aria-label={localize('Recommended')}
+                  aria-label="Sort products"
+                  title={localize('Sort products')}
                 >
                   <option value="featured">{localize('Recommended')}</option>
                   <option value="newest">{localize('Newest')}</option>
