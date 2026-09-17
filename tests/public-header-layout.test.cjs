@@ -10,14 +10,15 @@ const banner = read('src/components/LaunchOfferBanner.tsx');
 const nav = read('src/components/PublicNav.tsx');
 const saasSales = read('src/components/catalog/SaasProductSalesExperience.tsx');
 
-test('launch offer participates in document flow and does not mutate body spacing', () => {
+test('launch offer stays in document flow and exposes its measured height to floating controls', () => {
   assert.match(banner, /className="relative z-\[80\]/);
   assert.doesNotMatch(banner, /document\.body\.style\.paddingTop/);
-  assert.doesNotMatch(banner, /ResizeObserver/);
-  assert.doesNotMatch(banner, /--launch-offer-height/);
+  assert.match(banner, /ResizeObserver/);
+  assert.match(banner, /--launch-offer-height/);
+  assert.match(banner, /getBoundingClientRect\(\)\.height/);
 });
 
-test('public header sticks naturally below the in-flow offer without overlay bookkeeping', () => {
+test('public header sticks naturally below the in-flow offer without body-spacing bookkeeping', () => {
   assert.match(nav, /className="sticky top-0 z-50 -mb-\[70px\]/);
   assert.doesNotMatch(nav, /--launch-offer-height/);
   assert.match(nav, /absolute inset-x-0 top-full border-t/);
