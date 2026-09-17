@@ -578,12 +578,26 @@ function CheckoutInner() {
 }
 
 export default function CheckoutPage() {
+  const [hydrated, setHydrated] = useState(false);
+
+  useEffect(() => {
+    setHydrated(true);
+  }, []);
+
+  const checkoutFallback = (
+    <div className="pt-24 pb-20 max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8">
+      <CheckoutSkeleton />
+    </div>
+  );
+
   return (
     <div className="min-h-screen bg-background">
       <PublicNav />
-      <Suspense fallback={<div className="pt-24 pb-20 max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8"><CheckoutSkeleton /></div>}>
-        <CheckoutInner />
-      </Suspense>
+      {hydrated ? (
+        <Suspense fallback={checkoutFallback}>
+          <CheckoutInner />
+        </Suspense>
+      ) : checkoutFallback}
       <PublicFooter />
     </div>
   );
