@@ -30,9 +30,13 @@ jobs:
       - name: Install app dependencies
         run: npm ci --no-audit --no-fund
 
-      - name: Install temporary browser tooling
+      - name: Install temporary browser tooling outside the project
+        shell: bash
         run: |
-          npm install --no-save --no-package-lock playwright@1.55.0
+          mkdir -p /tmp/visual-tools
+          cd /tmp/visual-tools
+          npm init -y >/dev/null 2>&1
+          npm install --no-audit --no-fund playwright@1.55.0
           npx playwright install --with-deps chromium
 
       - name: Start SUMMECA locally
@@ -52,12 +56,13 @@ jobs:
       - name: Capture responsive matrix and assert no horizontal overflow
         shell: bash
         run: |
-          mkdir -p visual-audit
-          cat > /tmp/mobile-visual-audit.cjs <<'NODE'
+          mkdir -p "$GITHUB_WORKSPACE/visual-audit"
+          cat > /tmp/visual-tools/mobile-visual-audit.cjs <<'NODE'
           const { chromium } = require('playwright');
           const fs = require('fs');
           const path = require('path');
 
+          const outputDir = path.join(process.env.GITHUB_WORKSPACE, 'visual-audit');
           const sizes = [
             [320, 568],
             [375, 667],
@@ -128,7 +133,7 @@ jobs:
 
                     const filename = `${width}x${height}__${language}-${theme}__${name}.jpg`;
                     await page.screenshot({
-                      path: path.join('visual-audit', filename),
+                      path: path.join(outputDir, filename),
                       type: 'jpeg',
                       quality: 68,
                       fullPage: true,
@@ -160,7 +165,7 @@ jobs:
               }
             }
 
-            fs.writeFileSync('visual-audit/report.json', JSON.stringify({ failures, cases: report.length, report }, null, 2));
+            fs.writeFileSync(path.join(outputDir, 'report.json'), JSON.stringify({ failures, cases: report.length, report }, null, 2));
             console.log(`Visual audit cases=${report.length} failures=${failures}`);
             for (const item of report.filter((item) => item.overflow || item.dirMismatch || item.themeMismatch || item.error)) {
               console.log(JSON.stringify(item));
@@ -172,7 +177,8 @@ jobs:
             process.exit(3);
           });
           NODE
-          node /tmp/mobile-visual-audit.cjs
+          cd /tmp/visual-tools
+          node mobile-visual-audit.cjs
 
       - name: Upload responsive screenshots
         if: always()
