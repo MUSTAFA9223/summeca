@@ -34,7 +34,7 @@ export default function HomepagePurchaseGuide() {
           text: 'Checkout shows currently available payment methods and the order is verified server-side.',
         },
         {
-          title: 'Open it in your SUMMECA account',
+          title: 'Open the product inside your SUMMECA account',
           text: 'SaaS tools open from your account, while eligible digital products use protected delivery.',
         },
       ];
@@ -58,7 +58,7 @@ export default function HomepagePurchaseGuide() {
           answer: 'تظل الطلبات وصلاحيات الوصول مرتبطة بحساب SUMMECA الذي أجرى الشراء، ويظهر نوع الوصول أو التسليم للمنتج قبل الدفع.',
         },
         {
-          question: 'ما وسائل الدفع المتاحة؟',
+          question: 'ما وسائل الدفع المتاحة حاليًا؟',
           answer: 'تعرض صفحة المنتج والدفع فقط وسائل الدفع المفعلة والمتاحة حاليًا للعرض المحدد.',
         },
         {
@@ -84,7 +84,7 @@ export default function HomepagePurchaseGuide() {
           answer: 'Orders and eligible access stay linked to the SUMMECA account used for the purchase, with the delivery or access type shown before checkout.',
         },
         {
-          question: 'Which payment methods are available?',
+          question: 'What payment methods are currently available?',
           answer: 'The product page and checkout show only payment methods that are currently enabled and available for the selected offer.',
         },
         {
@@ -141,7 +141,7 @@ export default function HomepagePurchaseGuide() {
               {isArabic ? 'أسئلة شائعة مختصرة' : 'Quick answers'}
             </h2>
           </div>
-          <Link href="/support" className="inline-flex min-h-10 items-center gap-2 self-start text-sm font-700 text-primary hover:underline sm:self-auto">
+          <Link href="/support" className="inline-flex min-h-10 items-center gap-2 self-start text-sm font-700 text-primary hover:underline focus-visible:rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary sm:self-auto">
             <LifeBuoy size={15} /> {isArabic ? 'فتح الدعم' : 'Open support'}
           </Link>
         </div>
