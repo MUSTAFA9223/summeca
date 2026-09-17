@@ -72,6 +72,20 @@ test('Arabic mode persists preference, uses server RTL, and localizes dynamic DO
   assert.match(provider, /window\.location\.reload\(\)/);
 });
 
+test('Arabic DOM localization waits until hydration-sensitive content has settled', () => {
+  assert.match(provider, /document\.readyState === 'complete'/);
+  assert.match(provider, /window\.addEventListener\('load', startLocalization, \{ once: true \}\)/);
+  assert.match(provider, /window\.requestAnimationFrame/);
+  assert.match(provider, /secondFrame = window\.requestAnimationFrame/);
+  assert.match(provider, /localizeNode\(document\.body\)/);
+  assert.match(provider, /window\.cancelAnimationFrame/);
+  assert.match(provider, /observer\?\.disconnect\(\)/);
+  const effectStart = provider.indexOf("useEffect(() => {");
+  const startLocalization = provider.indexOf('const startLocalization = () => {', effectStart);
+  const firstBodyLocalization = provider.indexOf('localizeNode(document.body);', effectStart);
+  assert.ok(startLocalization >= 0 && firstBodyLocalization > startLocalization, 'body localization must be deferred inside startLocalization');
+});
+
 test('translation catalogs cover storefront, checkout, account, SaaS, and published product content', () => {
   assert.match(catalog, /'Products': 'المنتجات'/);
   assert.match(catalog, /'Dashboard': 'لوحة التحكم'/);
