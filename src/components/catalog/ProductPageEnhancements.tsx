@@ -89,11 +89,11 @@ export default function ProductPageEnhancements() {
         const key = node.textContent?.trim().toLowerCase();
         if (!key) return;
         const replacement = FRIENDLY_CATEGORY_LABELS[key];
-        if (replacement) node.textContent = replacement;
+        if (replacement) node.textContent = t(replacement);
       });
     });
     return () => window.cancelAnimationFrame(frame);
-  }, [slug]);
+  }, [slug, t]);
 
   useEffect(() => {
     if (!slug) return;
@@ -106,7 +106,8 @@ export default function ProductPageEnhancements() {
       if (!anchor) return false;
 
       setCheckoutHref(anchor.getAttribute('href'));
-      setCheckoutLabel(anchor.textContent?.replace(/\s+/g, ' ').trim() || 'Continue to checkout');
+      const rawLabel = anchor.textContent?.replace(/\s+/g, ' ').trim() || 'Continue to checkout';
+      setCheckoutLabel(t(rawLabel));
 
       const existing = document.getElementById('summeca-purchase-confidence-slot');
       if (existing) {
@@ -141,7 +142,7 @@ export default function ProductPageEnhancements() {
       setTrustTarget(null);
       setCheckoutHref(null);
     };
-  }, [slug]);
+  }, [slug, t]);
 
   useEffect(() => {
     if (!slug || isSaasProduct) return;
