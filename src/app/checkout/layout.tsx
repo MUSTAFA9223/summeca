@@ -7,5 +7,5 @@ export const metadata: Metadata = {
 };
 
 export default function CheckoutLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <div className="summeca-checkout-shell">{children}</div>;
+  return children;
 }
