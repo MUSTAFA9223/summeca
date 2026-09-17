@@ -9,3 +9,10 @@ const nav = fs.readFileSync(path.join(root, 'src/components/PublicNav.tsx'), 'ut
 test('mobile header keeps the bilingual selector beside the menu control', () => {
   assert.match(nav, /lg:hidden[\s\S]*<LanguageSwitcher compact \/>/);
 });
+
+test('public account navigation uses logical edges in LTR and RTL', () => {
+  assert.match(nav, /absolute end-0 top-full/);
+  assert.match(nav, /ps-\[23px\]/);
+  assert.doesNotMatch(nav, /absolute right-0 top-full/);
+  assert.doesNotMatch(nav, /pl-\[23px\]/);
+});
