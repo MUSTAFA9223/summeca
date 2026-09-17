@@ -84,7 +84,7 @@ export default function HeroSection() {
         }`}
       />
 
-      <div className="relative z-10 mx-auto grid min-h-[510px] max-w-[1440px] grid-cols-1 items-center lg:min-h-[550px] lg:grid-cols-[47%_53%]">
+      <div className="relative z-10 mx-auto grid min-h-[510px] max-w-[1440px] grid-cols-1 items-center lg:min-h-[550px] lg:grid-cols-[46%_54%]">
         <div
           className={`relative px-6 pb-8 pt-9 sm:px-10 sm:pt-10 lg:px-12 lg:pb-10 lg:pt-11 xl:px-16 ${
             isArabic ? 'text-right' : 'text-left'
@@ -146,7 +146,7 @@ export default function HeroSection() {
                   destination: 'signup',
                 })
               }
-              className={`group inline-flex min-h-11 items-center justify-center gap-2 px-3 py-3 text-sm font-bold underline-offset-4 transition duration-200 hover:underline focus-visible:rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-[#4bcdf6] motion-reduce:transition-none ${
+              className={`group inline-flex min-h-11 items-center justify-center gap-2 px-3 py-3 text-sm font-bold underline-offset-4 transition duration-200 hover:underline focus-visible:rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#4bcdf6] motion-reduce:transition-none ${
                 isLight ? 'text-[#315b63] hover:text-[#007f7c]' : 'text-[#b9d9de] hover:text-white'
               }`}
             >
