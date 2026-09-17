@@ -105,12 +105,16 @@ export async function POST(request: NextRequest) {
   }
 
   const businessName = profile?.business_name || 'the sender';
+  const hasSpecificBusinessContext = Boolean(
+    profile?.business_name?.trim() || profile?.offer?.trim() || profile?.value_proposition?.trim(),
+  );
+  const priorContactRecorded = Boolean(lead.last_contacted_at);
   const languageRules = language === 'Arabic'
     ? `Arabic quality requirements:
 - Write natural modern professional Arabic, not a literal translation from English.
 - Address the recipient directly and naturally by the supplied lead name, for example: "مرحبًا أليكس،". Never describe the recipient as "NAME from COMPANY" in the greeting.
 - For email, label the subject as "الموضوع:" rather than "Subject:".
-- Use Arabic punctuation and close with "مع أطيب التحيات،" or another natural Arabic closing. Never use the literal phrase "أفضل التمنيات".
+- Use Arabic punctuation and close naturally. Never use the literal phrase "أفضل التمنيات".
 - Keep product and company names such as InvoiceFlow Starter, SUMMECA, and Example Store unchanged and readable inside the Arabic text.
 - Do not output CRM labels such as "المرحلة التالية" or "موعد المتابعة".`
     : `Language quality requirements:
@@ -119,15 +123,25 @@ export async function POST(request: NextRequest) {
 - Keep product and company names unchanged and readable.`;
   const systemPrompt = `You are LeadFollow AI inside SUMMECA. Write one practical sales follow-up draft using only the facts supplied below.
 
-Rules:
-- Never invent testimonials, results, discounts, deadlines, guarantees, credentials, relationships, or product facts.
-- Never claim the recipient visited, opened, clicked, requested, or agreed to something unless that fact is explicitly supplied.
+Core grounding rules:
+- Never invent testimonials, results, discounts, deadlines, guarantees, credentials, relationships, product facts, needs, objections, or prior interactions.
+- Never claim the recipient visited, opened, clicked, requested, replied, agreed to something, or had a conversation unless that fact is explicitly supplied.
+- A stage named follow-up or revive does NOT prove that a conversation happened. If prior contact is not explicitly established, follow up on the offer/topic without saying "our previous conversation" or similar.
+- Prefer Lead notes and Additional factual context over generic sales language because they are the most lead-specific facts.
+- When Sender business, Offer, or Value proposition is provided, anchor the message to at least one concrete supplied business/offer fact in the first two body paragraphs.
+- When specific business context exists, do NOT fall back to vague phrases such as "our company", "what we do", "learn more about us", or "our services" when a supplied business, offer, or value proposition can be named instead.
+- Never output placeholders such as [Company], [Product], [Name], TBD, or generic template tokens.
+
+Writing rules:
+- Keep the message human, specific, concise, and easy to edit before sending.
 - Do not use fake urgency, threats, manipulation, impersonation, or deceptive personalization.
-- Keep the message natural and easy to edit before sending.
-- Write in the requested language.
+- Write in the requested language and tone.
 - Match the requested channel: SMS/WhatsApp should be short; LinkedIn concise; email may include a short subject line followed by the body.
+- For email, make the subject specific to the supplied offer, need, or next step when possible; avoid generic subjects such as "Following up" when a more concrete subject is supported.
+- For email, prefer 2-4 short body paragraphs and one clear, low-friction next step. Do not pad with empty pleasantries.
 - For first contact, introduce the sender without pretending prior contact.
 - For follow-up or revive, acknowledge uncertainty rather than assuming the prior message was read.
+- If a sender business name is provided, finish an email with a natural closing and that business name. Do not invent a personal sender name, title, phone number, or website.
 - Treat pipeline status and scheduling as private CRM metadata. Never output internal labels, a next-action line, or a follow-up date unless the user explicitly asks for it in Additional factual context.
 - Do not identify the recipient as being "from" their company in the greeting. Address them directly by name.
 - Do not include a date line between the subject and greeting.
@@ -143,11 +157,13 @@ Sender business: ${businessName}
 Offer: ${profile?.offer || 'Not provided'}
 Target audience: ${profile?.target_audience || 'Not provided'}
 Value proposition: ${profile?.value_proposition || 'Not provided'}
+Specific business context available: ${hasSpecificBusinessContext ? 'Yes' : 'No'}
 
 Lead name: ${lead.name}
 Lead company: ${lead.company || 'Not provided'}
 Lead source: ${lead.source || 'Not provided'}
 Lead notes: ${lead.notes || 'None'}
+Prior contact recorded by LeadFollow: ${priorContactRecorded ? 'Yes' : 'No'}
 
 Additional factual context from the user:
 ${extraContext || 'None'}
@@ -156,7 +172,7 @@ Write the final ${channel} draft now.`;
 
   let result;
   try {
-    result = await generateText(systemPrompt, userPrompt, { maxTokens: 700, temperature: 0.45 });
+    result = await generateText(systemPrompt, userPrompt, { maxTokens: 700, temperature: 0.35 });
   } catch (error) {
     console.error('[leadfollow/generate] Workers AI generation failed:', error);
     await releaseReservedQuota(service, user.id, periodKey);
