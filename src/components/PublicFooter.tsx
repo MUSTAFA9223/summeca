@@ -1,33 +1,55 @@
-import React from 'react';
+'use client';
+
 import Link from 'next/link';
+import { ArrowUpRight, Mail } from 'lucide-react';
 import AppLogo from '@/components/ui/AppLogo';
-import { Mail } from 'lucide-react';
+import { useLanguage } from '@/contexts/LanguageContext';
 
-const footerLinks = {
-  Platform: [
-    { label: 'AI Tools', href: '/ai' },
-    { label: 'SaaS Apps', href: '/saas' },
-    { label: 'Digital Products', href: '/digital' },
-    { label: 'Pricing', href: '/pricing' },
-  ],
-  Company: [
-    { label: 'About SUMMECA', href: '/about' },
-    { label: 'Contact', href: '/contact' },
-  ],
-  Support: [
-    { label: 'Help Center', href: '/support' },
-    { label: 'FAQ', href: '/faq' },
-    { label: 'Refund Policy', href: '/refunds' },
-    { label: 'Delivery Policy', href: '/shipping' },
-  ],
-  Legal: [
-    { label: 'Privacy Policy', href: '/privacy' },
-    { label: 'Terms of Service', href: '/terms' },
-    { label: 'Cookie Policy', href: '/cookies' },
-  ],
-};
+const PRODUCT_HUNT_URL = 'https://www.producthunt.com/products/summeca?utm_source=other&utm_medium=social';
+const X_URL = 'https://x.com/summeca_';
+const CONTACT_EMAIL = 'hello@summeca.com';
 
-function TwitterIcon({ size = 16 }: { size?: number }) {
+const footerSections = [
+  {
+    key: 'platform',
+    label: { en: 'Platform', ar: 'المنصة' },
+    links: [
+      { label: { en: 'AI Tools', ar: 'أدوات الذكاء الاصطناعي' }, href: '/ai' },
+      { label: { en: 'SaaS Apps', ar: 'تطبيقات SaaS' }, href: '/saas' },
+      { label: { en: 'Digital Products', ar: 'المنتجات الرقمية' }, href: '/digital' },
+      { label: { en: 'Pricing', ar: 'الأسعار' }, href: '/pricing' },
+    ],
+  },
+  {
+    key: 'company',
+    label: { en: 'Company', ar: 'الشركة' },
+    links: [
+      { label: { en: 'About SUMMECA', ar: 'عن SUMMECA' }, href: '/about' },
+      { label: { en: 'Contact', ar: 'تواصل معنا' }, href: '/contact' },
+    ],
+  },
+  {
+    key: 'support',
+    label: { en: 'Support', ar: 'الدعم' },
+    links: [
+      { label: { en: 'Help Center', ar: 'مركز المساعدة' }, href: '/support' },
+      { label: { en: 'FAQ', ar: 'الأسئلة الشائعة' }, href: '/faq' },
+      { label: { en: 'Refund Policy', ar: 'سياسة الاسترداد' }, href: '/refunds' },
+      { label: { en: 'Delivery Policy', ar: 'سياسة التسليم' }, href: '/shipping' },
+    ],
+  },
+  {
+    key: 'legal',
+    label: { en: 'Legal', ar: 'قانوني' },
+    links: [
+      { label: { en: 'Privacy Policy', ar: 'سياسة الخصوصية' }, href: '/privacy' },
+      { label: { en: 'Terms of Service', ar: 'شروط الخدمة' }, href: '/terms' },
+      { label: { en: 'Cookie Policy', ar: 'سياسة ملفات الارتباط' }, href: '/cookies' },
+    ],
+  },
+] as const;
+
+function XIcon({ size = 18 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
       <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.73-8.835L1.254 2.25H8.08l4.253 5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
@@ -35,67 +57,117 @@ function TwitterIcon({ size = 16 }: { size?: number }) {
   );
 }
 
-function ProductHuntIcon() {
-  return (
-    <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[#ff6154] text-sm font-black text-white" aria-hidden="true">
-      P
-    </span>
-  );
-}
-
 export default function PublicFooter() {
-  const socialLinks = [
-    { Icon: TwitterIcon, href: 'https://x.com/summeca_', label: 'SUMMECA on X (@summeca_)' },
-  ];
+  const { isArabic } = useLanguage();
+  const language = isArabic ? 'ar' : 'en';
+  const copy = isArabic
+    ? {
+        description: 'منتجات رقمية وتطبيقات SaaS وحلول تركّز على الذكاء الاصطناعي للعمل الحديث.',
+        follow: 'تابع SUMMECA',
+        xLabel: 'SUMMECA على X (@summeca_)',
+        emailLabel: 'راسل SUMMECA',
+        productHunt: 'عرض SUMMECA على Product Hunt',
+        productHuntHint: 'يفتح الموقع الرسمي في علامة تبويب جديدة',
+        rights: 'جميع الحقوق محفوظة.',
+      }
+    : {
+        description: 'Digital products, SaaS tools, and AI-focused solutions for modern work.',
+        follow: 'Follow SUMMECA',
+        xLabel: 'SUMMECA on X (@summeca_)',
+        emailLabel: 'Email SUMMECA',
+        productHunt: 'View SUMMECA on Product Hunt',
+        productHuntHint: 'Opens the official listing in a new tab',
+        rights: 'All rights reserved.',
+      };
 
   return (
-    <footer className="relative overflow-hidden border-t border-white/8 bg-[#0A0F1E] text-white">
-      <div className="absolute inset-0 opacity-25" style={{ backgroundImage: 'linear-gradient(rgba(13,148,136,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(13,148,136,0.05) 1px, transparent 1px)', backgroundSize: '44px 44px' }} />
-      <div className="pointer-events-none absolute left-1/2 top-0 h-[140px] w-[520px] -translate-x-1/2 rounded-full bg-primary/5 blur-3xl" />
+    <footer
+      dir={isArabic ? 'rtl' : 'ltr'}
+      className="relative overflow-hidden border-t border-white/10 bg-[#0A0F1E] text-white"
+    >
+      <div
+        aria-hidden="true"
+        className="absolute inset-0 opacity-25"
+        style={{
+          backgroundImage:
+            'linear-gradient(rgba(13,148,136,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(13,148,136,0.05) 1px, transparent 1px)',
+          backgroundSize: '44px 44px',
+        }}
+      />
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute left-1/2 top-0 h-[140px] w-[520px] max-w-full -translate-x-1/2 rounded-full bg-primary/5 blur-3xl"
+      />
 
-      <div className="relative mx-auto max-w-screen-xl px-6 py-9 lg:px-8 lg:py-10">
-        <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-[1.6fr_repeat(4,1fr)] lg:gap-7">
+      <div className="relative mx-auto max-w-screen-xl px-4 py-10 sm:px-6 sm:py-12 lg:px-8">
+        <div className="grid gap-x-8 gap-y-10 sm:grid-cols-2 lg:grid-cols-[1.55fr_repeat(4,minmax(0,1fr))] lg:gap-x-7">
           <div className="sm:col-span-2 lg:col-span-1">
-            <AppLogo variant="wordmark" tone="light" size={44} />
-            <p className="mt-3 max-w-[250px] text-sm leading-6 text-slate-400">Digital products, SaaS tools, and AI-focused solutions for modern work.</p>
-            <div className="mt-4 flex items-center gap-2">
-              {socialLinks.map(({ Icon, href, label }) => (
-                <a key={`footer-social-${label}`} href={href} target="_blank" rel="noopener noreferrer" aria-label={label} title={label} className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/8 text-slate-400 transition hover:bg-primary/30 hover:text-white"><Icon size={15} /></a>
-              ))}
-              <a href="mailto:hello@summeca.com?subject=SUMMECA%20General%20Inquiry" aria-label="Email SUMMECA general inquiries" title="hello@summeca.com" className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/8 text-slate-400 transition hover:bg-primary/30 hover:text-white"><Mail size={15} /></a>
+            <div className="inline-flex max-w-full">
+              <AppLogo variant="wordmark" tone="light" size={52} />
             </div>
+            <p className="mt-4 max-w-sm text-sm leading-6 text-slate-300">{copy.description}</p>
+
+            <p className="mt-5 text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">{copy.follow}</p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              <a
+                href={X_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={copy.xLabel}
+                className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-white/10 bg-white/[0.06] px-3 text-sm font-medium text-slate-200 transition hover:border-primary/40 hover:bg-primary/15 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+              >
+                <XIcon />
+                <span>X</span>
+              </a>
+              <a
+                href={`mailto:${CONTACT_EMAIL}?subject=SUMMECA%20General%20Inquiry`}
+                aria-label={copy.emailLabel}
+                className="inline-flex min-h-11 min-w-0 items-center gap-2 rounded-lg border border-white/10 bg-white/[0.06] px-3 text-sm font-medium text-slate-200 transition hover:border-primary/40 hover:bg-primary/15 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+              >
+                <Mail size={18} aria-hidden="true" />
+                <span className="break-all">{CONTACT_EMAIL}</span>
+              </a>
+            </div>
+
             <a
-              href="https://www.producthunt.com/products/summeca?utm_source=other&utm_medium=social"
+              href={PRODUCT_HUNT_URL}
               target="_blank"
               rel="noopener noreferrer"
-              aria-label="View SUMMECA on Product Hunt"
-              className="mt-5 inline-flex max-w-full items-center gap-3 rounded-xl border border-white/10 bg-white px-3.5 py-2.5 text-left text-[#1d2433] shadow-sm transition hover:-translate-y-0.5 hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary motion-reduce:transform-none motion-reduce:transition-none"
+              aria-label={copy.productHunt}
+              className="mt-5 inline-flex min-h-12 max-w-full items-center gap-3 rounded-xl border border-primary/35 bg-white/[0.06] px-4 py-2.5 text-start text-slate-100 transition hover:border-primary/60 hover:bg-primary/15 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
             >
-              <ProductHuntIcon />
-              <span className="min-w-0 leading-tight">
-                <span className="block text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">Featured on</span>
-                <span className="mt-0.5 block text-sm font-black text-[#1d2433]">Product Hunt</span>
+              <span className="min-w-0">
+                <span className="block text-sm font-semibold">{copy.productHunt}</span>
+                <span className="mt-0.5 block text-xs leading-5 text-slate-400">{copy.productHuntHint}</span>
               </span>
+              <ArrowUpRight className="h-4 w-4 shrink-0" aria-hidden="true" />
             </a>
           </div>
 
-          {Object.entries(footerLinks).map(([section, links]) => (
-            <div key={`footer-section-${section}`}>
-              <h4 className="mb-3 text-[11px] font-700 uppercase tracking-widest text-slate-500">{section}</h4>
-              <ul className="space-y-2">
-                {links.map((link) => (
-                  <li key={`footer-link-${link.label}`}>
-                    <Link href={link.href} className="text-sm text-slate-400 transition-colors hover:text-primary">{link.label}</Link>
+          {footerSections.map((section) => (
+            <nav key={section.key} aria-label={section.label[language]}>
+              <h2 className="mb-3 text-xs font-semibold uppercase tracking-[0.15em] text-slate-400">
+                {section.label[language]}
+              </h2>
+              <ul className="space-y-1">
+                {section.links.map((link) => (
+                  <li key={link.href}>
+                    <Link
+                      href={link.href}
+                      className="inline-flex min-h-10 items-center py-1 text-sm leading-5 text-slate-300 transition-colors hover:text-primary focus-visible:rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                    >
+                      {link.label[language]}
+                    </Link>
                   </li>
                 ))}
               </ul>
-            </div>
+            </nav>
           ))}
         </div>
 
-        <div className="mt-8 flex flex-col items-center justify-between gap-2 border-t border-white/8 pt-5 sm:flex-row">
-          <p className="text-xs text-slate-600">© 2026 SUMMECA. All rights reserved.</p>
-          <p className="text-xs text-slate-600">summeca.com</p>
+        <div className="mt-10 flex flex-col gap-2 border-t border-white/10 pt-5 text-xs text-slate-400 sm:flex-row sm:items-center sm:justify-between">
+          <p>© 2026 SUMMECA. {copy.rights}</p>
+          <p dir="ltr" className={isArabic ? 'self-end sm:self-auto' : undefined}>summeca.com</p>
         </div>
       </div>
     </footer>
