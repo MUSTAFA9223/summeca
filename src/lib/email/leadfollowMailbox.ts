@@ -221,17 +221,26 @@ function encodeSubject(value: string) {
   return `=?UTF-8?B?${Buffer.from(value, 'utf8').toString('base64')}?=`;
 }
 
+function safeSenderName(value: string | undefined) {
+  return (value || '').replace(/[\r\n]+/g, ' ').trim().slice(0, 120);
+}
+
 export async function sendMailboxMessage(args: {
   provider: LeadFollowMailboxProvider;
   accessToken: string;
   senderEmail: string;
+  senderName?: string;
   recipientEmail: string;
   subject: string;
   body: string;
 }) {
   if (args.provider === 'google') {
+    const senderName = safeSenderName(args.senderName);
+    const fromHeader = senderName
+      ? `${encodeSubject(senderName)} <${args.senderEmail}>`
+      : args.senderEmail;
     const raw = [
-      `From: ${args.senderEmail}`,
+      `From: ${fromHeader}`,
       `To: ${args.recipientEmail}`,
       `Subject: ${encodeSubject(args.subject)}`,
       'MIME-Version: 1.0',
