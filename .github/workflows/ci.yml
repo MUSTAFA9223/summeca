@@ -62,3 +62,72 @@ jobs:
 
       - name: Production build
         run: npm run build
+
+  visual_qa:
+    if: github.event_name == 'pull_request' && startsWith(github.head_ref, 'qa/rtl-visual-')
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      AFTER_BASE_URL: https://summeca.com
+      BEFORE_BASE_URL: http://127.0.0.1:4173
+      VISUAL_QA_OUTPUT: visual-qa-output
+      NEXT_PUBLIC_SUPABASE_URL: https://encrvihpdkvubxyvphlt.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+      NEXT_PUBLIC_SITE_URL: https://summeca.com
+    steps:
+      - name: Checkout QA branch
+        uses: actions/checkout@v7
+
+      - name: Checkout pre-Prompt-7 baseline
+        uses: actions/checkout@v7
+        with:
+          ref: b3573868d39b5bf88a2e1bd19b0e9fb37df58e6c
+          path: before-src
+
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install current dependencies and Playwright
+        run: |
+          npm ci --no-audit --no-fund
+          npm install --no-save --no-audit --no-fund playwright@1.55.0
+          npx playwright install --with-deps chromium
+
+      - name: Start pre-Prompt-7 baseline locally
+        continue-on-error: true
+        shell: bash
+        run: |
+          cd before-src
+          npm ci --no-audit --no-fund
+          export NEXT_PUBLIC_SITE_URL=http://127.0.0.1:4173
+          if [ -z "$NEXT_PUBLIC_SUPABASE_ANON_KEY" ]; then
+            export NEXT_PUBLIC_SUPABASE_ANON_KEY=test-anon-key
+          fi
+          nohup npm run dev -- --hostname 127.0.0.1 --port 4173 > /tmp/summeca-before.log 2>&1 &
+          echo $! > /tmp/summeca-before.pid
+          for i in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:4173/ >/dev/null 2>&1; then
+              echo "Baseline server is ready."
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Baseline server did not become ready; after-production QA will still run."
+          tail -100 /tmp/summeca-before.log || true
+          exit 1
+
+      - name: Run Arabic RTL visual QA
+        run: node scripts/visual-qa-rtl.mjs
+
+      - name: Upload RTL visual QA artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rtl-visual-qa
+          path: visual-qa-output
+          if-no-files-found: warn
+          retention-days: 7
