@@ -1,6 +1,7 @@
 import { Suspense } from 'react';
 import React from 'react';
 import type { Metadata, Viewport } from 'next';
+import { cookies } from 'next/headers';
 import { Plus_Jakarta_Sans } from 'next/font/google';
 import '../styles/tailwind.css';
 import '../styles/site-theme.css';
@@ -21,6 +22,7 @@ import VisitorTracker from '@/components/VisitorTracker';
 import LaunchOfferBanner from '@/components/LaunchOfferBanner';
 import ProductPageEnhancements from '@/components/catalog/ProductPageEnhancements';
 import ProductPageVideoPreview from '@/components/catalog/ProductPageVideoPreview';
+import { isAppLanguage, LANGUAGE_COOKIE_KEY } from '@/lib/i18n';
 
 const plusJakartaSans = Plus_Jakarta_Sans({
   subsets: ['latin'],
@@ -141,16 +143,22 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
+  const cookieStore = await cookies();
+  const requestedLanguage = cookieStore.get(LANGUAGE_COOKIE_KEY)?.value;
+  const language = isAppLanguage(requestedLanguage) ? requestedLanguage : 'en';
+  const direction = language === 'ar' ? 'rtl' : 'ltr';
+
   return (
     <html
-      lang="en"
-      dir="ltr"
+      lang={language}
+      dir={direction}
       suppressHydrationWarning
       className={plusJakartaSans.variable}
       data-site-theme="light"
+      data-language={language}
     >
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
@@ -167,7 +175,7 @@ export default function RootLayout({
           <VisitorTracker />
         </Suspense>
         <ThemeProvider>
-          <LanguageProvider>
+          <LanguageProvider initialLanguage={language}>
             <AuthProvider>
               <LaunchOfferBanner />
               {children}

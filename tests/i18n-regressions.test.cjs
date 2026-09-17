@@ -22,10 +22,16 @@ const dashboardSidebar = read('src/app/user-dashboard/components/DashboardSideba
 const adminShell = read('src/app/admin/components/AdminShell.tsx');
 const adminSidebar = read('src/app/admin/components/AdminSidebar.tsx');
 
-test('root layout enables the site-wide bilingual provider and fallback switcher', () => {
+test('root layout enables server-derived bilingual direction and fallback switcher', () => {
   assert.match(layout, /LanguageProvider/);
   assert.match(layout, /GlobalLanguageSwitcher/);
-  assert.match(layout, /dir="ltr"/);
+  assert.match(layout, /await cookies\(\)/);
+  assert.match(layout, /cookieStore\.get\(LANGUAGE_COOKIE_KEY\)/);
+  assert.match(layout, /language === 'ar' \? 'rtl' : 'ltr'/);
+  assert.match(layout, /lang=\{language\}/);
+  assert.match(layout, /dir=\{direction\}/);
+  assert.match(layout, /data-language=\{language\}/);
+  assert.match(layout, /<LanguageProvider initialLanguage=\{language\}>/);
   assert.match(layout, /suppressHydrationWarning/);
   assert.match(layout, /i18n\.css/);
 });
@@ -48,10 +54,13 @@ test('authenticated topbars host their own language controls without duplicate f
   assert.match(adminShell, /LanguageSwitcher/);
 });
 
-test('Arabic mode persists preference, switches RTL, and localizes dynamic DOM content and attributes', () => {
+test('Arabic mode persists preference, uses server RTL, and localizes dynamic DOM content and attributes', () => {
   assert.match(provider, /LANGUAGE_STORAGE_KEY/);
   assert.match(provider, /LANGUAGE_COOKIE_KEY/);
-  assert.match(provider, /document\.documentElement\.dir = language === 'ar' \? 'rtl' : 'ltr'/);
+  assert.match(provider, /initialLanguage = 'en'/);
+  assert.match(provider, /useState<AppLanguage>\(initialLanguage\)/);
+  assert.doesNotMatch(provider, /document\.documentElement\.dir\s*=/);
+  assert.doesNotMatch(provider, /document\.documentElement\.lang\s*=/);
   assert.match(provider, /MutationObserver/);
   assert.match(provider, /placeholder/);
   assert.match(provider, /aria-label/);
