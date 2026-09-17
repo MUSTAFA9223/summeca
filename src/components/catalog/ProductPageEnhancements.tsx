@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { usePathname } from 'next/navigation';
 import { ArrowRight, CreditCard, Headphones, ShieldCheck, Zap } from 'lucide-react';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 type ProviderAvailability = {
   crypto: boolean | null;
@@ -12,15 +13,15 @@ type ProviderAvailability = {
 };
 
 const FRIENDLY_CATEGORY_LABELS: Record<string, string> = {
-  'ai tool': 'AI Assistant',
+  'ai tool': 'AI Workflow',
   api: 'Developer Tool',
   plugin: 'Extension',
-  template: 'Ready-to-use Kit',
-  dataset: 'Data Resource',
-  course: 'Learning Guide',
-  saas: 'Business Software',
-  'saas app': 'Business Software',
-  other: 'Business Software',
+  template: 'Business Template',
+  dataset: 'Digital Kit',
+  course: 'Digital Kit',
+  saas: 'Business SaaS',
+  'saas app': 'Business SaaS',
+  other: 'Digital Kit',
 };
 
 function productSlug(pathname: string | null) {
@@ -41,6 +42,7 @@ async function providerAvailable(url: string): Promise<boolean | null> {
 
 export default function ProductPageEnhancements() {
   const pathname = usePathname();
+  const { isArabic, t } = useLanguage();
   const slug = productSlug(pathname);
   const isSaasProduct = slug === 'summeca-invoiceflow' || slug === 'summeca-leadfollow-ai';
   const [providerAvailability, setProviderAvailability] = useState<ProviderAvailability>({
@@ -56,11 +58,11 @@ export default function ProductPageEnhancements() {
 
   const availableProviders = useMemo(
     () => [
-      providerAvailability.fastspring === true ? 'Card / local methods' : null,
+      providerAvailability.fastspring === true ? (isArabic ? 'البطاقات / وسائل محلية' : 'Card / local methods') : null,
       providerAvailability.payoneer === true ? 'Payoneer' : null,
-      providerAvailability.crypto === true ? 'Crypto' : null,
+      providerAvailability.crypto === true ? (isArabic ? 'العملات الرقمية' : 'Crypto') : null,
     ].filter((value): value is string => Boolean(value)),
-    [providerAvailability],
+    [providerAvailability, isArabic],
   );
 
   useEffect(() => {
@@ -159,6 +161,7 @@ export default function ProductPageEnhancements() {
 
       slot = document.createElement('div');
       slot.id = 'summeca-how-it-works-slot';
+      slot.setAttribute('data-i18n-skip', 'true');
       anchor.insertAdjacentElement('afterend', slot);
       setHowTarget(slot);
     });
@@ -198,13 +201,19 @@ export default function ProductPageEnhancements() {
   if (!slug) return null;
 
   const paymentCopy = availableProviders.length
-    ? `Available before checkout: ${availableProviders.join(' · ')}`
-    : 'Payment availability is confirmed before checkout.';
+    ? `${t('Available before checkout')}: ${availableProviders.join(' · ')}`
+    : t('Payment availability is confirmed before checkout.');
   const languageCopy = slug === 'summeca-leadfollow-ai'
-    ? 'Preview UI is shown in English; supported draft languages are selected inside LeadFollow AI.'
+    ? t('Preview UI is shown in English; supported draft languages are selected inside LeadFollow AI.')
     : slug === 'summeca-invoiceflow'
-      ? 'The product preview is shown in English for a consistent buying experience.'
+      ? t('The product preview is shown in English for a consistent buying experience.')
       : null;
+
+  const howSteps = [
+    ['1', t('Review the product'), t('Check the real preview, included content, and active offer.')],
+    ['2', t('Choose your offer'), t('Select the published plan or one-time option that fits.')],
+    ['3', t('Checkout and access'), t('Complete protected checkout, then receive account access or the digital delivery after verification.')],
+  ];
 
   return (
     <>
@@ -237,11 +246,11 @@ export default function ProductPageEnhancements() {
       `}</style>
 
       {trustTarget && createPortal(
-        <div className="mt-4 rounded-2xl border border-primary/15 bg-card/80 p-3.5 shadow-sm backdrop-blur" data-i18n-skip>
+        <div className="mt-4 rounded-2xl border border-primary/15 bg-card/80 p-3.5 shadow-sm backdrop-blur" data-i18n-skip dir={isArabic ? 'rtl' : 'ltr'}>
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-[11px] font-bold text-muted-foreground sm:text-xs">
-            <span className="inline-flex items-center gap-1.5"><ShieldCheck size={14} className="text-primary" /> Protected checkout</span>
-            <span className="inline-flex items-center gap-1.5"><Zap size={14} className="text-primary" /> Access after verified payment</span>
-            <span className="inline-flex items-center gap-1.5"><Headphones size={14} className="text-primary" /> SUMMECA support</span>
+            <span className="inline-flex items-center gap-1.5"><ShieldCheck size={14} className="text-primary" /> {t('Protected checkout')}</span>
+            <span className="inline-flex items-center gap-1.5"><Zap size={14} className="text-primary" /> {t('Access after verified payment')}</span>
+            <span className="inline-flex items-center gap-1.5"><Headphones size={14} className="text-primary" /> {t('SUMMECA support')}</span>
           </div>
           <div className="mt-2 flex items-start gap-1.5 text-[11px] leading-5 text-muted-foreground sm:text-xs">
             <CreditCard size={13} className="mt-0.5 shrink-0 text-primary" />
@@ -253,18 +262,14 @@ export default function ProductPageEnhancements() {
       )}
 
       {howTarget && !isSaasProduct && createPortal(
-        <section className="border-y border-border bg-secondary/15" aria-label="How it works">
+        <section className="border-y border-border bg-secondary/15" aria-label={t('How it works')} data-i18n-skip dir={isArabic ? 'rtl' : 'ltr'}>
           <div className="mx-auto max-w-screen-xl px-6 py-12 lg:px-8">
             <div className="mx-auto max-w-2xl text-center">
-              <p className="text-xs font-black uppercase tracking-[0.18em] text-primary">How it works</p>
-              <h2 className="mt-2 text-2xl font-black tracking-tight text-foreground sm:text-3xl">From preview to access in three steps</h2>
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-primary">{t('How it works')}</p>
+              <h2 className="mt-2 text-2xl font-black tracking-tight text-foreground sm:text-3xl">{t('From preview to access in three steps')}</h2>
             </div>
             <div className="mt-7 grid gap-4 md:grid-cols-3">
-              {[
-                ['1', 'Review the product', 'Check the real preview, included content, and active offer.'],
-                ['2', 'Choose your offer', 'Select the published plan or one-time option that fits.'],
-                ['3', 'Checkout and access', 'Complete protected checkout, then receive account access or the digital delivery after verification.'],
-              ].map(([number, title, text]) => (
+              {howSteps.map(([number, title, text]) => (
                 <article key={number} className="rounded-2xl border border-border bg-card p-5 shadow-sm">
                   <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-xs font-black text-primary-foreground">{number}</span>
                   <h3 className="mt-4 font-black text-foreground">{title}</h3>
@@ -278,12 +283,12 @@ export default function ProductPageEnhancements() {
       )}
 
       {showSticky && checkoutHref && (
-        <div className="fixed inset-x-3 bottom-3 z-[105] sm:inset-x-auto sm:right-4 sm:w-auto" data-i18n-skip>
+        <div className="fixed inset-x-3 bottom-3 z-[105] sm:inset-x-auto sm:right-4 sm:w-auto" data-i18n-skip dir={isArabic ? 'rtl' : 'ltr'}>
           <a
             href={checkoutHref}
             className="flex min-h-12 items-center justify-center gap-2 rounded-xl border border-primary/20 bg-primary px-5 text-sm font-black text-primary-foreground shadow-[0_16px_45px_rgba(0,0,0,.28)] transition duration-200 hover:-translate-y-0.5 hover:brightness-105 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary motion-reduce:transform-none"
           >
-            {checkoutLabel} <ArrowRight size={15} />
+            {checkoutLabel} <ArrowRight size={15} className={isArabic ? 'rotate-180' : undefined} />
           </a>
         </div>
       )}
