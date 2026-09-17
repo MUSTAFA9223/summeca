@@ -70,7 +70,7 @@ test('cancelled payment recovery does not imply another provider or grant access
 
 test('free completion remains a server-created completed order with server reconciliation', () => {
   assert.match(freeOrder, /create_priced_order/);
-  assert.match(freeOrder, /status !== 'completed'/);
-  assert.match(freeOrder, /reconcileOrderEntitlements/);
+  assert.ok(freeOrder.includes("String(order.status ?? '') !== 'completed'"));
+  assert.match(freeOrder, /reconcileFreeEntitlements/);
   assert.doesNotMatch(freeOrder, /redirect.*completed/i);
 });
