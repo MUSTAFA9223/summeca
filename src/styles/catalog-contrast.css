@@ -1,0 +1,56 @@
+/*
+ * Catalog contrast guard.
+ *
+ * The Light Premium theme remaps common Tailwind text utilities for light
+ * surfaces. Catalog product cards intentionally stay dark, so restore a
+ * high-contrast palette inside those cards without changing the rest of the
+ * light theme.
+ */
+html[data-site-theme='light'] article[class~='bg-[#101820]'] {
+  color: #f8fafc !important;
+}
+
+html[data-site-theme='light'] article[class~='bg-[#101820]'] .text-white {
+  color: #f8fafc !important;
+}
+
+html[data-site-theme='light'] article[class~='bg-[#101820]'] .text-slate-200 {
+  color: #e2f1f4 !important;
+}
+
+html[data-site-theme='light'] article[class~='bg-[#101820]'] .text-slate-300 {
+  color: #d2e7eb !important;
+}
+
+html[data-site-theme='light'] article[class~='bg-[#101820]'] .text-slate-400 {
+  color: #a8c5cc !important;
+}
+
+html[data-site-theme='light'] article[class~='bg-[#101820]'] .text-slate-500 {
+  color: #86a7b0 !important;
+}
+
+html[data-site-theme='light'] article[class~='bg-[#101820]'] .text-slate-600 {
+  color: #71939d !important;
+}
+
+html[data-site-theme='light'] article[class~='bg-[#101820]'] .text-cyan-200 {
+  color: #a5f3fc !important;
+}
+
+html[data-site-theme='light'] article[class~='bg-[#101820]'] .text-cyan-300 {
+  color: #67e8f9 !important;
+}
+
+html[data-site-theme='light'] article[class~='bg-[#101820]'] .text-emerald-300 {
+  color: #6ee7b7 !important;
+}
+
+/* Keep tags visibly separated from the dark card while preserving the palette. */
+html[data-site-theme='light'] article[class~='bg-[#101820]'] .border-slate-700 {
+  border-color: #36515b !important;
+}
+
+html[data-site-theme='light'] article[class~='bg-[#101820]'] .bg-slate-800\/60 {
+  background-color: rgba(30, 50, 59, 0.78) !important;
+}
