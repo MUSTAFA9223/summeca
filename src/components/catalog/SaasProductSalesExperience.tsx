@@ -15,6 +15,7 @@ type DemoSlug = 'summeca-invoiceflow' | 'summeca-leadfollow-ai';
 
 // Publish only recordings captured from the real customer-facing workspaces.
 // Keep a slug absent until its final demo file is hosted and verified.
+// Public SaaS access is not delivered as a downloadable ZIP; the visible sales copy explains account access after verified payment.
 const DEMO_VIDEO_BY_SLUG: Partial<Record<DemoSlug, string>> = {
   'summeca-invoiceflow': '/assets/product-videos/summeca-invoiceflow-6s.mp4',
   'summeca-leadfollow-ai': '/assets/product-videos/summeca-leadfollow-ai-6s.mp4',

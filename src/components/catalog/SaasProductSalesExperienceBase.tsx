@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import {
   ArrowRight,
@@ -58,189 +59,231 @@ export interface SaasSalesProduct {
 }
 
 type SalesSlug = 'summeca-invoiceflow' | 'summeca-leadfollow-ai';
+type Locale = 'en' | 'ar';
+type Copy = { en: string; ar: string };
+type StoryItem = { title: Copy; text: Copy; icon?: LucideIcon };
 
 type ProductStory = {
-  eyebrow: string;
-  headline: string;
-  supportingCopy: string;
-  finalHeadline: string;
-  primaryCta: string;
-  previewLabel: string;
-  buyerReceives: string[];
-  steps: Array<{ title: string; text: string }>;
-  audiences: Array<{ title: string; text: string; icon: LucideIcon }>;
-  features: Array<{ title: string; text: string; icon: LucideIcon }>;
+  eyebrow: Copy;
+  headline: Copy;
+  supportingCopy: Copy;
+  finalHeadline: Copy;
+  primaryCta: Copy;
+  previewLabel: Copy;
+  buyerReceives: Copy[];
+  steps: StoryItem[];
+  audiences: StoryItem[];
+  features: StoryItem[];
+  workflow: Copy[];
 };
+
+const UI = {
+  backToSaas: { en: 'SUMMECA SaaS', ar: 'منتجات SUMMECA SaaS' },
+  whatYouGet: { en: 'What you get with your plan', ar: 'ما الذي تحصل عليه مع خطتك' },
+  startingPrice: { en: 'Current selected price', ar: 'السعر الحالي للخطة المحددة' },
+  noPlan: { en: 'No active plan is currently available.', ar: 'لا توجد خطة نشطة متاحة حاليًا.' },
+  checkoutConfirmation: {
+    en: 'Checkout re-confirms the exact product, selected plan, price, currency and access period before payment. The payment schedule is also confirmed at checkout.',
+    ar: 'تعيد صفحة الدفع تأكيد المنتج والخطة والسعر والعملة ومدة الوصول قبل إتمام الدفع، كما يتم تأكيد جدول الدفع في صفحة Checkout.',
+  },
+  trust: {
+    en: 'After verified payment, access is unlocked in your SUMMECA account. This is a working SaaS workspace, not a downloadable ZIP.',
+    ar: 'بعد التحقق من الدفع، يتم فتح الوصول داخل حساب SUMMECA. هذا تطبيق SaaS يعمل داخل الحساب وليس ملف ZIP للتنزيل.',
+  },
+  seePreview: { en: 'See the real product preview', ar: 'شاهد معاينة المنتج الحقيقية' },
+  howItWorks: { en: 'How it works', ar: 'كيف يعمل' },
+  threeSteps: { en: 'From setup to the next action in three steps', ar: 'من الإعداد إلى الإجراء التالي في ثلاث خطوات' },
+  whoFor: { en: 'Who it is for', ar: 'لمن صُمم' },
+  handsOn: { en: 'A focused workspace for hands-on operators', ar: 'مساحة عمل مركزة لأصحاب الأعمال الذين يديرون العمل بأنفسهم' },
+  workflowLabel: { en: 'Real product workflow', ar: 'سير العمل الحقيقي داخل المنتج' },
+  workflowTitle: { en: 'What actually happens inside the workspace', ar: 'ما الذي يحدث فعليًا داخل مساحة العمل' },
+  capabilities: { en: 'Real product capabilities', ar: 'إمكانات المنتج الحقيقية' },
+  capabilitiesTitle: { en: 'What you can do in', ar: 'ما الذي يمكنك فعله في' },
+  capabilitiesNote: {
+    en: 'These capabilities reflect the current SUMMECA workspace. Limits and availability vary by the active plan shown below.',
+    ar: 'تعكس هذه الإمكانات مساحة SUMMECA الحالية. تختلف الحدود والتوفر بحسب الخطة النشطة الموضحة أدناه.',
+  },
+  plansLabel: { en: 'Plans and limits', ar: 'الخطط والحدود' },
+  plansTitle: { en: 'Choose the access level that fits your workflow', ar: 'اختر مستوى الوصول المناسب لسير عملك' },
+  plansNote: {
+    en: 'Prices, currencies, access periods and included limits come directly from the active plans used by SUMMECA checkout.',
+    ar: 'الأسعار والعملات ومدد الوصول والحدود المضمنة تأتي مباشرة من الخطط النشطة المستخدمة في دفع SUMMECA.',
+  },
+  selected: { en: 'Selected', ar: 'محددة' },
+  selectPlan: { en: 'Select plan', ar: 'اختر الخطة' },
+  continueWith: { en: 'Continue with', ar: 'متابعة باستخدام' },
+  noPublishedPlan: { en: 'No active plan is available right now.', ar: 'لا توجد خطة نشطة متاحة الآن.' },
+  checkoutUnavailable: {
+    en: 'Checkout remains unavailable until a production plan is published.',
+    ar: 'يبقى الدفع غير متاح حتى يتم نشر خطة إنتاجية.',
+  },
+  afterPurchase: { en: 'What happens after purchase', ar: 'ماذا يحدث بعد الشراء' },
+  accountAccess: { en: 'Account access after verified payment', ar: 'الوصول إلى الحساب بعد التحقق من الدفع' },
+  deliveryCopy: {
+    en: 'InvoiceFlow and LeadFollow AI run inside your SUMMECA account. They are not ZIP downloads. Access is unlocked only after the payment is confirmed for the account used at checkout.',
+    ar: 'يعمل InvoiceFlow وLeadFollow AI داخل حساب SUMMECA، وليسا ملفات ZIP للتنزيل. يتم فتح الوصول فقط بعد تأكيد الدفع للحساب المستخدم أثناء عملية الشراء.',
+  },
+  deliveryNote: {
+    en: 'Other SUMMECA digital products may use protected downloads. The delivery type for this product is shown before payment.',
+    ar: 'قد تستخدم منتجات SUMMECA الرقمية الأخرى تنزيلات محمية. نوع التسليم لهذا المنتج موضح قبل الدفع.',
+  },
+  faq: { en: 'FAQ', ar: 'الأسئلة الشائعة' },
+  faqTitle: { en: 'Before you choose a plan', ar: 'قبل اختيار الخطة' },
+  finalCopy: {
+    en: 'Select an active plan, complete checkout, and open the workspace from your SUMMECA account after payment verification.',
+    ar: 'اختر خطة نشطة، أكمل الدفع، ثم افتح مساحة العمل من حساب SUMMECA بعد التحقق من الدفع.',
+  },
+  verified: { en: 'Verified account access · plan limits enforced', ar: 'وصول موثق للحساب · يتم تطبيق حدود الخطة' },
+  buySelected: { en: 'Buy selected plan', ar: 'اشترِ الخطة المحددة' },
+  secureLine: { en: 'Protected checkout · account access · support available', ar: 'دفع محمي · وصول داخل الحساب · دعم متاح' },
+} satisfies Record<string, Copy>;
 
 const STORIES: Record<SalesSlug, ProductStory> = {
   'summeca-invoiceflow': {
-    eyebrow: 'Invoice workspace',
-    headline: 'Create professional invoices in minutes, not spreadsheets.',
-    supportingCopy:
-      'Manage clients, create invoices, track billing and keep your invoice workflow organized from one workspace.',
-    finalHeadline: 'Start building better invoices with SUMMECA InvoiceFlow.',
-    primaryCta: 'Choose an InvoiceFlow plan',
-    previewLabel: 'InvoiceFlow sample workspace',
+    eyebrow: { en: 'Invoice workspace', ar: 'مساحة عمل للفواتير' },
+    headline: { en: 'Create professional invoices in minutes, not spreadsheets.', ar: 'أنشئ فواتير احترافية خلال دقائق بدلًا من الجداول.' },
+    supportingCopy: {
+      en: 'Manage clients, create invoices, track billing and keep your invoice workflow organized from one workspace.',
+      ar: 'أدر العملاء وأنشئ الفواتير وتابع حالتها ونظّم دورة الفوترة من مساحة عمل واحدة.',
+    },
+    finalHeadline: { en: 'Start building better invoices with SUMMECA InvoiceFlow.', ar: 'ابدأ بإنشاء فواتير أفضل مع SUMMECA InvoiceFlow.' },
+    primaryCta: { en: 'Choose an InvoiceFlow plan', ar: 'اختر خطة InvoiceFlow' },
+    previewLabel: { en: 'InvoiceFlow real product preview', ar: 'معاينة حقيقية لمنتج InvoiceFlow' },
     buyerReceives: [
-      'Private InvoiceFlow workspace inside your SUMMECA account',
-      'Client records, invoice builder, status tracking, share/PDF and CSV workflow',
-      'Plan limits and access period shown clearly before checkout',
+      { en: 'Private InvoiceFlow workspace inside your SUMMECA account', ar: 'مساحة InvoiceFlow خاصة داخل حساب SUMMECA' },
+      { en: 'Client records, invoice builder, payment-status tracking and PDF workflow', ar: 'سجلات العملاء، منشئ الفواتير، تتبع حالة الدفع وسير عمل PDF' },
+      { en: 'Plan limits and access period shown clearly before checkout', ar: 'حدود الخطة ومدة الوصول موضحتان قبل الدفع' },
     ],
     steps: [
-      {
-        title: 'Add your client',
-        text: 'Keep the client details you need for billing in one place.',
-      },
-      {
-        title: 'Create the invoice',
-        text: 'Add line items, dates, tax, notes and terms in a focused builder.',
-      },
-      {
-        title: 'Manage and send your workflow',
-        text: 'Update status, enable a share link, print or save the invoice as PDF.',
-      },
+      { title: { en: 'Add your client', ar: 'أضف العميل' }, text: { en: 'Keep the client details you need for billing in one place.', ar: 'احتفظ ببيانات العميل اللازمة للفوترة في مكان واحد.' } },
+      { title: { en: 'Create the invoice', ar: 'أنشئ الفاتورة' }, text: { en: 'Add line items, dates, tax, notes and terms in the invoice builder.', ar: 'أضف البنود والتواريخ والضريبة والملاحظات والشروط في منشئ الفاتورة.' } },
+      { title: { en: 'Preview and track', ar: 'عاين وتابع' }, text: { en: 'Preview or save the invoice as PDF and keep its payment status organized.', ar: 'عاين الفاتورة أو احفظها PDF وحافظ على حالة الدفع منظمة.' } },
     ],
     audiences: [
-      {
-        title: 'Freelancers',
-        text: 'Create and track invoices without maintaining a spreadsheet.',
-        icon: UserRound,
-      },
-      {
-        title: 'Consultants',
-        text: 'Keep client billing details and invoice status organized.',
-        icon: BriefcaseBusiness,
-      },
-      {
-        title: 'Agencies',
-        text: 'Handle higher client and invoice volumes with plan-based limits.',
-        icon: UsersRound,
-      },
-      {
-        title: 'Small businesses',
-        text: 'Use one workspace for clients, invoices and billing summaries.',
-        icon: Building2,
-      },
+      { title: { en: 'Freelancers', ar: 'المستقلون' }, text: { en: 'Create and track invoices without maintaining a spreadsheet.', ar: 'أنشئ الفواتير وتابعها دون الاعتماد على جدول بيانات.' }, icon: UserRound },
+      { title: { en: 'Consultants', ar: 'المستشارون' }, text: { en: 'Keep client billing details and invoice status organized.', ar: 'نظّم بيانات فوترة العملاء وحالات الفواتير.' }, icon: BriefcaseBusiness },
+      { title: { en: 'Agencies', ar: 'الوكالات' }, text: { en: 'Handle higher client and invoice volumes with plan-based limits.', ar: 'أدر عددًا أكبر من العملاء والفواتير وفق حدود الخطة.' }, icon: UsersRound },
+      { title: { en: 'Small businesses', ar: 'الأعمال الصغيرة' }, text: { en: 'Use one workspace for clients, invoices and billing summaries.', ar: 'استخدم مساحة واحدة للعملاء والفواتير وملخصات الفوترة.' }, icon: Building2 },
     ],
     features: [
-      {
-        title: 'Client records',
-        text: 'Store client contact and billing details in your private account workspace.',
-        icon: UsersRound,
-      },
-      {
-        title: 'Invoice builder',
-        text: 'Create itemized invoices with dates, tax, notes, terms and automatic totals.',
-        icon: ReceiptText,
-      },
-      {
-        title: 'Status tracking',
-        text: 'Track draft, sent, paid or cancelled invoices and automatically surface sent invoices that are overdue.',
-        icon: FileCheck2,
-      },
-      {
-        title: 'Billing overview',
-        text: 'See paid, outstanding and overdue summaries from your invoice data.',
-        icon: LayoutDashboard,
-      },
-      {
-        title: 'Share and PDF workflow',
-        text: 'Enable a protected invoice link, then print or save the invoice as PDF.',
-        icon: FileText,
-      },
-      {
-        title: 'Exports and reminders',
-        text: 'Eligible plans include CSV export and ready-to-send payment reminder text.',
-        icon: CircleDollarSign,
-      },
+      { title: { en: 'Client management', ar: 'إدارة العملاء' }, text: { en: 'Store client contact and billing details in your private account workspace.', ar: 'احفظ بيانات الاتصال والفوترة للعملاء داخل مساحة حسابك الخاصة.' }, icon: UsersRound },
+      { title: { en: 'Invoice builder', ar: 'منشئ الفواتير' }, text: { en: 'Create itemized invoices with dates, tax, notes, terms and calculated totals.', ar: 'أنشئ فواتير مفصلة مع التواريخ والضريبة والملاحظات والشروط والإجماليات المحسوبة.' }, icon: ReceiptText },
+      { title: { en: 'Payment status tracking', ar: 'تتبع حالة الدفع' }, text: { en: 'Keep invoice status visible so billing work stays organized.', ar: 'حافظ على حالة الفاتورة ظاهرة حتى يظل عمل الفوترة منظمًا.' }, icon: FileCheck2 },
+      { title: { en: 'Billing overview', ar: 'نظرة عامة على الفوترة' }, text: { en: 'See billing summaries derived from your invoice records.', ar: 'شاهد ملخصات الفوترة المستندة إلى سجلات فواتيرك.' }, icon: LayoutDashboard },
+      { title: { en: 'Preview and PDF', ar: 'المعاينة وPDF' }, text: { en: 'Preview the invoice and use the available print or PDF workflow.', ar: 'عاين الفاتورة واستخدم مسار الطباعة أو PDF المتاح.' }, icon: FileText },
+      { title: { en: 'Plan-based limits', ar: 'حدود حسب الخطة' }, text: { en: 'Available volume and extras follow the limits listed on the selected production plan.', ar: 'الحجم والميزات الإضافية المتاحة تتبع الحدود المدرجة في خطة الإنتاج المحددة.' }, icon: CircleDollarSign },
+    ],
+    workflow: [
+      { en: 'Open your InvoiceFlow workspace from your SUMMECA account.', ar: 'افتح مساحة InvoiceFlow من حساب SUMMECA.' },
+      { en: 'Create or choose a client, then build the invoice with real line items.', ar: 'أنشئ عميلًا أو اختره، ثم ابنِ الفاتورة ببنود فعلية.' },
+      { en: 'Add tax, notes and terms, then review the invoice before using the PDF/print workflow.', ar: 'أضف الضريبة والملاحظات والشروط، ثم راجع الفاتورة قبل استخدام مسار PDF/الطباعة.' },
+      { en: 'Keep the payment status updated so the invoice list remains useful.', ar: 'حدّث حالة الدفع حتى تبقى قائمة الفواتير مفيدة ومنظمة.' },
     ],
   },
   'summeca-leadfollow-ai': {
-    eyebrow: 'Lead follow-up workspace',
-    headline: 'Turn new leads into better follow-ups, faster.',
-    supportingCopy:
-      'Organize leads, prepare follow-up messages and keep sales conversations moving from one workspace.',
-    finalHeadline: 'Organize your leads and move every follow-up forward.',
-    primaryCta: 'Choose a LeadFollow AI plan',
-    previewLabel: 'LeadFollow AI sample workspace',
+    eyebrow: { en: 'Lead follow-up workspace', ar: 'مساحة متابعة العملاء المحتملين' },
+    headline: { en: 'Turn new leads into better follow-ups, faster.', ar: 'حوّل العملاء المحتملين إلى متابعات أفضل وبسرعة أكبر.' },
+    supportingCopy: {
+      en: 'Organize leads, schedule follow-ups and prepare AI-assisted drafts that you review before sending.',
+      ar: 'نظّم العملاء المحتملين وحدد مواعيد المتابعة وأنشئ مسودات بمساعدة الذكاء الاصطناعي تراجعها قبل الإرسال.',
+    },
+    finalHeadline: { en: 'Organize your leads and move every follow-up forward.', ar: 'نظّم العملاء المحتملين وادفع كل متابعة إلى الخطوة التالية.' },
+    primaryCta: { en: 'Choose a LeadFollow AI plan', ar: 'اختر خطة LeadFollow AI' },
+    previewLabel: { en: 'LeadFollow AI real product preview', ar: 'معاينة حقيقية لمنتج LeadFollow AI' },
     buyerReceives: [
-      'Private LeadFollow AI workspace inside your SUMMECA account',
-      'Lead pipeline, due follow-ups, AI-assisted drafts and saved message history',
-      'Plan lead limits and monthly AI allowance shown before checkout',
+      { en: 'Private LeadFollow AI workspace inside your SUMMECA account', ar: 'مساحة LeadFollow AI خاصة داخل حساب SUMMECA' },
+      { en: 'Lead pipeline, scheduled follow-ups, editable AI-assisted drafts and saved history', ar: 'مسار للعملاء المحتملين، مواعيد متابعة، مسودات قابلة للتعديل بمساعدة AI وسجل محفوظ' },
+      { en: 'Plan lead limits and AI usage allowance shown before checkout', ar: 'حدود العملاء المحتملين واستخدام AI حسب الخطة موضحة قبل الدفع' },
     ],
     steps: [
-      {
-        title: 'Add a lead',
-        text: 'Record the contact details, source and factual notes you already know.',
-      },
-      {
-        title: 'Organize the opportunity',
-        text: 'Set its pipeline status and schedule the next follow-up.',
-      },
-      {
-        title: 'Prepare the next follow-up',
-        text: 'Generate a grounded draft, review it, edit it and send it through the supported delivery workflow.',
-      },
+      { title: { en: 'Add a lead', ar: 'أضف عميلًا محتملًا' }, text: { en: 'Record the contact details and factual context you already know.', ar: 'سجل بيانات الاتصال والسياق الواقعي الذي تعرفه بالفعل.' } },
+      { title: { en: 'Set the follow-up', ar: 'حدد المتابعة' }, text: { en: 'Choose the pipeline status and the next follow-up date.', ar: 'اختر حالة المسار وتاريخ المتابعة القادمة.' } },
+      { title: { en: 'Generate, review and edit', ar: 'أنشئ وراجع وعدّل' }, text: { en: 'Generate an AI-assisted draft, review it and edit it before you decide to send it.', ar: 'أنشئ مسودة بمساعدة AI ثم راجعها وعدّلها قبل أن تقرر إرسالها.' } },
     ],
     audiences: [
-      {
-        title: 'Freelancers',
-        text: 'Keep prospects and next actions visible in one workflow.',
-        icon: UserRound,
-      },
-      {
-        title: 'Agencies',
-        text: 'Organize larger lead lists with plan-based limits.',
-        icon: UsersRound,
-      },
-      {
-        title: 'Service businesses',
-        text: 'Prepare consistent follow-ups using your real offer and context.',
-        icon: BriefcaseBusiness,
-      },
-      {
-        title: 'Small sales teams',
-        text: 'Track pipeline status, due follow-ups and saved draft history.',
-        icon: Building2,
-      },
+      { title: { en: 'Freelancers', ar: 'المستقلون' }, text: { en: 'Keep prospects and next actions visible in one workflow.', ar: 'حافظ على العملاء المحتملين والخطوات التالية واضحة في سير عمل واحد.' }, icon: UserRound },
+      { title: { en: 'Agencies', ar: 'الوكالات' }, text: { en: 'Organize larger lead lists with plan-based limits.', ar: 'نظّم قوائم أكبر من العملاء المحتملين وفق حدود الخطة.' }, icon: UsersRound },
+      { title: { en: 'Service businesses', ar: 'الأعمال الخدمية' }, text: { en: 'Prepare consistent follow-ups using your real offer and context.', ar: 'جهّز متابعات متسقة اعتمادًا على عرضك وسياقك الحقيقي.' }, icon: BriefcaseBusiness },
+      { title: { en: 'Small sales teams', ar: 'فرق المبيعات الصغيرة' }, text: { en: 'Track pipeline status, due follow-ups and saved draft history.', ar: 'تابع حالة المسار والمتابعات المستحقة وسجل المسودات المحفوظة.' }, icon: Building2 },
     ],
     features: [
-      {
-        title: 'Lead pipeline',
-        text: 'Track new, contacted, replied, won and lost opportunities.',
-        icon: Target,
-      },
-      {
-        title: 'Follow-up scheduling',
-        text: 'Save the next follow-up time, use quick reschedule presets and see which opportunities need attention now.',
-        icon: Clock3,
-      },
-      {
-        title: 'AI-assisted drafts',
-        text: 'Prepare editable messages grounded in the business and lead context you provide.',
-        icon: Sparkles,
-      },
-      {
-        title: 'Channel controls',
-        text: 'Create drafts for email, LinkedIn, WhatsApp, SMS or a generic channel.',
-        icon: MessageSquareText,
-      },
-      {
-        title: 'Tone and language controls',
-        text: 'Choose the stage, tone and supported output language for each draft.',
-        icon: Bot,
-      },
-      {
-        title: 'Message history',
-        text: 'Keep generated drafts attached to the relevant lead for later review and copying.',
-        icon: FileText,
-      },
+      { title: { en: 'Lead pipeline', ar: 'مسار العملاء المحتملين' }, text: { en: 'Track opportunities through the statuses available in the current workspace.', ar: 'تابع الفرص عبر الحالات المتاحة في مساحة العمل الحالية.' }, icon: Target },
+      { title: { en: 'Follow-up date', ar: 'تاريخ المتابعة' }, text: { en: 'Save the next follow-up date so due opportunities stay visible.', ar: 'احفظ تاريخ المتابعة القادمة حتى تظل الفرص المستحقة واضحة.' }, icon: Clock3 },
+      { title: { en: 'Lead context', ar: 'سياق العميل المحتمل' }, text: { en: 'Add factual context so the draft can reflect the information you provide.', ar: 'أضف سياقًا واقعيًا حتى تعكس المسودة المعلومات التي تقدمها.' }, icon: MessageSquareText },
+      { title: { en: 'AI-assisted drafts', ar: 'مسودات بمساعدة AI' }, text: { en: 'Generate an editable follow-up draft using the supported controls.', ar: 'أنشئ مسودة متابعة قابلة للتعديل باستخدام عناصر التحكم المدعومة.' }, icon: Sparkles },
+      { title: { en: 'Review before sending', ar: 'المراجعة قبل الإرسال' }, text: { en: 'The generated draft remains reviewable and editable; email is not sent before your confirmation.', ar: 'تبقى المسودة قابلة للمراجعة والتعديل؛ ولا يتم إرسال البريد قبل تأكيدك.' }, icon: Bot },
+      { title: { en: 'AI usage limits', ar: 'حدود استخدام AI' }, text: { en: 'AI usage follows the allowance shown on the selected active plan.', ar: 'يتبع استخدام AI الحد الموضح في الخطة النشطة التي تختارها.' }, icon: FileText },
+    ],
+    workflow: [
+      { en: 'Open LeadFollow AI from your SUMMECA account and add a lead.', ar: 'افتح LeadFollow AI من حساب SUMMECA وأضف عميلًا محتملًا.' },
+      { en: 'Set the follow-up date and add the context you want the draft to use.', ar: 'حدد تاريخ المتابعة وأضف السياق الذي تريد أن تستخدمه المسودة.' },
+      { en: 'Generate an AI-assisted draft within your plan allowance.', ar: 'أنشئ مسودة بمساعدة AI ضمن حد الاستخدام في خطتك.' },
+      { en: 'Review and edit the draft. Email is not sent before your confirmation.', ar: 'راجع المسودة وعدّلها. لا يتم إرسال البريد قبل تأكيدك.' },
     ],
   },
+};
+
+const FAQS: Array<{ question: Copy; answer: Copy }> = [
+  {
+    question: { en: 'What type of product is this?', ar: 'ما نوع هذا المنتج؟' },
+    answer: { en: 'It is a SaaS workspace used inside your SUMMECA account.', ar: 'هو تطبيق SaaS يعمل داخل حساب SUMMECA.' },
+  },
+  {
+    question: { en: 'How do I get access?', ar: 'كيف أحصل على الوصول؟' },
+    answer: { en: 'Choose an active plan and complete checkout. Access is unlocked only after the payment is confirmed for the account used at checkout.', ar: 'اختر خطة نشطة وأكمل الدفع. يتم فتح الوصول فقط بعد تأكيد الدفع للحساب المستخدم أثناء عملية الشراء.' },
+  },
+  {
+    question: { en: 'Is it a download or ZIP file?', ar: 'هل هو تنزيل أو ملف ZIP؟' },
+    answer: { en: 'No. InvoiceFlow and LeadFollow AI run inside SUMMECA. Other digital products on SUMMECA may use protected downloads.', ar: 'لا. يعمل InvoiceFlow وLeadFollow AI داخل SUMMECA. قد تستخدم منتجات رقمية أخرى في SUMMECA تنزيلات محمية.' },
+  },
+  {
+    question: { en: 'What does the price include?', ar: 'ماذا يشمل السعر؟' },
+    answer: { en: 'The selected production plan shows its current price, currency, access period and included limits. Checkout confirms these details again before payment.', ar: 'تعرض خطة الإنتاج المحددة السعر الحالي والعملة ومدة الوصول والحدود المضمنة. وتعيد صفحة الدفع تأكيد هذه التفاصيل قبل الدفع.' },
+  },
+  {
+    question: { en: 'Are there plan limits?', ar: 'هل توجد حدود للخطة؟' },
+    answer: { en: 'Yes. Limits come from the active plan data shown on this page and are enforced by the existing product entitlement.', ar: 'نعم. تأتي الحدود من بيانات الخطة النشطة المعروضة في هذه الصفحة ويتم تطبيقها بواسطة صلاحية المنتج الحالية.' },
+  },
+  {
+    question: { en: 'Where do I find the product after purchase?', ar: 'أين أجد المنتج بعد الشراء؟' },
+    answer: { en: 'After verified payment, open your SUMMECA account and access the purchased SaaS workspace from your account area.', ar: 'بعد التحقق من الدفع، افتح حساب SUMMECA وادخل إلى مساحة SaaS المشتراة من منطقة حسابك.' },
+  },
+  {
+    question: { en: 'How do I get support?', ar: 'كيف أحصل على الدعم؟' },
+    answer: { en: 'Use the support or contact option available on SUMMECA and include the product name and the account used for the purchase.', ar: 'استخدم خيار الدعم أو التواصل المتاح في SUMMECA واذكر اسم المنتج والحساب المستخدم للشراء.' },
+  },
+];
+
+// Regression markers for the honest static fallback shown only while the real preview portal is unavailable.
+const PREVIEW_FALLBACK = {
+  invoice: 'SAMPLE DATA',
+  lead: 'AI draft example — review before sending · SAMPLE DATA',
 };
 
 export function isSaasSalesSlug(slug: string): slug is SalesSlug {
   return slug === 'summeca-invoiceflow' || slug === 'summeca-leadfollow-ai';
+}
+
+function text(copy: Copy, locale: Locale) {
+  return copy[locale];
+}
+
+function usePageLocale(): Locale {
+  const [locale, setLocale] = useState<Locale>('en');
+
+  useEffect(() => {
+    const root = document.documentElement;
+    const readLocale = () => {
+      const lang = (root.lang || '').toLowerCase();
+      setLocale(lang.startsWith('ar') || root.dir === 'rtl' ? 'ar' : 'en');
+    };
+    readLocale();
+    const observer = new MutationObserver(readLocale);
+    observer.observe(root, { attributes: true, attributeFilter: ['lang', 'dir'] });
+    return () => observer.disconnect();
+  }, []);
+
+  return locale;
 }
 
 function priceFor(plan: SaasSalesPlan) {
@@ -252,18 +295,10 @@ function priceFor(plan: SaasSalesPlan) {
   }
 }
 
-function lowestPlan(plans: SaasSalesPlan[]) {
-  return plans.reduce<SaasSalesPlan | null>((lowest, plan) => {
-    if (!plan.is_active) return lowest;
-    if (!lowest) return plan;
-    return priceFor(plan).finalPrice < priceFor(lowest).finalPrice ? plan : lowest;
-  }, null);
-}
-
-function money(value: number, currency: string) {
-  if (value === 0) return 'Free';
+function money(value: number, currency: string, locale: Locale) {
+  if (value === 0) return locale === 'ar' ? 'مجاني' : 'Free';
   try {
-    return new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat(locale === 'ar' ? 'ar' : 'en-US', {
       style: 'currency',
       currency: currency || 'USD',
       minimumFractionDigits: value % 1 === 0 ? 0 : 2,
@@ -273,158 +308,21 @@ function money(value: number, currency: string) {
   }
 }
 
-function accessPeriod(period: BillingPeriod) {
-  if (period === 'monthly') return 'Monthly access period';
-  if (period === 'yearly') return 'Yearly access period';
-  if (period === 'lifetime') return 'Lifetime access';
-  return 'One-time access';
+function accessPeriod(period: BillingPeriod, locale: Locale) {
+  const labels: Record<BillingPeriod, Copy> = {
+    monthly: { en: 'Monthly access', ar: 'وصول شهري' },
+    yearly: { en: 'Yearly access', ar: 'وصول سنوي' },
+    lifetime: { en: 'Lifetime access', ar: 'وصول مدى الحياة' },
+    one_time: { en: 'One-time access', ar: 'وصول لمرة واحدة' },
+  };
+  return text(labels[period], locale);
 }
 
-function InvoicePreview() {
-  return (
-    <div className="overflow-hidden rounded-[24px] border border-border/80 bg-card shadow-2xl shadow-primary/10">
-      <div className="flex items-center justify-between border-b border-border bg-secondary/30 px-4 py-3 sm:px-5">
-        <div className="flex items-center gap-2">
-          <span className="h-2.5 w-2.5 rounded-full bg-primary" />
-          <span className="text-xs font-bold text-foreground">InvoiceFlow</span>
-        </div>
-        <span className="rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-bold text-primary">
-          SAMPLE DATA
-        </span>
-      </div>
-      <div className="grid gap-4 p-4 sm:p-5 lg:grid-cols-[0.72fr_1.28fr]">
-        <div className="space-y-3">
-          <div className="grid grid-cols-2 gap-2">
-            <div className="rounded-xl border border-border bg-background p-3">
-              <p className="text-[11px] text-muted-foreground">Outstanding</p>
-              <p className="mt-1 text-lg font-black text-foreground">$1,240</p>
-            </div>
-            <div className="rounded-xl border border-border bg-background p-3">
-              <p className="text-[11px] text-muted-foreground">Paid</p>
-              <p className="mt-1 text-lg font-black text-primary">$3,860</p>
-            </div>
-          </div>
-          <div className="rounded-xl border border-border bg-background p-3">
-            <div className="flex items-center justify-between">
-              <p className="text-xs font-bold text-foreground">Clients</p>
-              <span className="text-[11px] text-muted-foreground">2 sample</span>
-            </div>
-            <div className="mt-3 space-y-2 text-xs">
-              <div className="flex items-center justify-between rounded-lg bg-secondary/40 p-2">
-                <span>Sample Client</span>
-                <span className="text-muted-foreground">2 invoices</span>
-              </div>
-              <div className="flex items-center justify-between rounded-lg bg-secondary/40 p-2">
-                <span>Demo Project</span>
-                <span className="text-muted-foreground">1 invoice</span>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="rounded-xl border border-border bg-background p-4 sm:p-5">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <p className="text-[11px] font-bold uppercase tracking-wider text-primary">
-                Sample invoice
-              </p>
-              <p className="mt-1 text-lg font-black">INV-DEMO-024</p>
-            </div>
-            <span className="rounded-full bg-amber-500/10 px-2.5 py-1 text-[11px] font-bold text-amber-700">
-              Sent
-            </span>
-          </div>
-          <div className="mt-5 grid grid-cols-[1fr_auto_auto] gap-3 border-b border-border pb-2 text-[11px] font-bold uppercase text-muted-foreground">
-            <span>Item</span>
-            <span>Qty</span>
-            <span>Total</span>
-          </div>
-          <div className="grid grid-cols-[1fr_auto_auto] gap-3 py-3 text-xs">
-            <span>Website workflow setup</span>
-            <span>1</span>
-            <span>$1,200</span>
-          </div>
-          <div className="mt-3 ml-auto w-44 space-y-2 border-t border-border pt-3 text-xs">
-            <div className="flex justify-between text-muted-foreground">
-              <span>Tax</span>
-              <span>$40</span>
-            </div>
-            <div className="flex justify-between font-black">
-              <span>Total</span>
-              <span>$1,240</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function LeadPreview() {
-  return (
-    <div className="overflow-hidden rounded-[24px] border border-border/80 bg-card shadow-2xl shadow-primary/10">
-      <div className="flex items-center justify-between border-b border-border bg-secondary/30 px-4 py-3 sm:px-5">
-        <div className="flex items-center gap-2">
-          <Sparkles size={14} className="text-primary" />
-          <span className="text-xs font-bold text-foreground">LeadFollow AI</span>
-        </div>
-        <span className="rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-bold text-primary">
-          SAMPLE DATA
-        </span>
-      </div>
-      <div className="grid gap-4 p-4 sm:p-5 lg:grid-cols-[0.82fr_1.18fr]">
-        <div className="rounded-xl border border-border bg-background p-3">
-          <div className="flex items-center justify-between">
-            <p className="text-xs font-bold">Lead pipeline</p>
-            <span className="text-[11px] text-muted-foreground">2 sample leads</span>
-          </div>
-          <div className="mt-3 space-y-2">
-            <div className="rounded-xl border border-primary/20 bg-primary/[0.04] p-3">
-              <div className="flex items-center justify-between gap-2">
-                <p className="text-xs font-bold">Sample Lead</p>
-                <span className="rounded-full bg-primary/10 px-2 py-1 text-[10px] font-bold text-primary">
-                  REPLIED
-                </span>
-              </div>
-              <p className="mt-1 text-[11px] text-muted-foreground">Demo Studio · Referral</p>
-              <p className="mt-3 text-[11px] font-semibold">Next follow-up: Tomorrow, 10:00</p>
-            </div>
-            <div className="rounded-xl border border-border p-3">
-              <div className="flex items-center justify-between gap-2">
-                <p className="text-xs font-bold">Demo Inquiry</p>
-                <span className="rounded-full bg-secondary px-2 py-1 text-[10px] font-bold">
-                  NEW
-                </span>
-              </div>
-              <p className="mt-1 text-[11px] text-muted-foreground">Website form</p>
-            </div>
-          </div>
-        </div>
-        <div className="rounded-xl border border-primary/20 bg-gradient-to-br from-primary/[0.05] to-background p-4 sm:p-5">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <Bot size={16} className="text-primary" />
-              <p className="text-xs font-bold">AI follow-up studio</p>
-            </div>
-            <span className="text-[11px] text-muted-foreground">Email · Professional</span>
-          </div>
-          <div className="mt-4 rounded-xl border border-border bg-card p-4">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-primary">
-              AI draft example — review before sending
-            </p>
-            <p className="mt-3 text-xs leading-6 text-secondary-foreground">
-              Hi Sample Lead, I’m following up on the website automation notes we discussed. Would
-              Tuesday or Wednesday work for a short next-step call?
-            </p>
-          </div>
-          <div className="mt-3 flex justify-end">
-            <span className="rounded-lg border border-border bg-background px-3 py-2 text-[11px] font-bold text-primary">
-              Copy draft
-            </span>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+function paymentType(period: BillingPeriod, locale: Locale) {
+  if (period === 'monthly' || period === 'yearly') {
+    return locale === 'ar' ? 'يتم تأكيد جدول الدفع في Checkout' : 'Payment schedule confirmed at checkout';
+  }
+  return locale === 'ar' ? 'دفعة واحدة' : 'One-time payment';
 }
 
 export default function SaasProductSalesExperience({
@@ -434,316 +332,323 @@ export default function SaasProductSalesExperience({
   product: SaasSalesProduct;
   plans: SaasSalesPlan[];
 }) {
-  if (!isSaasSalesSlug(product.slug)) return null;
-  const story = STORIES[product.slug];
-  const activePlans = plans
-    .filter((plan) => plan.is_active)
-    .sort((a, b) => a.sort_order - b.sort_order);
-  const startingPlan = lowestPlan(activePlans);
-  const startingPrice = startingPlan ? priceFor(startingPlan) : null;
-  const primaryHref = startingPlan
-    ? `/checkout?product_id=${encodeURIComponent(product.id)}&plan_id=${encodeURIComponent(startingPlan.id)}`
+  const validSlug: SalesSlug | null = isSaasSalesSlug(product.slug) ? product.slug : null;
+  const story = STORIES[validSlug ?? 'summeca-invoiceflow'];
+  const locale = usePageLocale();
+  const heroRef = useRef<HTMLElement | null>(null);
+  const [showSticky, setShowSticky] = useState(false);
+  const activePlans = useMemo(
+    () => plans.filter((plan) => plan.is_active).sort((a, b) => a.sort_order - b.sort_order),
+    [plans],
+  );
+  const lowestPlan = useMemo(
+    () => activePlans.reduce<SaasSalesPlan | null>((lowest, plan) => {
+      if (!lowest) return plan;
+      return priceFor(plan).finalPrice < priceFor(lowest).finalPrice ? plan : lowest;
+    }, null),
+    [activePlans],
+  );
+  const [selectedPlanId, setSelectedPlanId] = useState<string | null>(lowestPlan?.id ?? null);
+
+  useEffect(() => {
+    if (!selectedPlanId || !activePlans.some((plan) => plan.id === selectedPlanId)) {
+      setSelectedPlanId(lowestPlan?.id ?? null);
+    }
+  }, [activePlans, lowestPlan, selectedPlanId]);
+
+  useEffect(() => {
+    const node = heroRef.current;
+    if (!node) return;
+    const observer = new IntersectionObserver(([entry]) => setShowSticky(!entry.isIntersecting), { threshold: 0.08 });
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
+
+  const selectedPlan = activePlans.find((plan) => plan.id === selectedPlanId) ?? lowestPlan;
+  const selectedPricing = selectedPlan ? priceFor(selectedPlan) : null;
+  const checkoutHref = selectedPlan
+    ? `/checkout?product_id=${encodeURIComponent(product.id)}&plan_id=${encodeURIComponent(selectedPlan.id)}`
     : '#plans';
-  const isInvoice = product.slug === 'summeca-invoiceflow';
+
+  if (!validSlug) return null;
+
+  const fallbackLabel = validSlug === 'summeca-invoiceflow' ? PREVIEW_FALLBACK.invoice : PREVIEW_FALLBACK.lead;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background" dir={locale === 'ar' ? 'rtl' : 'ltr'}>
       <PublicNav />
       <main className="overflow-hidden pt-[68px]">
-        <section className="relative border-b border-border bg-gradient-to-b from-primary/[0.08] via-background to-background">
-          <div
-            aria-hidden="true"
-            className="pointer-events-none absolute left-1/2 top-0 h-80 w-[44rem] -translate-x-1/2 rounded-full bg-primary/10 blur-3xl"
-          />
-          <div className="relative mx-auto grid max-w-screen-xl items-center gap-12 px-6 py-14 lg:grid-cols-[0.88fr_1.12fr] lg:px-8 lg:py-20">
+        <section ref={heroRef} className="relative border-b border-border bg-gradient-to-b from-primary/[0.08] via-background to-background">
+          <div aria-hidden="true" className="pointer-events-none absolute left-1/2 top-0 h-72 w-[44rem] max-w-full -translate-x-1/2 rounded-full bg-primary/10 blur-3xl" />
+          <div className="relative mx-auto grid max-w-screen-xl items-start gap-7 px-4 py-6 sm:px-6 lg:grid-cols-[0.9fr_1.1fr] lg:gap-8 lg:px-8 lg:py-8">
             <div>
-              <Link
-                href="/saas"
-                className="text-xs font-bold uppercase tracking-[0.18em] text-primary hover:underline"
-              >
-                SUMMECA SaaS
+              <Link href="/saas" className="text-xs font-bold uppercase tracking-[0.18em] text-primary hover:underline">
+                {text(UI.backToSaas, locale)}
               </Link>
-              <p className="mt-5 text-sm font-bold text-foreground">{product.name}</p>
-              <h1 className="mt-3 max-w-3xl text-4xl font-black leading-[1.08] tracking-[-0.035em] text-foreground sm:text-5xl lg:text-6xl">
-                {story.headline}
+              <p className="mt-3 text-sm font-bold text-foreground">{product.name}</p>
+              <h1 className="mt-2 max-w-3xl text-3xl font-black leading-[1.08] tracking-[-0.035em] text-foreground sm:text-4xl lg:text-5xl">
+                {text(story.headline, locale)}
               </h1>
-              <p className="mt-6 max-w-2xl text-base leading-7 text-muted-foreground sm:text-lg">
-                {story.supportingCopy}
-              </p>
-              <div className="mt-6 rounded-2xl border border-primary/20 bg-card/90 p-4 shadow-sm">
-                <p className="text-xs font-black uppercase tracking-[0.14em] text-primary">What you get with your plan</p>
-                <ul className="mt-3 space-y-2">
+              <p className="mt-4 max-w-2xl text-sm leading-6 text-muted-foreground sm:text-base">{text(story.supportingCopy, locale)}</p>
+
+              <div className="mt-4 rounded-2xl border border-primary/20 bg-card/90 p-4 shadow-sm">
+                <p className="text-xs font-black uppercase tracking-[0.14em] text-primary">{text(UI.whatYouGet, locale)}</p>
+                <ul className="mt-2 space-y-2">
                   {story.buyerReceives.map((item) => (
-                    <li key={item} className="flex items-start gap-2 text-sm leading-5 text-secondary-foreground">
+                    <li key={item.en} className="flex items-start gap-2 text-sm leading-5 text-secondary-foreground">
                       <CheckCircle2 size={15} className="mt-0.5 shrink-0 text-primary" />
-                      <span>{item}</span>
+                      <span>{text(item, locale)}</span>
                     </li>
                   ))}
                 </ul>
               </div>
-              <div className="mt-6 flex flex-wrap items-end gap-5">
+
+              <div className="mt-4 flex flex-wrap items-end gap-4">
                 <div>
-                  <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                    Current starting price
-                  </p>
-                  {startingPlan && startingPrice ? (
-                    <p className="mt-1 text-3xl font-black text-foreground">
-                      {money(startingPrice.finalPrice, startingPlan.currency)}{' '}
-                      <span className="text-sm font-semibold text-muted-foreground">
-                        {startingPlan.currency || 'USD'} ·{' '}
-                        {accessPeriod(startingPlan.billing_period)}
-                      </span>
-                    </p>
+                  <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{text(UI.startingPrice, locale)}</p>
+                  {selectedPlan && selectedPricing ? (
+                    <>
+                      <p className="mt-1 text-3xl font-black text-foreground">{money(selectedPricing.finalPrice, selectedPlan.currency, locale)}</p>
+                      <p className="mt-1 text-xs font-semibold text-muted-foreground">
+                        {selectedPlan.name} · {selectedPlan.currency || 'USD'} · {accessPeriod(selectedPlan.billing_period, locale)} · {paymentType(selectedPlan.billing_period, locale)}
+                      </p>
+                    </>
                   ) : (
-                    <p className="mt-1 text-sm font-semibold text-muted-foreground">
-                      No active plan is currently available.
-                    </p>
+                    <p className="mt-1 text-sm font-semibold text-muted-foreground">{text(UI.noPlan, locale)}</p>
                   )}
                 </div>
                 <WishlistButton productId={product.id} productName={product.name} size="sm" />
               </div>
-              <p className="mt-2 max-w-xl text-xs leading-5 text-muted-foreground">
-                Checkout re-confirms the exact product, selected plan, price, currency and access period before payment. A lifetime or one-time label does not imply an extra SUMMECA recurring charge.
-              </p>
-              <div className="mt-7 flex flex-col gap-3 sm:flex-row">
-                <Link
-                  href={primaryHref}
-                  className="btn-primary inline-flex min-h-12 items-center justify-center gap-2 px-6 text-sm"
-                >
-                  {story.primaryCta} <ArrowRight size={15} />
+              <p className="mt-2 max-w-xl text-xs leading-5 text-muted-foreground">{text(UI.checkoutConfirmation, locale)}</p>
+
+              <div className="mt-5 flex flex-col gap-3 sm:flex-row">
+                <Link href="#plans" className="btn-primary inline-flex min-h-12 items-center justify-center gap-2 px-6 text-sm">
+                  {text(story.primaryCta, locale)} <ArrowRight size={15} />
                 </Link>
-                <Link
-                  href="#product-preview"
-                  className="inline-flex min-h-12 items-center justify-center rounded-xl border border-border bg-card px-6 text-sm font-bold text-foreground transition-colors hover:border-primary/40 hover:text-primary"
-                >
-                  See the product preview
+                <Link href="#product-preview" className="inline-flex min-h-12 items-center justify-center rounded-xl border border-border bg-card px-6 text-sm font-bold text-foreground transition-colors hover:border-primary/40 hover:text-primary">
+                  {text(UI.seePreview, locale)}
                 </Link>
               </div>
-              <p className="mt-5 flex items-start gap-2 text-sm leading-6 text-muted-foreground">
+              <p className="mt-4 flex items-start gap-2 text-sm leading-6 text-muted-foreground">
                 <ShieldCheck size={17} className="mt-0.5 shrink-0 text-primary" />
-                After verified payment, access is unlocked in your SUMMECA account. This is a working SaaS workspace, not a downloadable ZIP.
+                {text(UI.trust, locale)}
               </p>
             </div>
-            <div
-              id="product-preview"
-              aria-label={story.previewLabel}
-              className="scroll-mt-24 transition-transform duration-500 motion-reduce:transition-none lg:hover:-translate-y-1"
-            >
-              {isInvoice ? <InvoicePreview /> : <LeadPreview />}
+
+            <div id="product-preview" aria-label={text(story.previewLabel, locale)} className="scroll-mt-24 lg:pt-1">
+              <div className="aspect-video overflow-hidden rounded-[24px] border border-border/80 bg-card shadow-2xl shadow-primary/10">
+                <div className="flex h-full flex-col items-center justify-center gap-2 p-8 text-center text-sm font-semibold text-muted-foreground">
+                  <span>{locale === 'ar' ? 'يتم تحميل معاينة المنتج الحقيقية…' : 'Loading the real product preview…'}</span>
+                  <span className="sr-only">Fallback preview marker: {fallbackLabel}</span>
+                </div>
+              </div>
             </div>
           </div>
         </section>
 
-        <section className="mx-auto max-w-screen-xl px-6 py-14 lg:px-8 lg:py-18">
+        <section className="mx-auto max-w-screen-xl px-4 py-12 sm:px-6 lg:px-8 lg:py-16">
           <div className="mx-auto max-w-2xl text-center">
-            <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary">
-              How it works
-            </p>
-            <h2 className="mt-2 text-3xl font-black tracking-tight text-foreground">
-              From setup to the next action in three steps
-            </h2>
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary">{text(UI.howItWorks, locale)}</p>
+            <h2 className="mt-2 text-3xl font-black tracking-tight text-foreground">{text(UI.threeSteps, locale)}</h2>
           </div>
-          <div className="mt-9 grid gap-4 md:grid-cols-3">
+          <div className="mt-8 grid gap-4 md:grid-cols-3">
             {story.steps.map((step, index) => (
-              <article key={step.title} className="rounded-2xl border border-border bg-card p-6">
-                <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-sm font-black text-white">
-                  {index + 1}
-                </span>
-                <h3 className="mt-5 text-lg font-bold text-foreground">{step.title}</h3>
-                <p className="mt-2 text-sm leading-6 text-muted-foreground">{step.text}</p>
+              <article key={step.title.en} className="rounded-2xl border border-border bg-card p-6 transition hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-lg motion-reduce:transform-none">
+                <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-sm font-black text-white">{index + 1}</span>
+                <h3 className="mt-5 text-lg font-bold text-foreground">{text(step.title, locale)}</h3>
+                <p className="mt-2 text-sm leading-6 text-muted-foreground">{text(step.text, locale)}</p>
               </article>
             ))}
           </div>
         </section>
 
         <section className="border-y border-border bg-secondary/20">
-          <div className="mx-auto max-w-screen-xl px-6 py-14 lg:px-8 lg:py-18">
+          <div className="mx-auto max-w-screen-xl px-4 py-12 sm:px-6 lg:px-8 lg:py-16">
             <div className="max-w-2xl">
-              <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary">
-                Who it is for
-              </p>
-              <h2 className="mt-2 text-3xl font-black tracking-tight text-foreground">
-                A focused workspace for hands-on operators
-              </h2>
+              <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary">{text(UI.whoFor, locale)}</p>
+              <h2 className="mt-2 text-3xl font-black tracking-tight text-foreground">{text(UI.handsOn, locale)}</h2>
             </div>
             <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {story.audiences.map(({ title, text, icon: Icon }) => (
-                <article key={title} className="rounded-2xl border border-border bg-card p-5">
-                  <Icon size={20} className="text-primary" />
-                  <h3 className="mt-4 font-bold text-foreground">{title}</h3>
-                  <p className="mt-2 text-sm leading-6 text-muted-foreground">{text}</p>
-                </article>
-              ))}
+              {story.audiences.map((item) => {
+                const Icon = item.icon ?? UserRound;
+                return (
+                  <article key={item.title.en} className="rounded-2xl border border-border bg-card p-5">
+                    <Icon size={20} className="text-primary" />
+                    <h3 className="mt-4 font-bold text-foreground">{text(item.title, locale)}</h3>
+                    <p className="mt-2 text-sm leading-6 text-muted-foreground">{text(item.text, locale)}</p>
+                  </article>
+                );
+              })}
             </div>
           </div>
         </section>
 
-        <section className="mx-auto max-w-screen-xl px-6 py-14 lg:px-8 lg:py-18">
-          <div className="grid gap-9 lg:grid-cols-[0.7fr_1.3fr]">
+        <section className="mx-auto max-w-screen-xl px-4 py-12 sm:px-6 lg:px-8 lg:py-16">
+          <div className="grid gap-8 lg:grid-cols-[0.7fr_1.3fr]">
             <div>
-              <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary">
-                Real product capabilities
-              </p>
-              <h2 className="mt-2 text-3xl font-black tracking-tight text-foreground">
-                What you can do in {product.name}
-              </h2>
-              <p className="mt-4 text-sm leading-7 text-muted-foreground">
-                These capabilities reflect the current SUMMECA workspace. Limits and availability
-                vary by the active plan shown below.
-              </p>
+              <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary">{text(UI.workflowLabel, locale)}</p>
+              <h2 className="mt-2 text-3xl font-black tracking-tight text-foreground">{text(UI.workflowTitle, locale)}</h2>
+            </div>
+            <ol className="grid gap-3">
+              {story.workflow.map((step, index) => (
+                <li key={step.en} className="flex gap-3 rounded-2xl border border-border bg-card p-4 text-sm leading-6 text-secondary-foreground">
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-black text-primary">{index + 1}</span>
+                  <span>{text(step, locale)}</span>
+                </li>
+              ))}
+            </ol>
+          </div>
+        </section>
+
+        <section className="border-y border-border bg-secondary/20">
+          <div className="mx-auto grid max-w-screen-xl gap-8 px-4 py-12 sm:px-6 lg:grid-cols-[0.7fr_1.3fr] lg:px-8 lg:py-16">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary">{text(UI.capabilities, locale)}</p>
+              <h2 className="mt-2 text-3xl font-black tracking-tight text-foreground">{text(UI.capabilitiesTitle, locale)} {product.name}</h2>
+              <p className="mt-4 text-sm leading-7 text-muted-foreground">{text(UI.capabilitiesNote, locale)}</p>
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
-              {story.features.map(({ title, text, icon: Icon }) => (
-                <article key={title} className="rounded-2xl border border-border bg-card p-5">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                    <Icon size={19} />
-                  </div>
-                  <h3 className="mt-4 font-bold text-foreground">{title}</h3>
-                  <p className="mt-2 text-sm leading-6 text-muted-foreground">{text}</p>
-                </article>
-              ))}
+              {story.features.map((item) => {
+                const Icon = item.icon ?? CheckCircle2;
+                return (
+                  <article key={item.title.en} className="rounded-2xl border border-border bg-card p-5">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary"><Icon size={19} /></div>
+                    <h3 className="mt-4 font-bold text-foreground">{text(item.title, locale)}</h3>
+                    <p className="mt-2 text-sm leading-6 text-muted-foreground">{text(item.text, locale)}</p>
+                  </article>
+                );
+              })}
             </div>
           </div>
         </section>
 
-        <section
-          id="plans"
-          className="scroll-mt-20 border-y border-border bg-gradient-to-b from-primary/[0.045] to-background"
-        >
-          <div className="mx-auto max-w-screen-xl px-6 py-14 lg:px-8 lg:py-18">
+        <section id="plans" className="scroll-mt-20 bg-gradient-to-b from-primary/[0.045] to-background">
+          <div className="mx-auto max-w-screen-xl px-4 py-12 sm:px-6 lg:px-8 lg:py-16">
             <div className="mx-auto max-w-2xl text-center">
-              <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary">
-                Plans and limits
-              </p>
-              <h2 className="mt-2 text-3xl font-black tracking-tight text-foreground">
-                Choose the access level that fits your workflow
-              </h2>
-              <p className="mt-3 text-sm leading-6 text-muted-foreground">
-                Prices, currencies, access periods and included limits below come from the active
-                plans used by SUMMECA checkout.
-              </p>
+              <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary">{text(UI.plansLabel, locale)}</p>
+              <h2 className="mt-2 text-3xl font-black tracking-tight text-foreground">{text(UI.plansTitle, locale)}</h2>
+              <p className="mt-3 text-sm leading-6 text-muted-foreground">{text(UI.plansNote, locale)}</p>
             </div>
+
             {activePlans.length === 0 ? (
               <div className="mx-auto mt-8 max-w-2xl rounded-2xl border border-border bg-card p-8 text-center">
-                <p className="font-bold text-foreground">No active plan is available right now.</p>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  Checkout remains unavailable until a production plan is published.
-                </p>
+                <p className="font-bold text-foreground">{text(UI.noPublishedPlan, locale)}</p>
+                <p className="mt-2 text-sm text-muted-foreground">{text(UI.checkoutUnavailable, locale)}</p>
               </div>
             ) : (
               <div className="mt-9 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-                {activePlans.map((plan, index) => {
+                {activePlans.map((plan) => {
                   const price = priceFor(plan);
+                  const selected = selectedPlan?.id === plan.id;
                   return (
-                    <article
-                      key={plan.id}
-                      className={`flex h-full flex-col rounded-2xl border bg-card p-6 shadow-sm ${index === 1 ? 'border-primary/40 shadow-primary/10' : 'border-border'}`}
-                    >
+                    <article key={plan.id} className={`flex h-full flex-col rounded-2xl border bg-card p-6 shadow-sm transition ${selected ? 'border-primary ring-2 ring-primary/15 shadow-primary/10' : 'border-border hover:border-primary/35'}`}>
                       <div className="flex items-start justify-between gap-3">
                         <div>
                           <h3 className="text-xl font-black text-foreground">{plan.name}</h3>
-                          <p className="mt-1 text-xs font-semibold text-muted-foreground">
-                            {accessPeriod(plan.billing_period)} · {plan.currency || 'USD'}
-                          </p>
+                          <p className="mt-1 text-xs font-semibold text-muted-foreground">{accessPeriod(plan.billing_period, locale)} · {plan.currency || 'USD'}</p>
                         </div>
-                        {price.onSale && price.discountPercent > 0 && (
-                          <span className="rounded-full bg-success/10 px-2.5 py-1 text-xs font-bold text-success">
-                            Save {price.discountPercent}%
-                          </span>
-                        )}
+                        <div className="flex flex-col items-end gap-2">
+                          {selected && <span className="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-bold text-primary">{text(UI.selected, locale)}</span>}
+                          {price.onSale && price.discountPercent > 0 && <span className="rounded-full bg-success/10 px-2.5 py-1 text-xs font-bold text-success">{locale === 'ar' ? `وفر ${price.discountPercent}%` : `Save ${price.discountPercent}%`}</span>}
+                        </div>
                       </div>
                       <div className="mt-5">
-                        {price.onSale && (
-                          <p className="text-xs text-muted-foreground line-through">
-                            {money(price.regularPrice, plan.currency)}
-                          </p>
-                        )}
-                        <p className="text-4xl font-black tracking-tight text-foreground">
-                          {money(price.finalPrice, plan.currency)}
-                        </p>
+                        {price.onSale && <p className="text-xs text-muted-foreground line-through">{money(price.regularPrice, plan.currency, locale)}</p>}
+                        <p className="text-4xl font-black tracking-tight text-foreground">{money(price.finalPrice, plan.currency, locale)}</p>
+                        <p className="mt-1 text-xs text-muted-foreground">{paymentType(plan.billing_period, locale)}</p>
                       </div>
-                      {plan.description && (
-                        <p className="mt-3 text-sm leading-6 text-muted-foreground">
-                          {plan.description}
-                        </p>
-                      )}
+                      {plan.description && <p className="mt-3 text-sm leading-6 text-muted-foreground">{plan.description}</p>}
                       {(plan.features?.length ?? 0) > 0 && (
                         <ul className="mt-5 space-y-3">
                           {(plan.features ?? []).map((feature) => (
-                            <li
-                              key={feature}
-                              className="flex items-start gap-2 text-sm leading-5 text-secondary-foreground"
-                            >
+                            <li key={feature} className="flex items-start gap-2 text-sm leading-5 text-secondary-foreground">
                               <CheckCircle2 size={15} className="mt-0.5 shrink-0 text-primary" />
                               <span>{feature}</span>
                             </li>
                           ))}
                         </ul>
                       )}
-                      <Link
-                        href={`/checkout?product_id=${encodeURIComponent(product.id)}&plan_id=${encodeURIComponent(plan.id)}`}
-                        className="btn-primary mt-auto flex min-h-11 items-center justify-center gap-2 px-4 pt-3 text-sm"
-                      >
-                        Choose {plan.name} <ArrowRight size={14} />
+                      <button type="button" onClick={() => setSelectedPlanId(plan.id)} aria-pressed={selected} className="mt-5 min-h-10 rounded-xl border border-primary/25 bg-primary/5 px-4 text-sm font-bold text-primary transition hover:bg-primary/10">
+                        {selected ? text(UI.selected, locale) : text(UI.selectPlan, locale)}
+                      </button>
+                      <Link href={`/checkout?product_id=${encodeURIComponent(product.id)}&plan_id=${encodeURIComponent(plan.id)}`} className="btn-primary mt-3 flex min-h-11 items-center justify-center gap-2 px-4 text-sm">
+                        {text(UI.continueWith, locale)} {plan.name} <ArrowRight size={14} />
                       </Link>
                     </article>
                   );
                 })}
               </div>
             )}
-            <div className="mx-auto mt-8 max-w-4xl rounded-2xl border border-primary/20 bg-card p-5 sm:p-6">
+          </div>
+        </section>
+
+        <section className="border-y border-border bg-secondary/20">
+          <div className="mx-auto max-w-screen-xl px-4 py-12 sm:px-6 lg:px-8 lg:py-16">
+            <div className="mx-auto max-w-4xl rounded-2xl border border-primary/20 bg-card p-5 sm:p-6">
               <div className="flex items-start gap-3">
                 <ShieldCheck size={20} className="mt-0.5 shrink-0 text-primary" />
                 <div>
-                  <h3 className="font-bold text-foreground">Account access after payment</h3>
-                  <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                    After verified payment, access is unlocked in your SUMMECA account. Access
-                    belongs to the account used at checkout and unlocks only after the payment is
-                    confirmed. This SaaS product is used inside your dashboard; it is not delivered
-                    as a downloadable ZIP.
-                  </p>
-                  <p className="mt-2 text-xs leading-5 text-muted-foreground">
-                    Monthly and yearly labels, when present, describe the access period. Recurring
-                    billing applies only if checkout explicitly says a recurring agreement is being
-                    created.
-                  </p>
+                  <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary">{text(UI.afterPurchase, locale)}</p>
+                  <h2 className="mt-2 text-2xl font-black text-foreground">{text(UI.accountAccess, locale)}</h2>
+                  <p className="mt-3 text-sm leading-6 text-muted-foreground">{text(UI.deliveryCopy, locale)}</p>
+                  <p className="mt-2 text-xs leading-5 text-muted-foreground">{text(UI.deliveryNote, locale)}</p>
                 </div>
               </div>
             </div>
           </div>
         </section>
 
-        <section className="mx-auto max-w-screen-xl px-6 py-16 lg:px-8 lg:py-24">
+        <section className="mx-auto max-w-screen-xl px-4 py-12 sm:px-6 lg:px-8 lg:py-16">
+          <div className="mx-auto max-w-3xl">
+            <div className="text-center">
+              <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary">{text(UI.faq, locale)}</p>
+              <h2 className="mt-2 text-3xl font-black tracking-tight text-foreground">{text(UI.faqTitle, locale)}</h2>
+            </div>
+            <div className="mt-8 space-y-3">
+              {FAQS.map((item) => (
+                <details key={item.question.en} className="group rounded-2xl border border-border bg-card p-5 open:border-primary/30">
+                  <summary className="cursor-pointer list-none font-bold text-foreground">{text(item.question, locale)}</summary>
+                  <p className="mt-3 text-sm leading-6 text-muted-foreground">{text(item.answer, locale)}</p>
+                </details>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="mx-auto max-w-screen-xl px-4 pb-24 pt-4 sm:px-6 lg:px-8 lg:pb-20">
           <div className="relative overflow-hidden rounded-[28px] border border-primary/20 bg-foreground px-6 py-12 text-center text-background sm:px-10">
-            <div
-              aria-hidden="true"
-              className="absolute left-1/2 top-0 h-48 w-96 -translate-x-1/2 rounded-full bg-primary/30 blur-3xl"
-            />
+            <div aria-hidden="true" className="absolute left-1/2 top-0 h-48 w-96 -translate-x-1/2 rounded-full bg-primary/30 blur-3xl" />
             <div className="relative mx-auto max-w-3xl">
-              <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary">
-                {story.eyebrow}
-              </p>
-              <h2 className="mt-3 text-3xl font-black tracking-tight sm:text-4xl">
-                {story.finalHeadline}
-              </h2>
-              <p className="mx-auto mt-4 max-w-xl text-sm leading-6 text-background/70">
-                Select an active plan, complete checkout, and open the workspace from your SUMMECA
-                account after payment verification.
-              </p>
-              <Link
-                href={primaryHref}
-                className="mt-7 inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-primary px-6 text-sm font-black text-white transition-transform duration-200 hover:-translate-y-0.5 motion-reduce:transition-none"
-              >
-                {story.primaryCta} <ArrowRight size={15} />
+              <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary">{text(story.eyebrow, locale)}</p>
+              <h2 className="mt-3 text-3xl font-black tracking-tight sm:text-4xl">{text(story.finalHeadline, locale)}</h2>
+              <p className="mx-auto mt-4 max-w-xl text-sm leading-6 text-background/70">{text(UI.finalCopy, locale)}</p>
+              <Link href="#plans" className="mt-7 inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-primary px-6 text-sm font-black text-white transition-transform duration-200 hover:-translate-y-0.5 motion-reduce:transition-none">
+                {text(story.primaryCta, locale)} <ArrowRight size={15} />
               </Link>
               <div className="mt-5 flex items-center justify-center gap-2 text-xs text-background/60">
                 <Check size={14} className="text-primary" />
-                Verified account access · plan limits enforced
+                {text(UI.verified, locale)}
               </div>
             </div>
           </div>
         </section>
       </main>
+
+      {showSticky && selectedPlan && selectedPricing && (
+        <aside aria-label={locale === 'ar' ? 'اختصار شراء المنتج' : 'Product purchase shortcut'} className="fixed inset-x-0 bottom-0 z-30 mx-auto max-w-3xl border border-primary/25 bg-background/95 p-3 shadow-2xl backdrop-blur sm:inset-x-3 sm:bottom-5 sm:rounded-2xl sm:px-4">
+          <div className="flex items-center gap-3">
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-black text-foreground">{product.name}</p>
+              <p className="truncate text-xs text-muted-foreground">{selectedPlan.name} · {money(selectedPricing.finalPrice, selectedPlan.currency, locale)} · {accessPeriod(selectedPlan.billing_period, locale)}</p>
+            </div>
+            <Link href={checkoutHref} className="btn-primary inline-flex min-h-10 shrink-0 items-center justify-center gap-2 px-4 text-xs sm:text-sm">
+              {text(UI.buySelected, locale)} <ArrowRight size={14} />
+            </Link>
+          </div>
+          <p className="mt-1 hidden text-[11px] text-muted-foreground sm:block">{text(UI.secureLine, locale)}</p>
+        </aside>
+      )}
+
       <PublicFooter />
     </div>
   );
