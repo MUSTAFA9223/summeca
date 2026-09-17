@@ -1,0 +1,192 @@
+/* SUMMECA mobile/responsive guardrails.
+   Scope: layout safety only. No product, auth, payment, or entitlement logic. */
+
+html,
+body {
+  max-width: 100%;
+  overflow-x: clip;
+}
+
+body,
+main,
+section,
+article,
+header,
+footer,
+nav,
+form,
+fieldset {
+  min-width: 0;
+}
+
+img,
+video {
+  max-width: 100%;
+  height: auto;
+}
+
+canvas,
+iframe {
+  max-width: 100%;
+}
+
+input,
+select,
+textarea,
+button {
+  max-width: 100%;
+  min-width: 0;
+}
+
+button,
+a,
+input,
+select,
+textarea {
+  touch-action: manipulation;
+}
+
+pre {
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 767px) {
+  table {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-inline: contain;
+  }
+
+  th,
+  td {
+    white-space: nowrap;
+  }
+
+  .btn-primary,
+  .btn-secondary,
+  .form-input {
+    min-height: 44px;
+  }
+
+  [data-language-switcher="true"] button {
+    min-width: 40px;
+    min-height: 40px;
+  }
+
+  [data-public-nav="true"] button[aria-label="Toggle mobile menu"] {
+    width: 44px;
+    height: 44px;
+  }
+
+  [data-public-nav="true"] > div.absolute {
+    max-height: calc(100dvh - 70px - var(--launch-offer-height, 0px) - env(safe-area-inset-bottom));
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  [data-public-nav="true"] > div.absolute a,
+  [data-public-nav="true"] > div.absolute button {
+    min-height: 44px;
+  }
+
+  aside[aria-label="Launch offer"] > button,
+  aside[aria-label="عرض الإطلاق"] > button {
+    width: 44px;
+    height: 44px;
+  }
+
+  .summeca-home-hero h1 {
+    font-size: clamp(2.05rem, 10vw, 2.75rem);
+    line-height: 0.98;
+    overflow-wrap: anywhere;
+  }
+
+  .summeca-saas-sales-shell h1 {
+    font-size: clamp(2rem, 9.5vw, 2.75rem);
+    line-height: 1.02;
+    overflow-wrap: anywhere;
+  }
+
+  .summeca-catalog-enter article .mt-auto.flex.items-end.justify-between {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.75rem;
+  }
+
+  .summeca-catalog-enter article .mt-auto.flex.items-end.justify-between > span {
+    width: 100%;
+    justify-content: center;
+  }
+
+  button[aria-label="فتح موظف مبيعات SUMMECA"] {
+    right: max(1rem, env(safe-area-inset-right)) !important;
+    bottom: max(1rem, env(safe-area-inset-bottom)) !important;
+  }
+
+  .fixed.bottom-20.right-3 {
+    right: max(0.75rem, env(safe-area-inset-right)) !important;
+    bottom: calc(5rem + env(safe-area-inset-bottom)) !important;
+    max-height: calc(100dvh - 6rem - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  }
+}
+
+@media (max-width: 1023px) {
+  .summeca-checkout-shell .sticky.top-24 {
+    position: static;
+  }
+
+  .summeca-checkout-shell .overflow-hidden > .p-5.flex.gap-4 {
+    flex-wrap: wrap;
+  }
+
+  .summeca-checkout-shell .overflow-hidden > .p-5.flex.gap-4 > .flex-1 {
+    min-width: min(12rem, 100%);
+  }
+
+  .summeca-checkout-shell code {
+    min-width: 0;
+  }
+}
+
+@media (max-width: 430px) {
+  [data-public-nav="true"] > div:first-child {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
+
+  [data-public-nav="true"] a[aria-label="SUMMECA home"] {
+    max-width: 9rem;
+    overflow: hidden;
+  }
+
+  .summeca-checkout-shell .pt-24.pb-20 {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+}
+
+@media (max-width: 360px) {
+  [data-public-nav="true"] a[aria-label="SUMMECA home"] {
+    max-width: 7.75rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .summeca-checkout-shell .sticky.top-24 {
+    max-height: calc(100dvh - 7rem);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
