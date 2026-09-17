@@ -39,6 +39,13 @@ test('checkout makes preparing and awaiting states explicit and keeps server ver
   assert.match(checkout, /safe-area-inset-bottom/);
 });
 
+test('checkout delays the localized Suspense body until root hydration has completed', () => {
+  assert.match(checkout, /const \[hydrated, setHydrated\] = useState\(false\)/);
+  assert.match(checkout, /useEffect\(\(\) => \{\s*setHydrated\(true\);\s*\}, \[\]\);/s);
+  assert.match(checkout, /hydrated\s*\?\s*\(\s*<Suspense fallback=\{checkoutFallback\}>/s);
+  assert.match(checkout, /<CheckoutInner \/>/);
+});
+
 test('success page opens products only after a completed order state', () => {
   assert.match(success, /order\.status !== 'completed'/);
   assert.match(success, /nextOrder\.status === 'completed'/);
