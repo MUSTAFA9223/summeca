@@ -83,6 +83,8 @@ const CRYPTO_METHODS = [
   { value: 'crypto_usdt_erc20', label: 'USDT · Ethereum (ERC20)' },
 ];
 
+const SAAS_PRODUCT_SLUGS = new Set(['summeca-invoiceflow', 'summeca-leadfollow-ai']);
+
 function cryptoAssetLabel(paymentMethodType: string) {
   if (paymentMethodType === 'crypto_trx') return 'TRX';
   if (paymentMethodType === 'crypto_bnb') return 'BNB';
@@ -97,6 +99,12 @@ const categoryLabel: Record<string, string> = {
 const billingPeriodLabel: Record<string, string> = {
   one_time: 'One-time purchase', monthly: '1-month access', yearly: '1-year access', lifetime: 'Lifetime access',
 };
+
+function deliveryTypeLabel(product: Product) {
+  return SAAS_PRODUCT_SLUGS.has(product.slug)
+    ? 'Account-based SaaS access'
+    : 'Protected digital download';
+}
 
 function formatCurrency(amount: number, currency = 'USD') {
   return new Intl.NumberFormat('en-US', {
@@ -119,10 +127,18 @@ function checkoutAttemptKey(fingerprint: string) {
 }
 
 function CheckoutSkeleton() {
-  return <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 animate-pulse">
-    <div className="lg:col-span-3 space-y-4"><div className="h-8 bg-secondary/60 rounded-xl w-48" /><div className="h-40 bg-secondary/40 rounded-2xl" /><div className="h-48 bg-secondary/40 rounded-2xl" /></div>
-    <div className="lg:col-span-2"><div className="h-72 bg-secondary/40 rounded-2xl" /></div>
-  </div>;
+  return (
+    <div className="space-y-4" aria-live="polite" aria-busy="true">
+      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <Loader2 size={15} className="animate-spin text-primary" />
+        Preparing checkout…
+      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 animate-pulse">
+        <div className="lg:col-span-3 space-y-4"><div className="h-8 bg-secondary/60 rounded-xl w-48" /><div className="h-40 bg-secondary/40 rounded-2xl" /><div className="h-48 bg-secondary/40 rounded-2xl" /></div>
+        <div className="lg:col-span-2"><div className="h-72 bg-secondary/40 rounded-2xl" /></div>
+      </div>
+    </div>
+  );
 }
 
 function CheckoutInner() {
@@ -164,24 +180,38 @@ function CheckoutInner() {
   }, []);
 
   const loadCartItem = useCallback(async () => {
-    if (!productIdParam) { setPageError('No product selected. Choose a product before starting checkout.'); setPageLoading(false); return; }
-    setPageLoading(true); setPageError('');
+    if (!productIdParam) {
+      setPageError('No product selected. Choose a product before starting checkout.');
+      setPageLoading(false);
+      return;
+    }
+    setPageLoading(true);
+    setPageError('');
     try {
       const { data: product, error: productError } = await supabase.from('products')
         .select('id, name, slug, short_desc, category, thumbnail_url')
         .eq('id', productIdParam).eq('status', 'active').single();
-      if (productError || !product) { setPageError('Product not found or unavailable.'); return; }
+      if (productError || !product) {
+        setPageError('Product not found or unavailable.');
+        return;
+      }
       const { data: plans, error: plansError } = await supabase.from('product_plans')
         .select('id, name, description, price, currency, billing_period, features, is_active, sale_price, sale_discount_type, sale_discount_value, sale_starts_at, sale_ends_at')
         .eq('product_id', productIdParam).eq('is_active', true).order('sort_order', { ascending: true });
-      if (plansError || !plans?.length) { setPageError('No active plans found for this product.'); return; }
+      if (plansError || !plans?.length) {
+        setPageError('No active plans found for this product.');
+        return;
+      }
       const typedPlans = plans as ProductPlan[];
       setAllPlans(typedPlans);
       const selectedPlan = typedPlans.find((plan) => plan.id === planIdParam) ?? typedPlans[0];
       setBillingFrequency(selectedPlan.billing_period === 'yearly' ? 'yearly' : 'monthly');
       setCartItem({ product: product as Product, plan: selectedPlan });
-    } catch { setPageError('Failed to load checkout details.'); }
-    finally { setPageLoading(false); }
+    } catch {
+      setPageError('Failed to load checkout details.');
+    } finally {
+      setPageLoading(false);
+    }
   }, [planIdParam, productIdParam, supabase]);
 
   useEffect(() => { if (!authLoading) void loadCartItem(); }, [authLoading, loadCartItem]);
@@ -216,8 +246,7 @@ function CheckoutInner() {
             : undefined,
         });
       } catch {
-        // The normal checkout form remains available when a stale order URL
-        // cannot be restored.
+        // The normal checkout form remains available when a stale order URL cannot be restored.
       }
     }
     void restoreCheckoutSession();
@@ -226,8 +255,9 @@ function CheckoutInner() {
 
   const pricing = useMemo(() => {
     if (!cartItem) return null;
-    try { return getEffectivePrice(cartItem.plan); }
-    catch {
+    try {
+      return getEffectivePrice(cartItem.plan);
+    } catch {
       const price = Number(cartItem.plan.price || 0);
       return { regularPrice: price, salePrice: null, finalPrice: price, discountAmount: 0, discountPercent: 0, onSale: false };
     }
@@ -257,12 +287,18 @@ function CheckoutInner() {
     if (!matchingPlan) return;
     setBillingFrequency(frequency);
     setCartItem({ ...cartItem, plan: matchingPlan });
-    setAppliedCoupon(null); setCouponCode(''); setCouponError(''); setCryptoSession(null);
+    setAppliedCoupon(null);
+    setCouponCode('');
+    setCouponError('');
+    setCryptoSession(null);
   };
 
   const handleApplyCoupon = async () => {
     if (!couponCode.trim() || !cartItem) return;
-    setCouponLoading(true); setCouponError(''); setAppliedCoupon(null); setCryptoSession(null);
+    setCouponLoading(true);
+    setCouponError('');
+    setAppliedCoupon(null);
+    setCryptoSession(null);
     try {
       const response = await fetch('/api/payment/quote', {
         method: 'POST',
@@ -279,8 +315,11 @@ function CheckoutInner() {
         return;
       }
       setAppliedCoupon(data.coupon);
-    } catch { setCouponError('Failed to validate coupon.'); }
-    finally { setCouponLoading(false); }
+    } catch {
+      setCouponError('Failed to validate coupon.');
+    } finally {
+      setCouponLoading(false);
+    }
   };
 
   const selectedProviderAvailable = checkoutMethod === 'crypto' && cryptoStatus === 'available';
@@ -294,7 +333,9 @@ function CheckoutInner() {
       return;
     }
     if (!cartItem || (!isFreeOrder && !selectedProviderAvailable)) return;
-    setCheckoutSubmitting(true); setPageError(''); setCryptoSession(null);
+    setCheckoutSubmitting(true);
+    setPageError('');
+    setCryptoSession(null);
     let attemptStorageKey = '';
     try {
       const endpoint = isFreeOrder
@@ -329,8 +370,13 @@ function CheckoutInner() {
         }),
       });
       const data = await res.json().catch(() => ({})) as {
-        orderId?: string; redirectUrl?: string; paymentAddress?: string; cryptoAmount?: string;
-        paymentMethodType?: string; instructions?: string; error?: string;
+        orderId?: string;
+        redirectUrl?: string;
+        paymentAddress?: string;
+        cryptoAmount?: string;
+        paymentMethodType?: string;
+        instructions?: string;
+        error?: string;
         retryableNewAttempt?: boolean;
       };
       if (!res.ok || !data.orderId) {
@@ -340,89 +386,205 @@ function CheckoutInner() {
         setPageError(data.error ?? 'Failed to start checkout.');
         return;
       }
-      if (isFreeOrder) { router.push(`/checkout/success?order_id=${encodeURIComponent(data.orderId)}&free=1`); return; }
+      if (isFreeOrder) {
+        router.push(`/checkout/success?order_id=${encodeURIComponent(data.orderId)}&free=1`);
+        return;
+      }
       if (checkoutMethod === 'crypto') {
-        if (!data.paymentAddress || !data.cryptoAmount || !data.paymentMethodType) { setPageError('Crypto provider returned incomplete payment details.'); return; }
-        setCryptoSession({ orderId: data.orderId, paymentAddress: data.paymentAddress, cryptoAmount: data.cryptoAmount, paymentMethodType: data.paymentMethodType, instructions: data.instructions });
+        if (!data.paymentAddress || !data.cryptoAmount || !data.paymentMethodType) {
+          setPageError('Crypto provider returned incomplete payment details.');
+          return;
+        }
+        setCryptoSession({
+          orderId: data.orderId,
+          paymentAddress: data.paymentAddress,
+          cryptoAmount: data.cryptoAmount,
+          paymentMethodType: data.paymentMethodType,
+          instructions: data.instructions,
+        });
         if (attemptStorageKey) window.sessionStorage.removeItem(attemptStorageKey);
         const restoredUrl = new URLSearchParams(searchParams.toString());
         restoredUrl.set('order_id', data.orderId);
         router.replace('/checkout?' + restoredUrl.toString());
         return;
       }
-      if (!data.redirectUrl) { setPageError('Payment provider did not return a checkout URL.'); return; }
+      if (!data.redirectUrl) {
+        setPageError('Payment provider did not return a checkout URL.');
+        return;
+      }
       if (attemptStorageKey) window.sessionStorage.removeItem(attemptStorageKey);
       window.location.assign(data.redirectUrl);
-    } catch { setPageError('Failed to start checkout. Please try again.'); }
-    finally { setCheckoutSubmitting(false); }
+    } catch {
+      setPageError('Failed to start checkout. Please try again.');
+    } finally {
+      setCheckoutSubmitting(false);
+    }
   };
 
   const hasMonthly = allPlans.some((plan) => plan.billing_period === 'monthly');
   const hasYearly = allPlans.some((plan) => plan.billing_period === 'yearly');
 
-  return <div className="pt-24 pb-20 max-w-screen-xl mx-auto px-6 lg:px-8">
-    <div className="flex items-center gap-2 text-sm text-muted-foreground mb-8">
-      <Link href="/products" className="hover:text-foreground flex items-center gap-1"><ArrowLeft size={14} /> Products</Link><ChevronRight size={13} /><span className="text-foreground font-600">Checkout</span>
-    </div>
-    <div className="mb-8">
-      <div className="flex items-center gap-3"><div className="w-10 h-10 rounded-xl bg-gradient-teal flex items-center justify-center"><ShoppingCart size={18} className="text-white" /></div><div><h1 className="text-2xl font-800">Secure Checkout</h1><p className="text-sm text-muted-foreground">Cryptocurrency is the only payment method currently shown at SUMMECA. Payment return pages never complete paid orders.</p></div></div>
-      <div className="flex items-center gap-2 mt-4 p-3 bg-success/5 border border-success/15 rounded-xl"><Shield size={14} className="text-success" /><p className="text-xs">SUMMECA recalculates pricing server-side and grants access only after trusted payment verification.</p></div>
-    </div>
+  return (
+    <div className="pt-24 pb-[max(5rem,env(safe-area-inset-bottom))] max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="flex items-center gap-2 text-sm text-muted-foreground mb-8">
+        <Link href="/products" className="hover:text-foreground flex items-center gap-1"><ArrowLeft size={14} /> Products</Link>
+        <ChevronRight size={13} />
+        <span className="text-foreground font-600">Checkout</span>
+      </div>
 
-    {pageLoading && <CheckoutSkeleton />}
-    {!pageLoading && !cartItem && <div className="py-20 text-center"><AlertCircle className="mx-auto text-danger mb-3" /><p>{pageError || 'Checkout could not be loaded.'}</p><Link href="/products" className="btn-primary mt-5 inline-flex items-center gap-2 px-5 py-2.5"><ArrowLeft size={14} /> Back to products</Link></div>}
-    {!pageLoading && cartItem && <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 items-start">
-      <div className="lg:col-span-3 space-y-5">
-        <div className="bg-card border border-border rounded-2xl overflow-hidden">
-          <div className="px-5 py-3 border-b border-border"><h2 className="text-sm font-700 flex items-center gap-2"><Package size={15} /> Your Order</h2></div>
-          <div className="p-5 flex gap-4">
-            {cartItem.product.thumbnail_url ? <img src={cartItem.product.thumbnail_url} alt={cartItem.product.name} className="w-16 h-16 rounded-xl object-cover border border-border" /> : <div className="w-16 h-16 rounded-xl bg-primary/10 flex items-center justify-center"><Zap size={22} className="text-primary" /></div>}
-            <div className="flex-1"><span className="text-xs text-primary">{categoryLabel[cartItem.product.category] || 'Other'}</span><h3 className="font-700 mt-1">{cartItem.product.name}</h3><p className="text-xs text-muted-foreground mt-1">{cartItem.product.short_desc}</p><p className="text-xs mt-2">{cartItem.plan.name} · {billingPeriodLabel[cartItem.plan.billing_period]}</p></div>
-            <div className="text-right">{pricing?.onSale && <div className="text-xs line-through text-muted-foreground">{formatCurrency(regularPrice, currency)}</div>}<div className="font-800">{basePrice === 0 ? 'Free' : formatCurrency(basePrice, currency)}</div></div>
+      <div className="mb-8">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-gradient-teal flex items-center justify-center"><ShoppingCart size={18} className="text-white" /></div>
+          <div>
+            <h1 className="text-2xl font-800">Secure Checkout</h1>
+            <p className="text-sm text-muted-foreground">Cryptocurrency is the only payment method currently shown at SUMMECA. Payment return pages never complete paid orders.</p>
           </div>
         </div>
-
-        {hasMonthly && hasYearly && <div className="bg-card border border-border rounded-2xl p-5"><h2 className="text-sm font-700 flex items-center gap-2 mb-3"><RefreshCw size={15} /> Access Period</h2><div className="flex gap-2"><button onClick={() => handleBillingSwitch('monthly')} className={`flex-1 p-3 rounded-xl border ${billingFrequency === 'monthly' ? 'border-primary bg-primary/5' : 'border-border'}`}>1 Month</button><button onClick={() => handleBillingSwitch('yearly')} className={`flex-1 p-3 rounded-xl border ${billingFrequency === 'yearly' ? 'border-primary bg-primary/5' : 'border-border'}`}>1 Year</button></div><p className="mt-2 text-[11px] text-muted-foreground">These options describe the paid access period. They do not promise automatic renewal unless a payment provider explicitly presents a recurring agreement.</p></div>}
-
-        {!isFreeOrder && <div className="bg-card border border-border rounded-2xl p-5 space-y-3">
-          <h2 className="text-sm font-700 flex items-center gap-2"><Wallet size={15} /> Payment Method</h2>
-          <div className="w-full rounded-xl border border-primary bg-primary/5 p-4 flex gap-3">
-            <Bitcoin size={20} className="text-primary" /><div className="flex-1"><div className="font-700 text-sm">Cryptocurrency · USDT / USDC / TRX / BNB</div><p className="text-xs text-muted-foreground mt-1">Crypto-only checkout through NOWPayments. Choose the exact asset and network below; provider minimums are checked live before a payment is created.</p></div><span className="text-[10px]">{cryptoStatus === 'available' ? 'Available' : cryptoStatus === 'checking' ? 'Checking…' : 'Not configured'}</span>
-          </div>
-          <select value={cryptoMethod} onChange={(e) => { setCryptoMethod(e.target.value); setCryptoSession(null); setPageError(''); }} className="w-full px-3 py-3 bg-background border border-border rounded-xl text-sm">{CRYPTO_METHODS.map((method) => <option key={method.value} value={method.value}>{method.label}</option>)}</select>
-        </div>}
-
-        {cryptoSession && <div className="bg-card border border-primary/30 rounded-2xl p-5 space-y-4">
-          <div className="flex items-center gap-2"><CheckCircle2 size={18} className="text-success" /><h2 className="font-700">{cryptoAssetLabel(cryptoSession.paymentMethodType)} payment created</h2></div>
-          <div><p className="text-xs text-muted-foreground mb-1">Amount to send</p><p className="font-800 text-lg">{cryptoSession.cryptoAmount} {cryptoAssetLabel(cryptoSession.paymentMethodType)}</p></div>
-          <div><p className="text-xs text-muted-foreground mb-1">Payment address</p><div className="flex gap-2"><code className="flex-1 text-xs break-all p-3 bg-secondary rounded-xl">{cryptoSession.paymentAddress}</code><button type="button" onClick={() => void navigator.clipboard.writeText(cryptoSession.paymentAddress)} className="px-3 rounded-xl border border-border" aria-label="Copy payment address"><Copy size={14} /></button></div></div>
-          <div className="p-3 rounded-xl bg-warning/5 border border-warning/20 text-xs">Send only {cryptoAssetLabel(cryptoSession.paymentMethodType)} on the selected network. Sending another asset or the wrong network can result in permanent loss. SUMMECA waits for the verified provider webhook before granting access.</div>
-          <p className="text-xs text-muted-foreground">Order: {cryptoSession.orderId}</p>
-        </div>}
-
-        <div className="bg-card border border-border rounded-2xl p-5">
-          <h2 className="text-sm font-700 flex items-center gap-2 mb-3"><Tag size={15} /> Coupon Code</h2>
-          {appliedCoupon ? <div className="flex items-center justify-between bg-success/5 border border-success/20 rounded-xl px-4 py-3"><span className="text-sm font-700">{appliedCoupon.code}</span><button onClick={() => { setAppliedCoupon(null); setCouponCode(''); setCryptoSession(null); }}><X size={15} /></button></div> : <div className="flex gap-2"><input value={couponCode} onChange={(e) => { setCouponCode(e.target.value.toUpperCase()); setCouponError(''); }} placeholder="Enter coupon code" className="flex-1 px-3 py-2.5 bg-secondary border border-border rounded-xl text-sm" /><button onClick={() => void handleApplyCoupon()} disabled={couponLoading || !couponCode.trim()} className="btn-primary px-4 rounded-xl disabled:opacity-50">{couponLoading ? <Loader2 size={14} className="animate-spin" /> : 'Apply'}</button></div>}
-          {couponError && <p className="text-xs text-danger mt-2">{couponError}</p>}
+        <div className="flex items-center gap-2 mt-4 p-3 bg-success/5 border border-success/15 rounded-xl">
+          <Shield size={14} className="text-success shrink-0" />
+          <p className="text-xs">SUMMECA recalculates pricing server-side and grants access only after trusted payment verification.</p>
         </div>
       </div>
 
-      <div className="lg:col-span-2"><div className="bg-card border border-border rounded-2xl sticky top-24 p-5">
-        <h2 className="text-sm font-700 mb-4">Order Summary</h2>
-        <div className="space-y-3 text-sm"><div className="flex justify-between"><span className="text-muted-foreground">Regular price</span><span>{formatCurrency(regularPrice, currency)}</span></div>{pricing?.discountAmount ? <div className="flex justify-between text-success"><span>Sale discount</span><span>-{formatCurrency(pricing.discountAmount, currency)}</span></div> : null}{couponDiscountAmount > 0 && <div className="flex justify-between text-success"><span>Coupon discount</span><span>-{formatCurrency(couponDiscountAmount, currency)}</span></div>}<div className="border-t border-border pt-3 flex justify-between"><span className="font-700">Total</span><span className="text-xl font-800">{finalAmount === 0 ? 'Free' : formatCurrency(finalAmount, currency)}</span></div></div>
-        <div className="mt-4 p-3 bg-secondary/60 rounded-xl text-xs flex gap-2"><Info size={13} className="mt-0.5" /><span>Payment success pages are informational only. Paid access is granted by verified server-side events.</span></div>
-        {!user && !authLoading && <div className="mt-4 p-3 bg-warning/5 border border-warning/20 rounded-xl text-xs">Sign in to continue.</div>}
-        {pageError && <div className="mt-4 p-3 bg-danger/5 border border-danger/20 rounded-xl text-xs text-danger">{pageError}</div>}
-        <button onClick={() => void handleCheckout()} disabled={authLoading || checkoutSubmitting || (!isFreeOrder && !selectedProviderAvailable) || Boolean(cryptoSession)} className="mt-4 w-full py-3.5 bg-gradient-teal text-white font-700 text-sm rounded-xl disabled:opacity-50 flex items-center justify-center gap-2">
-          {checkoutSubmitting ? <><Loader2 size={16} className="animate-spin" /> Processing…</> : !user ? 'Sign In to Continue' : isFreeOrder ? <><CheckCircle2 size={15} /> Get Free Access</> : <><Bitcoin size={15} /> Create {cryptoAssetLabel(cryptoMethod)} Payment</>}
-        </button>
-        <p className="text-center text-xs text-muted-foreground mt-3 flex items-center justify-center gap-1"><Lock size={11} /> {isFreeOrder ? 'No payment information required' : 'Crypto payment details are handled by the provider and never stored by SUMMECA'}</p>
-        <div className="mt-5 pt-4 border-t border-border text-center"><Link href={`/products/${cartItem.product.slug}`} className="text-xs text-muted-foreground">← Back to product</Link></div>
-      </div></div>
-    </div>}
-  </div>;
+      {pageLoading && <CheckoutSkeleton />}
+      {!pageLoading && !cartItem && (
+        <div className="py-20 text-center">
+          <AlertCircle className="mx-auto text-danger mb-3" />
+          <p>{pageError || 'Checkout could not be loaded.'}</p>
+          <Link href="/products" className="btn-primary mt-5 inline-flex items-center gap-2 px-5 py-2.5"><ArrowLeft size={14} /> Back to products</Link>
+        </div>
+      )}
+
+      {!pageLoading && cartItem && (
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 items-start">
+          <div className="lg:col-span-3 space-y-5 min-w-0">
+            <div className="bg-card border border-border rounded-2xl overflow-hidden">
+              <div className="px-5 py-3 border-b border-border"><h2 className="text-sm font-700 flex items-center gap-2"><Package size={15} /> Your Order</h2></div>
+              <div className="p-5 flex gap-4 min-w-0">
+                {cartItem.product.thumbnail_url
+                  ? <img src={cartItem.product.thumbnail_url} alt={cartItem.product.name} className="w-16 h-16 rounded-xl object-cover border border-border shrink-0" />
+                  : <div className="w-16 h-16 rounded-xl bg-primary/10 flex items-center justify-center shrink-0"><Zap size={22} className="text-primary" /></div>}
+                <div className="flex-1 min-w-0">
+                  <span className="text-xs text-primary">{categoryLabel[cartItem.product.category] || 'Other'}</span>
+                  <h3 className="font-700 mt-1 break-words">{cartItem.product.name}</h3>
+                  <p className="text-xs text-muted-foreground mt-1 break-words">{cartItem.product.short_desc}</p>
+                  <p className="text-xs mt-2">{cartItem.plan.name} · {billingPeriodLabel[cartItem.plan.billing_period]}</p>
+                  <p className="text-xs text-muted-foreground mt-1">{deliveryTypeLabel(cartItem.product)}</p>
+                </div>
+                <div className="text-right shrink-0">
+                  {pricing?.onSale && <div className="text-xs line-through text-muted-foreground">{formatCurrency(regularPrice, currency)}</div>}
+                  <div className="font-800">{basePrice === 0 ? 'Free' : formatCurrency(basePrice, currency)}</div>
+                </div>
+              </div>
+            </div>
+
+            {hasMonthly && hasYearly && (
+              <div className="bg-card border border-border rounded-2xl p-5">
+                <h2 className="text-sm font-700 flex items-center gap-2 mb-3"><RefreshCw size={15} /> Access Period</h2>
+                <div className="flex gap-2">
+                  <button onClick={() => handleBillingSwitch('monthly')} className={`flex-1 p-3 min-h-11 rounded-xl border ${billingFrequency === 'monthly' ? 'border-primary bg-primary/5' : 'border-border'}`}>1 Month</button>
+                  <button onClick={() => handleBillingSwitch('yearly')} className={`flex-1 p-3 min-h-11 rounded-xl border ${billingFrequency === 'yearly' ? 'border-primary bg-primary/5' : 'border-border'}`}>1 Year</button>
+                </div>
+                <p className="mt-2 text-[11px] text-muted-foreground">These options describe the paid access period. They do not promise automatic renewal unless a payment provider explicitly presents a recurring agreement.</p>
+              </div>
+            )}
+
+            {!isFreeOrder && (
+              <div className="bg-card border border-border rounded-2xl p-5 space-y-3">
+                <h2 className="text-sm font-700 flex items-center gap-2"><Wallet size={15} /> Payment Method</h2>
+                <div className="w-full rounded-xl border border-primary bg-primary/5 p-4 flex gap-3 min-w-0">
+                  <Bitcoin size={20} className="text-primary shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <div className="font-700 text-sm">Cryptocurrency · USDT / USDC / TRX / BNB</div>
+                    <p className="text-xs text-muted-foreground mt-1">Crypto-only checkout through NOWPayments. Choose the exact asset and network below; provider minimums are checked live before a payment is created.</p>
+                  </div>
+                  <span className="text-[10px] shrink-0">{cryptoStatus === 'available' ? 'Available' : cryptoStatus === 'checking' ? 'Checking…' : 'Not configured'}</span>
+                </div>
+                <select
+                  value={cryptoMethod}
+                  onChange={(e) => { setCryptoMethod(e.target.value); setCryptoSession(null); setPageError(''); }}
+                  className="w-full px-3 py-3 min-h-11 bg-background border border-border rounded-xl text-sm"
+                >
+                  {CRYPTO_METHODS.map((method) => <option key={method.value} value={method.value}>{method.label}</option>)}
+                </select>
+              </div>
+            )}
+
+            {cryptoSession && (
+              <div className="bg-card border border-primary/30 rounded-2xl p-5 space-y-4" aria-live="polite">
+                <div className="flex items-center gap-2"><Loader2 size={18} className="text-primary animate-spin" /><h2 className="font-700">Awaiting payment</h2></div>
+                <p className="text-xs text-muted-foreground">Payment details are ready. Your order remains pending until SUMMECA receives verified provider confirmation.</p>
+                <div><p className="text-xs text-muted-foreground mb-1">Amount to send</p><p className="font-800 text-lg">{cryptoSession.cryptoAmount} {cryptoAssetLabel(cryptoSession.paymentMethodType)}</p></div>
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">Payment address</p>
+                  <div className="flex gap-2 min-w-0">
+                    <code className="flex-1 min-w-0 text-xs break-all p-3 bg-secondary rounded-xl">{cryptoSession.paymentAddress}</code>
+                    <button type="button" onClick={() => void navigator.clipboard.writeText(cryptoSession.paymentAddress)} className="px-3 min-h-11 rounded-xl border border-border shrink-0" aria-label="Copy payment address"><Copy size={14} /></button>
+                  </div>
+                </div>
+                <div className="p-3 rounded-xl bg-warning/5 border border-warning/20 text-xs">Send only {cryptoAssetLabel(cryptoSession.paymentMethodType)} on the selected network. Sending another asset or the wrong network can result in permanent loss. SUMMECA waits for the verified provider webhook before granting access.</div>
+                <p className="text-xs text-muted-foreground break-all">Order: {cryptoSession.orderId}</p>
+              </div>
+            )}
+
+            <div className="bg-card border border-border rounded-2xl p-5">
+              <h2 className="text-sm font-700 flex items-center gap-2 mb-3"><Tag size={15} /> Coupon Code</h2>
+              {appliedCoupon
+                ? <div className="flex items-center justify-between bg-success/5 border border-success/20 rounded-xl px-4 py-3"><span className="text-sm font-700">{appliedCoupon.code}</span><button onClick={() => { setAppliedCoupon(null); setCouponCode(''); setCryptoSession(null); }} aria-label="Remove coupon"><X size={15} /></button></div>
+                : <div className="flex gap-2"><input value={couponCode} onChange={(e) => { setCouponCode(e.target.value.toUpperCase()); setCouponError(''); }} placeholder="Enter coupon code" className="flex-1 min-w-0 px-3 py-2.5 min-h-11 bg-secondary border border-border rounded-xl text-sm" /><button onClick={() => void handleApplyCoupon()} disabled={couponLoading || !couponCode.trim()} className="btn-primary px-4 min-h-11 rounded-xl disabled:opacity-50">{couponLoading ? <Loader2 size={14} className="animate-spin" /> : 'Apply'}</button></div>}
+              {couponError && <p className="text-xs text-danger mt-2">{couponError}</p>}
+            </div>
+          </div>
+
+          <div className="lg:col-span-2 min-w-0">
+            <div className="bg-card border border-border rounded-2xl lg:sticky lg:top-24 p-5">
+              <h2 className="text-sm font-700 mb-4">Order Summary</h2>
+              <dl className="space-y-3 text-sm">
+                <div className="flex justify-between gap-4"><dt className="text-muted-foreground">Product</dt><dd className="font-600 text-right break-words">{cartItem.product.name}</dd></div>
+                <div className="flex justify-between gap-4"><dt className="text-muted-foreground">Plan</dt><dd className="font-600 text-right break-words">{cartItem.plan.name}</dd></div>
+                <div className="flex justify-between gap-4"><dt className="text-muted-foreground">Access duration</dt><dd className="text-right">{billingPeriodLabel[cartItem.plan.billing_period]}</dd></div>
+                <div className="flex justify-between gap-4"><dt className="text-muted-foreground">Delivery type</dt><dd className="text-right">{deliveryTypeLabel(cartItem.product)}</dd></div>
+                <div className="flex justify-between gap-4"><dt className="text-muted-foreground">Currency</dt><dd>{currency}</dd></div>
+                <div className="border-t border-border pt-3 flex justify-between"><dt className="text-muted-foreground">Regular price</dt><dd>{formatCurrency(regularPrice, currency)}</dd></div>
+                {pricing?.discountAmount ? <div className="flex justify-between text-success"><dt>Sale discount</dt><dd>-{formatCurrency(pricing.discountAmount, currency)}</dd></div> : null}
+                {couponDiscountAmount > 0 && <div className="flex justify-between text-success"><dt>Coupon discount</dt><dd>-{formatCurrency(couponDiscountAmount, currency)}</dd></div>}
+                <div className="border-t border-border pt-3 flex justify-between"><dt className="font-700">Total</dt><dd className="text-xl font-800">{finalAmount === 0 ? 'Free' : formatCurrency(finalAmount, currency)}</dd></div>
+              </dl>
+
+              <div className="mt-4 p-3 bg-secondary/60 rounded-xl text-xs flex gap-2"><Info size={13} className="mt-0.5 shrink-0" /><span>Payment success pages are informational only. Paid access is granted by verified server-side events.</span></div>
+              {!user && !authLoading && <div className="mt-4 p-3 bg-warning/5 border border-warning/20 rounded-xl text-xs">Sign in to continue.</div>}
+              {pageError && <div className="mt-4 p-3 bg-danger/5 border border-danger/20 rounded-xl text-xs text-danger">{pageError}</div>}
+              <button
+                onClick={() => void handleCheckout()}
+                disabled={authLoading || checkoutSubmitting || (!isFreeOrder && !selectedProviderAvailable) || Boolean(cryptoSession)}
+                className="mt-4 w-full min-h-12 py-3.5 bg-gradient-teal text-white font-700 text-sm rounded-xl disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {checkoutSubmitting
+                  ? <><Loader2 size={16} className="animate-spin" /> Preparing payment…</>
+                  : !user
+                    ? 'Sign In to Continue'
+                    : isFreeOrder
+                      ? <><CheckCircle2 size={15} /> Get Free Access</>
+                      : <><Bitcoin size={15} /> Create {cryptoAssetLabel(cryptoMethod)} Payment</>}
+              </button>
+              <p className="text-center text-xs text-muted-foreground mt-3 flex items-center justify-center gap-1"><Lock size={11} /> {isFreeOrder ? 'No payment information required' : 'Crypto payment details are handled by the provider and never stored by SUMMECA'}</p>
+              <div className="mt-5 pt-4 border-t border-border text-center"><Link href={`/products/${cartItem.product.slug}`} className="text-xs text-muted-foreground">← Back to product</Link></div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
 
 export default function CheckoutPage() {
-  return <div className="min-h-screen bg-background"><PublicNav /><Suspense fallback={<div className="pt-24 pb-20 max-w-screen-xl mx-auto px-6 lg:px-8"><CheckoutSkeleton /></div>}><CheckoutInner /></Suspense><PublicFooter /></div>;
+  return (
+    <div className="min-h-screen bg-background">
+      <PublicNav />
+      <Suspense fallback={<div className="pt-24 pb-20 max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8"><CheckoutSkeleton /></div>}>
+        <CheckoutInner />
+      </Suspense>
+      <PublicFooter />
+    </div>
+  );
 }
