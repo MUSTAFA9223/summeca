@@ -54,3 +54,24 @@ html[data-site-theme='light'] article[class~='bg-[#101820]'] .border-slate-700 {
 html[data-site-theme='light'] article[class~='bg-[#101820]'] .bg-slate-800\/60 {
   background-color: rgba(30, 50, 59, 0.78) !important;
 }
+
+/* Match the Featured sort control to the selected All category pill. */
+select[aria-label='Sort products'] {
+  background-color: #67e8f9 !important;
+  border-color: #67e8f9 !important;
+  color: #041014 !important;
+  box-shadow: 0 8px 24px rgba(34, 211, 238, 0.18);
+  color-scheme: light;
+}
+
+select[aria-label='Sort products']:hover,
+select[aria-label='Sort products']:focus {
+  background-color: #67e8f9 !important;
+  border-color: #67e8f9 !important;
+  color: #041014 !important;
+}
+
+select[aria-label='Sort products'] option {
+  background-color: #ffffff;
+  color: #062b35;
+}

@@ -4,14 +4,20 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const catalog = fs.readFileSync(path.resolve(__dirname, '../src/components/catalog/CatalogClient.tsx'), 'utf8');
+const catalogContrast = fs.readFileSync(path.resolve(__dirname, '../src/styles/catalog-contrast.css'), 'utf8');
 
-test('catalog sort control uses the same neutral pill surface as inactive category filters', () => {
+test('catalog sort control matches the selected All category turquoise surface', () => {
+  assert.match(catalog, /<select[\s\S]*?aria-label="Sort products"/);
   assert.match(
-    catalog,
-    /<select[\s\S]*?className="rounded-lg border border-white\/10 bg-white\/\[0\.035\][^"]*text-slate-400/,
+    catalogContrast,
+    /select\[aria-label='Sort products'\][\s\S]*?background-color:\s*#67e8f9\s*!important;/,
+  );
+  assert.match(
+    catalogContrast,
+    /select\[aria-label='Sort products'\][\s\S]*?color:\s*#041014\s*!important;/,
   );
   assert.doesNotMatch(
-    catalog,
-    /<select[\s\S]*?className="[^"]*bg-\[#0b1117\][^"]*"/,
+    catalogContrast,
+    /select\[aria-label='Sort products'\][^{]*\{[^}]*background-color:\s*#0b1117/i,
   );
 });
