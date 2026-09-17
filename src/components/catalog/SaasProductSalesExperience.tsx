@@ -14,7 +14,10 @@ type DemoSlug = 'summeca-invoiceflow' | 'summeca-leadfollow-ai';
 
 // Publish only recordings captured from the real customer-facing workspaces.
 // Keep a slug absent until its final demo file is hosted and verified.
-const DEMO_VIDEO_BY_SLUG: Partial<Record<DemoSlug, string>> = {};
+const DEMO_VIDEO_BY_SLUG: Partial<Record<DemoSlug, string>> = {
+  'summeca-invoiceflow': '/assets/product-videos/summeca-invoiceflow-6s.mp4',
+  'summeca-leadfollow-ai': '/assets/product-videos/summeca-leadfollow-ai-6s.mp4',
+};
 
 function demoVideoFor(slug: string) {
   if (slug !== 'summeca-invoiceflow' && slug !== 'summeca-leadfollow-ai') return null;
