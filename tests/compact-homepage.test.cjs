@@ -21,7 +21,8 @@ test('homepage keeps only three featured products and stays focused on store out
 });
 
 test('hero is concise, store-specific, and shows real product workspace previews', () => {
-  assert.match(hero, /min-h-\[620px\]/);
+  assert.match(hero, /min-h-\[580px\]/);
+  assert.match(hero, /lg:min-h-\[620px\]/);
   assert.match(hero, /Built for small e-commerce stores/);
   assert.match(hero, /Run your store faster/);
   assert.match(hero, /Get Started/);
