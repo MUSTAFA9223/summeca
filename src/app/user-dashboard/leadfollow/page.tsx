@@ -336,7 +336,7 @@ export default function LeadFollowPage() {
           <div>
             <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-primary"><Sparkles size={15}/> SUMMECA SaaS</div>
             <h1 className="mt-2 text-3xl font-black tracking-tight">LeadFollow AI</h1>
-            <p className="mt-2 text-sm text-muted-foreground">Keep every lead organized, generate grounded follow-ups, and send reviewed email drafts directly from SUMMECA.</p>
+            <p className="mt-2 text-sm text-muted-foreground">Keep every lead organized, generate grounded follow-ups, and send reviewed email drafts through your connected mailbox.</p>
           </div>
           <div className="flex flex-wrap gap-2">
             <span className="rounded-full bg-primary/10 px-3 py-2 text-xs font-bold text-primary">{data.access.planName} · Lifetime</span>
@@ -392,7 +392,7 @@ export default function LeadFollowPage() {
 
           <form id="follow-up-studio" onSubmit={generateDraft} className="scroll-mt-24 rounded-2xl border border-primary/25 bg-gradient-to-br from-primary/[0.05] to-card p-6">
             <div className="flex items-center gap-2"><Bot size={19} className="text-primary"/><h2 className="font-bold">AI follow-up studio</h2></div>
-            <p className="mt-1 text-xs text-muted-foreground">Generate and review the draft first. Email-channel drafts can then be sent directly from SUMMECA; other channels remain copy-and-send.</p>
+            <p className="mt-1 text-xs text-muted-foreground">Generate and review the draft first. Email-channel drafts can then be sent through your connected mailbox; other channels remain copy-and-send.</p>
             <div className="mt-5 grid gap-3 sm:grid-cols-2">
               <select required className="form-input sm:col-span-2" value={selectedLeadId} onChange={(e) => setSelectedLeadId(e.target.value)}>
                 <option value="">Choose a lead</option>
@@ -432,7 +432,7 @@ export default function LeadFollowPage() {
                     />
                     <label className="flex items-start gap-2 text-xs leading-5 text-muted-foreground">
                       <input type="checkbox" className="mt-1" checked={emailPermissionConfirmed} onChange={(event) => setEmailPermissionConfirmed(event.target.checked)} />
-                      <span>I confirm I have permission or a lawful basis to email this lead. The message will be sent through SUMMECA and replies will go to my SUMMECA account email.</span>
+                      <span>I confirm I have permission or a lawful basis to email this lead. The message will use my connected mailbox when available; otherwise SUMMECA will use its configured fallback delivery and route replies to my account email.</span>
                     </label>
                     <button
                       type="button"
