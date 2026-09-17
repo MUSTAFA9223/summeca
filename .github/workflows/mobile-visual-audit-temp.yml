@@ -1,0 +1,188 @@
+name: Mobile Visual Audit Temporary
+
+on:
+  push:
+    branches:
+      - fix/mobile-responsive-audit-2026-09-17-v2
+
+permissions:
+  contents: read
+
+jobs:
+  visual-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: https://encrvihpdkvubxyvphlt.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+      NEXT_PUBLIC_SITE_URL: http://127.0.0.1:4028
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install app dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Install temporary browser tooling
+        run: |
+          npm install --no-save --no-package-lock playwright@1.55.0
+          npx playwright install --with-deps chromium
+
+      - name: Start SUMMECA locally
+        shell: bash
+        run: |
+          nohup npm run dev > /tmp/summeca-dev.log 2>&1 &
+          echo $! > /tmp/summeca-dev.pid
+          for i in $(seq 1 90); do
+            if curl --fail --silent http://127.0.0.1:4028/ >/dev/null; then
+              exit 0
+            fi
+            sleep 2
+          done
+          cat /tmp/summeca-dev.log
+          exit 1
+
+      - name: Capture responsive matrix and assert no horizontal overflow
+        shell: bash
+        run: |
+          mkdir -p visual-audit
+          cat > /tmp/mobile-visual-audit.cjs <<'NODE'
+          const { chromium } = require('playwright');
+          const fs = require('fs');
+          const path = require('path');
+
+          const sizes = [
+            [320, 568],
+            [375, 667],
+            [390, 844],
+            [430, 932],
+            [768, 1024],
+            [1024, 768],
+            [1440, 900],
+          ];
+          const states = [
+            ['en', 'light'],
+            ['en', 'dark'],
+            ['ar', 'light'],
+            ['ar', 'dark'],
+          ];
+          const routes = [
+            ['home', '/'],
+            ['products', '/products'],
+            ['pricing', '/pricing'],
+            ['invoiceflow-product', '/products/summeca-invoiceflow'],
+            ['leadfollow-product', '/products/summeca-leadfollow-ai'],
+            ['login', '/sign-up-login-screen'],
+            ['checkout-shell', '/checkout'],
+            ['invoiceflow-protected', '/user-dashboard/invoiceflow'],
+            ['leadfollow-protected', '/user-dashboard/leadfollow'],
+          ];
+
+          (async () => {
+            const browser = await chromium.launch({ headless: true });
+            const report = [];
+            let failures = 0;
+
+            for (const [width, height] of sizes) {
+              for (const [language, theme] of states) {
+                const context = await browser.newContext({ viewport: { width, height }, deviceScaleFactor: 1 });
+                await context.addInitScript(({ language, theme }) => {
+                  localStorage.setItem('summeca.language', language);
+                  localStorage.setItem('summeca:theme', theme);
+                }, { language, theme });
+
+                for (const [name, route] of routes) {
+                  const page = await context.newPage();
+                  const errors = [];
+                  page.on('pageerror', (error) => errors.push(`pageerror:${error.message}`));
+                  page.on('console', (msg) => {
+                    if (msg.type() === 'error') errors.push(`console:${msg.text()}`);
+                  });
+
+                  let responseStatus = null;
+                  try {
+                    const response = await page.goto(`http://127.0.0.1:4028${route}`, { waitUntil: 'domcontentloaded', timeout: 45000 });
+                    responseStatus = response?.status() ?? null;
+                    await page.waitForTimeout(2200);
+
+                    const metrics = await page.evaluate(() => ({
+                      innerWidth: window.innerWidth,
+                      scrollWidth: document.documentElement.scrollWidth,
+                      bodyScrollWidth: document.body?.scrollWidth ?? 0,
+                      dir: document.documentElement.dir,
+                      lang: document.documentElement.lang,
+                      theme: document.documentElement.dataset.siteTheme ?? null,
+                      title: document.title,
+                    }));
+                    const overflow = Math.max(metrics.scrollWidth, metrics.bodyScrollWidth) > metrics.innerWidth + 1;
+                    const dirMismatch = language === 'ar' ? metrics.dir !== 'rtl' : metrics.dir !== 'ltr';
+                    const themeMismatch = metrics.theme !== theme;
+                    if (overflow || dirMismatch || themeMismatch) failures += 1;
+
+                    const filename = `${width}x${height}__${language}-${theme}__${name}.jpg`;
+                    await page.screenshot({
+                      path: path.join('visual-audit', filename),
+                      type: 'jpeg',
+                      quality: 68,
+                      fullPage: true,
+                    });
+                    report.push({
+                      width,
+                      height,
+                      language,
+                      theme,
+                      name,
+                      route,
+                      finalUrl: page.url(),
+                      responseStatus,
+                      overflow,
+                      dirMismatch,
+                      themeMismatch,
+                      metrics,
+                      consoleErrors: errors.slice(0, 8),
+                      screenshot: filename,
+                    });
+                  } catch (error) {
+                    failures += 1;
+                    report.push({ width, height, language, theme, name, route, error: String(error), consoleErrors: errors.slice(0, 8) });
+                  } finally {
+                    await page.close();
+                  }
+                }
+                await context.close();
+              }
+            }
+
+            fs.writeFileSync('visual-audit/report.json', JSON.stringify({ failures, cases: report.length, report }, null, 2));
+            console.log(`Visual audit cases=${report.length} failures=${failures}`);
+            for (const item of report.filter((item) => item.overflow || item.dirMismatch || item.themeMismatch || item.error)) {
+              console.log(JSON.stringify(item));
+            }
+            await browser.close();
+            if (failures > 0) process.exit(2);
+          })().catch((error) => {
+            console.error(error);
+            process.exit(3);
+          });
+          NODE
+          node /tmp/mobile-visual-audit.cjs
+
+      - name: Upload responsive screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mobile-responsive-visual-audit
+          path: visual-audit
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Show dev server log on failure
+        if: failure()
+        run: tail -n 250 /tmp/summeca-dev.log || true
