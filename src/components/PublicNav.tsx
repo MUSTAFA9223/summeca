@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import AppLogo from '@/components/ui/AppLogo';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
+import { ThemeSwitcher } from '@/components/GlobalThemeSwitcher';
 import { useAuth } from '@/contexts/AuthContext';
 import { trackEvent } from '@/lib/analytics';
 
@@ -71,6 +72,7 @@ export default function PublicNav() {
   return (
     <header
       data-public-nav="true"
+      data-theme-switcher-host="true"
       className="sticky top-0 z-50 -mb-[70px] border-b border-primary/10 bg-background/90 shadow-sm shadow-primary/5 backdrop-blur-xl transition-[background-color,box-shadow,border-color] duration-300"
     >
       <div className="mx-auto max-w-screen-xl px-5 sm:px-6 lg:px-8">
@@ -93,6 +95,7 @@ export default function PublicNav() {
 
           <div className="hidden items-center gap-2 lg:flex">
             <LanguageSwitcher compact />
+            <ThemeSwitcher compact />
             {loading ? (
               <div className="h-9 w-24 animate-pulse rounded-lg bg-secondary/70" aria-label="Loading account" />
             ) : user ? (
@@ -159,6 +162,10 @@ export default function PublicNav() {
               </Link>
             ))}
             <div className="mt-3 flex flex-col gap-2.5 border-t border-border pt-4">
+              <div className="flex min-h-11 items-center justify-between rounded-xl border border-border bg-secondary/30 px-3 py-2">
+                <span className="text-sm font-semibold text-secondary-foreground">Theme</span>
+                <ThemeSwitcher compact />
+              </div>
               {loading ? (
                 <div className="h-10 animate-pulse rounded-xl bg-secondary/70" aria-label="Loading account" />
               ) : user ? (
