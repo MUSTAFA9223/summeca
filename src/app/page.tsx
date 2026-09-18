@@ -19,9 +19,9 @@ import { getPublicCatalog } from '@/lib/catalog/publicCatalog';
 
 export const revalidate = 300;
 export const metadata = {
-  title: { absolute: 'SUMMECA — Digital Tools for Small Online Businesses' },
+  title: { absolute: 'SUMMECA — AI & SaaS Tools for Modern Business' },
   description:
-    'Practical SUMMECA tools for small online businesses: invoicing, customer follow-up, conversion workflows, ready-to-use digital kits, and business templates with transparent production pricing.',
+    'Focused SUMMECA AI and SaaS applications for lead follow-up, client proposals, invoicing, and practical business workflows.',
 };
 
 type ProductPlan = {
@@ -49,13 +49,9 @@ type PublishedProduct = {
 };
 
 const FEATURED_PRODUCT_ORDER = [
-  'summeca-invoiceflow',
   'summeca-leadfollow-ai',
   'summeca-proposalflow-ai',
-  'conversion-rescue-kit-pro',
-  'ecommerce-product-page-conversion-kit',
-  'conversion-rescue-kit-starter',
-  'conversion-rescue-kit-ultimate',
+  'summeca-invoiceflow',
 ];
 
 function productTypeLabel(product: PublishedProduct) {
@@ -200,7 +196,7 @@ export default async function HomePage() {
 
   const featuredProducts = [...products]
     .sort((a, b) => productRank(a) - productRank(b))
-    .slice(0, 4);
+    .slice(0, 3);
 
   return (
     <div className="min-h-screen overflow-x-clip bg-background">
@@ -253,13 +249,13 @@ export default async function HomePage() {
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <p className="text-[11px] font-800 uppercase tracking-[0.18em] text-primary">
-                Real products, real interfaces
+                Focused AI & SaaS products
               </p>
               <h2
                 id="featured-products-title"
                 className="mt-2 max-w-2xl text-2xl font-800 tracking-tight text-foreground sm:text-3xl"
               >
-                Start with the store workflow slowing you down today.
+                Move from lead to proposal to invoice with SUMMECA.
               </h2>
             </div>
             <Link
@@ -297,13 +293,13 @@ export default async function HomePage() {
             <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
               <div>
                 <p className="text-[11px] font-800 uppercase tracking-[0.18em] text-primary">
-                  Solutions for small stores
+                  One connected business workflow
                 </p>
                 <h2
                   id="solutions-title"
                   className="mt-2 max-w-2xl text-2xl font-800 tracking-tight text-foreground sm:text-3xl"
                 >
-                  Choose the outcome you need, not a software category.
+                  Capture the lead, prepare the proposal, then invoice the work.
                 </h2>
               </div>
             </div>
@@ -340,18 +336,18 @@ export default async function HomePage() {
                 </span>
               </Link>
               <Link
-                href="/products/conversion-rescue-kit-pro"
+                href="/products/summeca-proposalflow-ai"
                 className="group rounded-2xl border border-border bg-card p-5 transition duration-200 hover:-translate-y-0.5 hover:border-primary/35 hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary motion-reduce:transform-none motion-reduce:transition-none"
               >
                 <div className="flex items-center gap-3">
                   <FileText size={20} className="text-primary" />
-                  <h3 className="text-base font-800 text-foreground">Improve conversion pages</h3>
+                  <h3 className="text-base font-800 text-foreground">Turn a brief into a proposal</h3>
                 </div>
                 <p className="mt-3 text-sm leading-6 text-muted-foreground">
-                  Apply ready-to-use conversion assets and implementation guidance without starting every page from a blank screen.
+                  Generate a structured client proposal, scope, deliverables, pricing wording and follow-up in one AI-assisted workspace.
                 </p>
                 <span className="mt-4 inline-flex min-h-10 items-center gap-2 text-sm font-700 text-primary">
-                  View Conversion Kit <ArrowRight size={13} />
+                  Explore ProposalFlow <ArrowRight size={13} />
                 </span>
               </Link>
             </div>
@@ -410,10 +406,10 @@ export default async function HomePage() {
         <section className="border-t border-border bg-secondary/20">
           <div className="mx-auto max-w-5xl px-6 py-12 text-center sm:py-14">
             <p className="text-[11px] font-800 uppercase tracking-[0.18em] text-primary">
-              Find your next tool
+              Build one connected workflow
             </p>
             <h2 className="mx-auto mt-2 max-w-3xl text-2xl font-800 tracking-tight text-foreground sm:text-3xl">
-              Start with one workflow, then add only what your store needs.
+              Follow up leads, create proposals, and invoice clients from focused SUMMECA apps.
             </h2>
             <p className="mx-auto mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">
               Create an account to access your dashboard, or review live production pricing before you decide.
