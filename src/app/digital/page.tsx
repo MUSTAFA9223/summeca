@@ -10,7 +10,6 @@ export const metadata: Metadata = {
   title: 'Digital Products',
   description:
     'Browse published SUMMECA templates, datasets, and digital products with pricing from active production plans.',
-  alternates: { canonical: '/digital' },
   robots: { index: true, follow: true },
   openGraph: {
     type: 'website',
