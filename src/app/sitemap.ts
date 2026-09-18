@@ -58,6 +58,8 @@ function pushLocalizedEntries(
 }
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  // Static routes intentionally omit lastModified. Using the current time here would
+  // falsely tell crawlers that every public page changed whenever this sitemap revalidates.
   const entries: MetadataRoute.Sitemap = [];
 
   for (const route of publicRoutes) {
@@ -94,11 +96,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     for (const product of data ?? []) {
       if (!product.slug) continue;
       const lastModified = validDate(product.updated_at);
-      pushLocalizedEntries(entries, `/products/${encodeURIComponent(product.slug)}`, {
-        changeFrequency: 'weekly',
+      const productOptions = {
+        ...(lastModified ? { lastModified } : {}),
+        changeFrequency: 'weekly' as const,
         priority: 0.8,
-        lastModified,
-      });
+      };
+      pushLocalizedEntries(
+        entries,
+        `/products/${encodeURIComponent(product.slug)}`,
+        productOptions,
+      );
     }
   } catch (error) {
     console.warn('[sitemap] Product sitemap generation failed:', error);
