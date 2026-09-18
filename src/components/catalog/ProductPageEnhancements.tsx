@@ -44,7 +44,7 @@ export default function ProductPageEnhancements() {
   const pathname = usePathname();
   const { isArabic, t } = useLanguage();
   const slug = productSlug(pathname);
-  const isSaasProduct = slug === 'summeca-invoiceflow' || slug === 'summeca-leadfollow-ai';
+  const isSaasProduct = slug === 'summeca-invoiceflow' || slug === 'summeca-leadfollow-ai' || slug === 'summeca-proposalflow-ai';
   const [providerAvailability, setProviderAvailability] = useState<ProviderAvailability>({
     crypto: null,
     payoneer: null,
@@ -208,7 +208,9 @@ export default function ProductPageEnhancements() {
     ? t('Preview UI is shown in English; supported draft languages are selected inside LeadFollow AI.')
     : slug === 'summeca-invoiceflow'
       ? t('The product preview is shown in English for a consistent buying experience.')
-      : null;
+      : slug === 'summeca-proposalflow-ai'
+        ? t('ProposalFlow AI generates English or Arabic proposal packages from the facts you provide.')
+        : null;
 
   const howSteps = [
     ['1', t('Review the product'), t('Check the real preview, included content, and active offer.')],
