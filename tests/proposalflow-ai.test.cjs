@@ -12,6 +12,8 @@ const workspace = read('src/app/user-dashboard/proposalflow/page.tsx');
 const sidebar = read('src/app/user-dashboard/components/DashboardSidebar.tsx');
 const productPage = read('src/app/products/[slug]/page.tsx');
 const productLayout = read('src/app/products/[slug]/layout.tsx');
+const checkout = read('src/app/checkout/page.tsx');
+const checkoutSuccess = read('src/app/checkout/success/page.tsx');
 
 test('ProposalFlow is protected by the existing SaaS entitlement model', () => {
   assert.match(access, /summeca-proposalflow-ai/);
