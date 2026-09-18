@@ -106,6 +106,12 @@ function deliveryTypeLabel(product: Product) {
     : 'Protected digital download';
 }
 
+function verifiedDeliveryText(product: Product) {
+  return SAAS_PRODUCT_SLUGS.has(product.slug)
+    ? 'After verified payment, access appears in your SUMMECA dashboard.'
+    : 'After verified payment, the protected file appears in your SUMMECA downloads.';
+}
+
 function formatCurrency(amount: number, currency = 'USD') {
   return new Intl.NumberFormat('en-US', {
     style: 'currency', currency, minimumFractionDigits: amount % 1 === 0 ? 0 : 2,
@@ -443,6 +449,24 @@ function CheckoutInner() {
         <div className="flex items-center gap-2 mt-4 p-3 bg-success/5 border border-success/15 rounded-xl">
           <Shield size={14} className="text-success shrink-0" />
           <p className="text-xs">SUMMECA recalculates pricing server-side and grants access only after trusted payment verification.</p>
+        </div>
+        <div className="mt-3 grid gap-2 sm:grid-cols-3">
+          <div className="rounded-xl border border-border bg-card px-3 py-3">
+            <p className="text-[11px] font-700 uppercase tracking-[0.12em] text-muted-foreground">Verified access</p>
+            <p className="mt-1 text-xs leading-5 text-foreground">Paid access is granted only after provider confirmation.</p>
+          </div>
+          <div className="rounded-xl border border-border bg-card px-3 py-3">
+            <p className="text-[11px] font-700 uppercase tracking-[0.12em] text-muted-foreground">Delivery</p>
+            <p className="mt-1 text-xs leading-5 text-foreground">{cartItem ? verifiedDeliveryText(cartItem.product) : 'Your delivery method is shown before payment.'}</p>
+          </div>
+          <div className="rounded-xl border border-border bg-card px-3 py-3">
+            <p className="text-[11px] font-700 uppercase tracking-[0.12em] text-muted-foreground">Need help?</p>
+            <p className="mt-1 text-xs leading-5 text-foreground">
+              <Link href="/support" className="font-700 text-primary hover:underline">Support</Link>
+              <span className="mx-1 text-muted-foreground">·</span>
+              <Link href="/refunds" className="font-700 text-primary hover:underline">Refund policy</Link>
+            </p>
+          </div>
         </div>
       </div>
 
