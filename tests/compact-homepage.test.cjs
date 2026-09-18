@@ -11,35 +11,35 @@ const hero = read('src/app/components/HeroSection.tsx');
 const nav = read('src/components/PublicNav.tsx');
 const footer = read('src/components/PublicFooter.tsx');
 
-test('homepage keeps four featured production products and stays focused on store outcomes', () => {
-  assert.match(home, /\.slice\(0, 4\)/);
+test('homepage keeps three focused AI and SaaS products and stays outcome-led', () => {
+  assert.match(home, /\.slice\(0, 3\)/);
   assert.match(home, /summeca-invoiceflow/);
   assert.match(home, /summeca-leadfollow-ai/);
-  assert.match(home, /conversion-rescue-kit-pro/);
-  assert.match(home, /ecommerce-product-page-conversion-kit/);
+  assert.match(home, /summeca-proposalflow-ai/);
+  assert.doesNotMatch(home, /conversion-rescue-kit-pro/);
   assert.match(home, /SaaS workspace/);
   assert.match(home, /AI-assisted workspace/);
-  assert.match(home, /Downloadable digital kit/);
-  assert.match(home, /Business Template/);
-  assert.match(home, /Solutions for small stores/);
-  assert.match(home, /Choose the outcome you need, not a software category/);
+  assert.match(home, /AI proposal workspace/);
+  assert.match(home, /AI & SaaS workspace/);
+  assert.match(home, /One connected business workflow/);
+  assert.match(home, /Capture the lead, prepare the proposal, then invoice the work/);
   assert.match(home, /Buy with clarity/);
-  assert.match(home, /Find your next tool/);
+  assert.match(home, /Build one connected workflow/);
   assert.doesNotMatch(home, /Browse by category/);
 });
 
 test('hero is concise, bilingual, product-specific, and shows real product workspace previews', () => {
   assert.match(hero, /min-h-\[580px\]/);
   assert.match(hero, /lg:min-h-\[620px\]/);
-  assert.match(hero, /Practical apps for modern small online businesses/);
-  assert.match(hero, /Organize invoices and customer follow-ups/);
-  assert.match(hero, /with focused SUMMECA apps\./);
+  assert.match(hero, /Focused AI & SaaS apps for modern business/);
+  assert.match(hero, /Move from lead to proposal to invoice/);
+  assert.match(hero, /with focused SUMMECA AI & SaaS apps\./);
   assert.match(hero, /Explore InvoiceFlow/);
   assert.match(hero, /Explore LeadFollow AI/);
   assert.match(hero, /View all products/);
-  assert.match(hero, /تطبيقات عملية للأعمال والمتاجر الرقمية الصغيرة/);
-  assert.match(hero, /نظّم الفواتير ومتابعة العملاء/);
-  assert.match(hero, /بتطبيقات SUMMECA العملية\./);
+  assert.match(hero, /تطبيقات ذكاء اصطناعي وSaaS للأعمال الحديثة/);
+  assert.match(hero, /حوّل العميل إلى عرض ثم فاتورة/);
+  assert.match(hero, /باستخدام تطبيقات SUMMECA الذكية\./);
   assert.match(hero, /استكشف InvoiceFlow/);
   assert.match(hero, /استكشف LeadFollow AI/);
   assert.match(hero, /عرض كل المنتجات/);
