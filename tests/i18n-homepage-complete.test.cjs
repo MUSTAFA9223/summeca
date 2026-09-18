@@ -13,9 +13,9 @@ const normalizedMarketing = `${homepage}\n${nav}`.replace(/\s+/g, ' ');
 
 const translatedHomepagePhrases = [
   'AI-assisted workspace',
-  'Downloadable digital kit',
+  'AI proposal workspace',
   'SaaS workspace',
-  'Business Template',
+  'AI & SaaS workspace',
   'For Stores',
   'Products',
   'Pricing',
