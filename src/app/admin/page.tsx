@@ -53,6 +53,13 @@ async function getStats(supabase: Awaited<ReturnType<typeof createClient>>) {
     realCompletedOrdersMonth,
     testCompletedOrdersMonth,
     testCompletedOrdersTotal,
+    funnelProductViews,
+    funnelBuyClicks,
+    funnelTrialStarts,
+    funnelCheckoutStarts,
+    funnelPaymentSelected,
+    funnelPaymentFailed,
+    funnelPaymentCompleted,
   ] = await Promise.all([
     supabase.from('orders').select('*', { count: 'exact', head: true }).eq('purchase_kind', 'real'),
     supabase.from('orders').select('*', { count: 'exact', head: true }).eq('status', 'completed').eq('purchase_kind', 'real'),
@@ -68,6 +75,13 @@ async function getStats(supabase: Awaited<ReturnType<typeof createClient>>) {
     supabase.from('orders').select('*', { count: 'exact', head: true }).eq('status', 'completed').eq('purchase_kind', 'real').gte('created_at', periods.month),
     supabase.from('orders').select('*', { count: 'exact', head: true }).eq('status', 'completed').eq('purchase_kind', 'test').gte('created_at', periods.month),
     supabase.from('orders').select('*', { count: 'exact', head: true }).eq('status', 'completed').eq('purchase_kind', 'test'),
+    supabase.from('analytics_events').select('*', { count: 'exact', head: true }).eq('event_type', 'product_view').gte('created_at', periods.month),
+    supabase.from('analytics_events').select('*', { count: 'exact', head: true }).eq('event_type', 'buy_click').gte('created_at', periods.month),
+    supabase.from('analytics_events').select('*', { count: 'exact', head: true }).eq('event_type', 'trial_started').gte('created_at', periods.month),
+    supabase.from('analytics_events').select('*', { count: 'exact', head: true }).eq('event_type', 'checkout_started').gte('created_at', periods.month),
+    supabase.from('analytics_events').select('*', { count: 'exact', head: true }).eq('event_type', 'payment_method_selected').gte('created_at', periods.month),
+    supabase.from('analytics_events').select('*', { count: 'exact', head: true }).eq('event_type', 'payment_failed').gte('created_at', periods.month),
+    supabase.from('analytics_events').select('*', { count: 'exact', head: true }).eq('event_type', 'payment_completed').gte('created_at', periods.month),
   ]);
 
   const revenueByCurrency = new Map<string, number>();
@@ -100,6 +114,15 @@ async function getStats(supabase: Awaited<ReturnType<typeof createClient>>) {
     conversionMonth,
     testCompletedOrdersMonth: testCompletedOrdersMonth.count ?? 0,
     testCompletedOrdersTotal: testCompletedOrdersTotal.count ?? 0,
+    funnel: {
+      productViews: funnelProductViews.count ?? 0,
+      buyClicks: funnelBuyClicks.count ?? 0,
+      trialStarts: funnelTrialStarts.count ?? 0,
+      checkoutStarts: funnelCheckoutStarts.count ?? 0,
+      paymentSelected: funnelPaymentSelected.count ?? 0,
+      paymentFailed: funnelPaymentFailed.count ?? 0,
+      paymentCompleted: funnelPaymentCompleted.count ?? 0,
+    },
   };
 }
 
@@ -182,6 +205,51 @@ export default async function AdminDashboardPage() {
           <div className="rounded-xl border border-border bg-secondary/20 p-4">
             <p className="text-xs font-600 text-muted-foreground">Test Purchases Total</p>
             <p className="mt-1 text-xl font-800 tabular-nums text-foreground">{stats.testCompletedOrdersTotal.toLocaleString('en-US')}</p>
+          </div>
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-border bg-card p-5">
+        <div className="mb-4">
+          <h2 className="text-sm font-700 text-foreground">Sales funnel · This month</h2>
+          <p className="mt-1 text-xs text-muted-foreground">
+            These are first-party SUMMECA funnel events. They start accumulating after this tracking release and are separate from historical order totals.
+          </p>
+        </div>
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-7">
+          {[
+            ['Product views', stats.funnel.productViews],
+            ['Buy clicks', stats.funnel.buyClicks],
+            ['Free trials', stats.funnel.trialStarts],
+            ['Checkout starts', stats.funnel.checkoutStarts],
+            ['Payment selected', stats.funnel.paymentSelected],
+            ['Payment failed', stats.funnel.paymentFailed],
+            ['Payment completed', stats.funnel.paymentCompleted],
+          ].map(([label, value]) => (
+            <div key={String(label)} className="rounded-xl border border-border bg-secondary/20 p-4">
+              <p className="text-xs font-600 text-muted-foreground">{label}</p>
+              <p className="mt-1 text-xl font-800 tabular-nums text-foreground">{Number(value).toLocaleString('en-US')}</p>
+            </div>
+          ))}
+        </div>
+        <div className="mt-4 grid gap-3 md:grid-cols-3">
+          <div className="rounded-xl border border-border bg-background p-4">
+            <p className="text-xs text-muted-foreground">View → buy click</p>
+            <p className="mt-1 text-lg font-800 text-foreground">
+              {stats.funnel.productViews > 0 ? ((stats.funnel.buyClicks / stats.funnel.productViews) * 100).toFixed(1) : '0.0'}%
+            </p>
+          </div>
+          <div className="rounded-xl border border-border bg-background p-4">
+            <p className="text-xs text-muted-foreground">Buy click → checkout</p>
+            <p className="mt-1 text-lg font-800 text-foreground">
+              {stats.funnel.buyClicks > 0 ? ((stats.funnel.checkoutStarts / stats.funnel.buyClicks) * 100).toFixed(1) : '0.0'}%
+            </p>
+          </div>
+          <div className="rounded-xl border border-border bg-background p-4">
+            <p className="text-xs text-muted-foreground">Payment selected → completed</p>
+            <p className="mt-1 text-lg font-800 text-foreground">
+              {stats.funnel.paymentSelected > 0 ? ((stats.funnel.paymentCompleted / stats.funnel.paymentSelected) * 100).toFixed(1) : '0.0'}%
+            </p>
           </div>
         </div>
       </section>
