@@ -28,6 +28,7 @@ import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { trackCheckoutStarted } from '@/lib/analytics';
 import { getEffectivePrice } from '@/lib/pricing';
+import { trackFunnelEvent } from '@/lib/funnelAnalytics';
 
 interface ProductPlan {
   id: string;
@@ -283,6 +284,15 @@ function CheckoutInner() {
   useEffect(() => {
     if (cartItem && pricing && !checkoutTracked) {
       trackCheckoutStarted({ id: cartItem.product.id, name: cartItem.product.name, price: pricing.finalPrice, planName: cartItem.plan.name });
+      trackFunnelEvent('checkout_started', {
+        productId: cartItem.product.id,
+        productSlug: cartItem.product.slug,
+        planId: cartItem.plan.id,
+        planName: cartItem.plan.name,
+        amount: pricing.finalPrice,
+        currency: cartItem.plan.currency,
+        source: 'checkout',
+      });
       setCheckoutTracked(true);
     }
   }, [cartItem, checkoutTracked, pricing]);
@@ -343,6 +353,21 @@ function CheckoutInner() {
     setPageError('');
     setCryptoSession(null);
     let attemptStorageKey = '';
+
+    if (!isFreeOrder) {
+      trackFunnelEvent('payment_method_selected', {
+        productId: cartItem.product.id,
+        productSlug: cartItem.product.slug,
+        planId: cartItem.plan.id,
+        planName: cartItem.plan.name,
+        method: checkoutMethod,
+        cryptoMethod: checkoutMethod === 'crypto' ? cryptoMethod : '',
+        amount: finalAmount,
+        currency,
+        source: 'checkout_submit',
+      });
+    }
+
     try {
       const endpoint = isFreeOrder
         ? '/api/payment/create-free-order'
@@ -389,7 +414,21 @@ function CheckoutInner() {
         if (data.retryableNewAttempt && attemptStorageKey) {
           window.sessionStorage.removeItem(attemptStorageKey);
         }
-        setPageError(data.error ?? 'Failed to start checkout.');
+        const reason = data.error ?? 'Failed to start checkout.';
+        setPageError(reason);
+        if (!isFreeOrder) {
+          trackFunnelEvent('payment_failed', {
+            productId: cartItem.product.id,
+            productSlug: cartItem.product.slug,
+            planId: cartItem.plan.id,
+            method: checkoutMethod,
+            cryptoMethod: checkoutMethod === 'crypto' ? cryptoMethod : '',
+            amount: finalAmount,
+            currency,
+            reason,
+            source: 'checkout_session',
+          });
+        }
         return;
       }
       if (isFreeOrder) {
@@ -398,7 +437,19 @@ function CheckoutInner() {
       }
       if (checkoutMethod === 'crypto') {
         if (!data.paymentAddress || !data.cryptoAmount || !data.paymentMethodType) {
-          setPageError('Crypto provider returned incomplete payment details.');
+          const reason = 'Crypto provider returned incomplete payment details.';
+          setPageError(reason);
+          trackFunnelEvent('payment_failed', {
+            productId: cartItem.product.id,
+            productSlug: cartItem.product.slug,
+            planId: cartItem.plan.id,
+            method: checkoutMethod,
+            cryptoMethod,
+            amount: finalAmount,
+            currency,
+            reason,
+            source: 'checkout_session',
+          });
           return;
         }
         setCryptoSession({
@@ -415,13 +466,38 @@ function CheckoutInner() {
         return;
       }
       if (!data.redirectUrl) {
-        setPageError('Payment provider did not return a checkout URL.');
+        const reason = 'Payment provider did not return a checkout URL.';
+        setPageError(reason);
+        trackFunnelEvent('payment_failed', {
+          productId: cartItem.product.id,
+          productSlug: cartItem.product.slug,
+          planId: cartItem.plan.id,
+          method: checkoutMethod,
+          amount: finalAmount,
+          currency,
+          reason,
+          source: 'checkout_redirect',
+        });
         return;
       }
       if (attemptStorageKey) window.sessionStorage.removeItem(attemptStorageKey);
       window.location.assign(data.redirectUrl);
     } catch {
-      setPageError('Failed to start checkout. Please try again.');
+      const reason = 'Failed to start checkout. Please try again.';
+      setPageError(reason);
+      if (!isFreeOrder) {
+        trackFunnelEvent('payment_failed', {
+          productId: cartItem.product.id,
+          productSlug: cartItem.product.slug,
+          planId: cartItem.plan.id,
+          method: checkoutMethod,
+          cryptoMethod: checkoutMethod === 'crypto' ? cryptoMethod : '',
+          amount: finalAmount,
+          currency,
+          reason,
+          source: 'checkout_exception',
+        });
+      }
     } finally {
       setCheckoutSubmitting(false);
     }
