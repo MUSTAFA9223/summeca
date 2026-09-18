@@ -4,7 +4,7 @@ import { checkRateLimit, getRequestIdentity } from '@/lib/security/rateLimit';
 import { getSaasAccess } from '@/lib/saas/access';
 
 const PRODUCT_SLUG = 'summeca-leadfollow-ai' as const;
-const STATUSES = ['new', 'contacted', 'replied', 'won', 'lost'] as const;
+const STATUSES = ['new', 'contacted', 'proposal_sent', 'replied', 'won', 'lost'] as const;
 const STATUS_SET = new Set(STATUSES);
 const LEAD_PAGE_SIZE = 50;
 
