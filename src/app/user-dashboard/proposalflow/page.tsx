@@ -211,7 +211,7 @@ export default function ProposalFlowPage() {
           <div className="flex flex-wrap gap-2">
             {access?.planName && (
               <span className="rounded-full bg-primary/10 px-3 py-2 text-xs font-bold text-primary">
-                {access.planName} · Lifetime access
+                {access.planName} · {access.planName === 'Free' ? 'Free tier' : 'Lifetime access'}
               </span>
             )}
             {usage && (
