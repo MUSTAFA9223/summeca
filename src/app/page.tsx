@@ -22,7 +22,6 @@ export const metadata = {
   title: { absolute: 'SUMMECA — Digital Tools for Small Online Businesses' },
   description:
     'Practical SUMMECA tools for small online businesses: invoicing, customer follow-up, conversion workflows, ready-to-use digital kits, and business templates with transparent production pricing.',
-  alternates: { canonical: '/' },
 };
 
 type ProductPlan = {
