@@ -11,7 +11,6 @@ export const metadata: Metadata = {
   title: 'Products',
   description:
     'Browse published SUMMECA AI tools, SaaS applications, and digital products with live pricing from active offers.',
-  alternates: { canonical: '/products' },
   robots: { index: true, follow: true },
   openGraph: {
     type: 'website',
