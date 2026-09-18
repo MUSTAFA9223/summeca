@@ -1,7 +1,7 @@
 import { Suspense } from 'react';
 import React from 'react';
 import type { Metadata, Viewport } from 'next';
-import { cookies } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import { Plus_Jakarta_Sans } from 'next/font/google';
 import '../styles/tailwind.css';
 import '../styles/site-theme.css';
@@ -26,6 +26,7 @@ import ProductPageEnhancements from '@/components/catalog/ProductPageEnhancement
 import ProductPageVideoPreview from '@/components/catalog/ProductPageVideoPreview';
 import SkipToContent from '@/components/SkipToContent';
 import { isAppLanguage, LANGUAGE_COOKIE_KEY } from '@/lib/i18n';
+import { isInternationalSeoPath, isSeoLocale, localizedAlternates } from '@/lib/locale-routing';
 
 const plusJakartaSans = Plus_Jakarta_Sans({
   subsets: ['latin'],
@@ -86,7 +87,7 @@ const structuredData = {
       url: 'https://summeca.com',
       description: siteDescription,
       publisher: { '@id': 'https://summeca.com/#organization' },
-      inLanguage: 'en',
+      inLanguage: ['en', 'ar'],
     },
   ],
 };
@@ -96,7 +97,7 @@ export const viewport: Viewport = {
   initialScale: 1,
 };
 
-export const metadata: Metadata = {
+const baseMetadata: Metadata = {
   metadataBase: new URL('https://summeca.com'),
   title: {
     default: 'SUMMECA — Digital Tools for Modern Work',
@@ -146,11 +147,34 @@ export const metadata: Metadata = {
   },
 };
 
+export async function generateMetadata(): Promise<Metadata> {
+  const requestHeaders = await headers();
+  const localeHeader = requestHeaders.get('x-summeca-locale');
+  const publicPath = requestHeaders.get('x-summeca-public-path');
+  const locale = isSeoLocale(localeHeader) ? localeHeader : 'en';
+
+  if (!publicPath || !isInternationalSeoPath(publicPath)) {
+    return baseMetadata;
+  }
+
+  const alternates = localizedAlternates(publicPath);
+  return {
+    ...baseMetadata,
+    alternates: {
+      canonical: alternates.canonicalByLocale[locale],
+      languages: alternates.languages,
+    },
+  };
+}
+
 export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
+  const requestHeaders = await headers();
   const cookieStore = await cookies();
-  const requestedLanguage = cookieStore.get(LANGUAGE_COOKIE_KEY)?.value;
+  const headerLanguage = requestHeaders.get('x-summeca-locale');
+  const cookieLanguage = cookieStore.get(LANGUAGE_COOKIE_KEY)?.value;
+  const requestedLanguage = isSeoLocale(headerLanguage) ? headerLanguage : cookieLanguage;
   const language = isAppLanguage(requestedLanguage) ? requestedLanguage : 'en';
   const direction = language === 'ar' ? 'rtl' : 'ltr';
 
