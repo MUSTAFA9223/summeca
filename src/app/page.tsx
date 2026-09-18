@@ -58,12 +58,7 @@ function productTypeLabel(product: PublishedProduct) {
   if (product.slug === 'summeca-invoiceflow') return 'SaaS workspace';
   if (product.slug === 'summeca-leadfollow-ai') return 'AI-assisted workspace';
   if (product.slug === 'summeca-proposalflow-ai') return 'AI proposal workspace';
-  if (product.slug === 'ecommerce-product-page-conversion-kit') return 'Business Template';
-  if (product.category === 'template' || product.category === 'dataset') {
-    return 'Downloadable digital kit';
-  }
-  if (['ai_tool', 'api', 'plugin'].includes(product.category)) return 'AI-assisted workspace';
-  return 'SaaS workspace';
+  return 'AI & SaaS workspace';
 }
 
 function pricingFor(plan: ProductPlan) {
@@ -114,7 +109,6 @@ function productCta(product: PublishedProduct) {
   if (product.slug === 'summeca-invoiceflow') return 'Explore InvoiceFlow';
   if (product.slug === 'summeca-leadfollow-ai') return 'Explore LeadFollow';
   if (product.slug === 'summeca-proposalflow-ai') return 'Explore ProposalFlow';
-  if (product.slug.startsWith('conversion-rescue-kit-')) return 'View Kit';
   return 'View Product';
 }
 
