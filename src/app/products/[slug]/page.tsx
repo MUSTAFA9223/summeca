@@ -410,7 +410,7 @@ export default function ProductDetailPage() {
               category={product.category}
               eyebrow={categoryLabel(product.category)}
               variant="hero"
-              badge="Actual product preview"
+              badge={product.thumbnail_url ? 'Actual product preview' : isSaas ? 'Account-based SaaS workspace' : 'Product preview'}
               className="relative z-10"
             />
           </div>
