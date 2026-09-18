@@ -3,6 +3,8 @@ const HOMEPAGE_AR_TRANSLATIONS: Record<string, string> = {
   'Digital Kit': 'حزمة رقمية',
   'SaaS App': 'تطبيق SaaS',
   'AI-assisted workspace': 'مساحة عمل مدعومة بالذكاء الاصطناعي',
+  'AI proposal workspace': 'مساحة عمل عروض مدعومة بالذكاء الاصطناعي',
+  'AI & SaaS workspace': 'مساحة عمل للذكاء الاصطناعي وSaaS',
   'Downloadable digital kit': 'حزمة رقمية قابلة للتنزيل',
   'SaaS workspace': 'مساحة عمل SaaS',
   'Business SaaS': 'SaaS للأعمال',
