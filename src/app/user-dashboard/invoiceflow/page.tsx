@@ -293,7 +293,7 @@ export default function InvoiceFlowPage() {
             <p className="mt-2 text-sm text-muted-foreground">Create, track, share, print and export professional invoices from one workspace.</p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <span className="rounded-full bg-primary/10 px-3 py-2 text-xs font-bold text-primary">{data.access.planName} · Lifetime</span>
+            <span className="rounded-full bg-primary/10 px-3 py-2 text-xs font-bold text-primary">{data.access.planName} · {data.access.planName === 'Free' ? 'Free tier' : 'Lifetime'}</span>
             <button onClick={exportCsv} className="inline-flex items-center gap-2 rounded-xl border border-border bg-card px-4 py-2 text-sm font-semibold"><Download size={15} /> Export CSV</button>
             <button onClick={startInvoice} className="btn-primary inline-flex items-center gap-2 px-4 py-2"><FilePlus2 size={15} /> New invoice</button>
           </div>
