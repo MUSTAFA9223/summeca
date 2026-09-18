@@ -1,9 +1,11 @@
 import type { Metadata } from 'next';
+import { headers } from 'next/headers';
 import PublicNav from '@/components/PublicNav';
 import PublicFooter from '@/components/PublicFooter';
 import CatalogClient from '@/components/catalog/CatalogClient';
 import { getPublicCatalog } from '@/lib/catalog/publicCatalog';
 import { getEffectivePrice } from '@/lib/pricing';
+import { isSeoLocale, localizedAbsoluteUrl, type SeoLocale } from '@/lib/locale-routing';
 
 export const revalidate = 300;
 
@@ -48,13 +50,18 @@ function lowestOffer(product: Awaited<ReturnType<typeof getPublicCatalog>>[numbe
 }
 
 export default async function ProductsPage() {
+  const requestHeaders = await headers();
+  const localeHeader = requestHeaders.get('x-summeca-locale');
+  const locale: SeoLocale = isSeoLocale(localeHeader) ? localeHeader : 'en';
+  const catalogUrl = localizedAbsoluteUrl('/products', locale);
   const products = await getPublicCatalog();
   const itemList = {
     '@context': 'https://schema.org',
     '@type': 'ItemList',
-    '@id': 'https://summeca.com/products#catalog',
+    '@id': `${catalogUrl}#catalog`,
     name: 'SUMMECA Product Catalog',
-    url: 'https://summeca.com/products',
+    url: catalogUrl,
+    inLanguage: locale,
     numberOfItems: products.length,
     itemListElement: products.map((product, index) => {
       const plan = lowestOffer(product);
@@ -66,7 +73,7 @@ export default async function ProductsPage() {
           price = Number(plan.price) || 0;
         }
       }
-      const url = `https://summeca.com/products/${encodeURIComponent(product.slug)}`;
+      const url = localizedAbsoluteUrl(`/products/${encodeURIComponent(product.slug)}`, locale);
       return {
         '@type': 'ListItem',
         position: index + 1,
