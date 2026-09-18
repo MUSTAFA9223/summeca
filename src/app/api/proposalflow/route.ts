@@ -7,9 +7,17 @@ import { getSaasAccess } from '@/lib/saas/access';
 const PRODUCT_SLUG = 'summeca-proposalflow-ai' as const;
 const LANGUAGES = new Set(['English', 'Arabic']);
 const TONES = new Set(['professional', 'friendly', 'concise', 'consultative']);
+const TEMPLATES = new Set(['general', 'freelancer', 'agency', 'web-development', 'marketing', 'ecommerce']);
 
 function text(value: unknown, max = 1200) {
   return typeof value === 'string' ? value.trim().slice(0, max) : '';
+}
+
+function uuid(value: unknown) {
+  const candidate = text(value, 36);
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(candidate)
+    ? candidate
+    : null;
 }
 
 function jsonFromModel(value: string) {
@@ -60,19 +68,32 @@ export async function GET() {
   const access = await getSaasAccess(user.id, PRODUCT_SLUG);
   if (!access.allowed || !access.productId) {
     return NextResponse.json(
-      { error: 'ProposalFlow AI purchase required.', access },
+      { error: 'ProposalFlow AI access required.', access },
       { status: 403, headers: { 'Cache-Control': 'private, no-store' } },
     );
   }
 
   try {
-    const used = await currentUsage(user.id, access.productId);
+    const service = createServiceClient();
+    const [used, savedResult] = await Promise.all([
+      currentUsage(user.id, access.productId),
+      service
+        .from('proposalflow_proposals')
+        .select('id, source_lead_id, client_name, client_company, template, language, tone, project, deliverables, timeline, price, extra_context, output, status, share_enabled, created_at')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(25),
+    ]);
+
+    if (savedResult.error) throw savedResult.error;
+
     return NextResponse.json({
       access,
       usage: { used, limit: access.limits.monthlyProposals ?? 0 },
+      proposals: savedResult.data ?? [],
     }, { headers: { 'Cache-Control': 'private, no-store' } });
   } catch (error) {
-    console.error('[proposalflow] usage load failed:', error);
+    console.error('[proposalflow] dashboard load failed:', error);
     return NextResponse.json({ error: 'Unable to load ProposalFlow AI.' }, { status: 500 });
   }
 }
@@ -83,7 +104,7 @@ export async function POST(request: NextRequest) {
 
   const access = await getSaasAccess(user.id, PRODUCT_SLUG);
   if (!access.allowed || !access.productId) {
-    return NextResponse.json({ error: 'ProposalFlow AI purchase required.', access }, { status: 403 });
+    return NextResponse.json({ error: 'ProposalFlow AI access required.', access }, { status: 403 });
   }
 
   const burst = await checkRateLimit(`proposalflow:${getRequestIdentity(request, user.id)}`, {
@@ -116,14 +137,30 @@ export async function POST(request: NextRequest) {
   const extraContext = text(body.extraContext, 1800);
   const requestedLanguage = text(body.language, 20);
   const requestedTone = text(body.tone, 30);
+  const requestedTemplate = text(body.template, 40);
+  const sourceLeadId = uuid(body.sourceLeadId);
   const language = LANGUAGES.has(requestedLanguage) ? requestedLanguage : 'English';
   const tone = TONES.has(requestedTone) ? requestedTone : 'professional';
+  const template = TEMPLATES.has(requestedTemplate) ? requestedTemplate : 'general';
 
   if (!clientName || !project || !deliverables || !price) {
     return NextResponse.json(
       { error: 'Client name, project need, deliverables and price are required.' },
       { status: 400 },
     );
+  }
+
+  if (sourceLeadId) {
+    const service = createServiceClient();
+    const { data: ownedLead, error: leadError } = await service
+      .from('leadfollow_leads')
+      .select('id')
+      .eq('id', sourceLeadId)
+      .eq('user_id', user.id)
+      .maybeSingle();
+    if (leadError || !ownedLead) {
+      return NextResponse.json({ error: 'The linked lead is not available.' }, { status: 400 });
+    }
   }
 
   let used = 0;
@@ -150,6 +187,7 @@ Rules:
 - If the timeline is missing, say it should be confirmed with the client instead of inventing one.
 - The follow-up email must be concise, professional and non-manipulative.
 - This is business drafting assistance, not legal advice.
+- Use the selected template only to organize emphasis; do not invent industry-specific facts.
 - Write in the requested language.
 - Return valid JSON only, with no markdown fences.
 
@@ -167,6 +205,7 @@ Return exactly:
 
   const userPrompt = `Requested language: ${language}
 Tone: ${tone}
+Proposal template: ${template}
 
 Client name: ${clientName}
 Client company: ${clientCompany || 'Not provided'}
@@ -217,32 +256,108 @@ Create the proposal package now.`;
   }
 
   const service = createServiceClient();
-  const { error: logError } = await service.from('ai_generations').insert({
-    user_id: user.id,
-    product_id: access.productId,
-    generation_type: 'marketing_campaign',
-    model: result.model,
-    input_data: {
-      tool: 'proposalflow',
-      language,
-      tone,
-      has_company: Boolean(clientCompany),
-      has_timeline: Boolean(timeline),
-      has_extra_context: Boolean(extraContext),
-    },
-    output_text: null,
-    tokens_used: Math.max(0, Number(result.tokensUsed) || 0),
-    duration_ms: Math.max(0, Number(result.durationMs) || 0),
-    metadata: { tool: 'proposalflow' },
-  });
+  const [proposalResult, logResult] = await Promise.all([
+    service
+      .from('proposalflow_proposals')
+      .insert({
+        user_id: user.id,
+        source_lead_id: sourceLeadId,
+        client_name: clientName,
+        client_company: clientCompany,
+        template,
+        language,
+        tone,
+        project,
+        deliverables,
+        timeline,
+        price,
+        extra_context: extraContext,
+        output,
+        status: 'draft',
+      })
+      .select('id, source_lead_id, client_name, client_company, template, language, tone, project, deliverables, timeline, price, extra_context, output, status, share_enabled, created_at')
+      .single(),
+    service.from('ai_generations').insert({
+      user_id: user.id,
+      product_id: access.productId,
+      generation_type: 'marketing_campaign',
+      model: result.model,
+      input_data: {
+        tool: 'proposalflow',
+        language,
+        tone,
+        template,
+        has_company: Boolean(clientCompany),
+        has_timeline: Boolean(timeline),
+        has_extra_context: Boolean(extraContext),
+        source_lead: Boolean(sourceLeadId),
+      },
+      output_text: null,
+      tokens_used: Math.max(0, Number(result.tokensUsed) || 0),
+      duration_ms: Math.max(0, Number(result.durationMs) || 0),
+      metadata: { tool: 'proposalflow' },
+    }),
+  ]);
 
-  if (logError) {
-    console.warn('[proposalflow] usage log failed:', logError.message);
+  if (logResult.error) {
+    console.warn('[proposalflow] usage log failed:', logResult.error.message);
+  }
+  if (proposalResult.error) {
+    console.error('[proposalflow] save failed:', proposalResult.error.message);
+  }
+
+  if (sourceLeadId && !proposalResult.error) {
+    const { error: leadUpdateError } = await service
+      .from('leadfollow_leads')
+      .update({ status: 'proposal_sent', updated_at: new Date().toISOString() })
+      .eq('id', sourceLeadId)
+      .eq('user_id', user.id);
+    if (leadUpdateError) console.warn('[proposalflow] lead stage update failed:', leadUpdateError.message);
   }
 
   return NextResponse.json({
     success: true,
     output,
+    proposal: proposalResult.data ?? null,
+    saved: !proposalResult.error,
+    warning: proposalResult.error ? 'Proposal generated but could not be saved.' : null,
     usage: { used: used + 1, limit },
   }, { headers: { 'Cache-Control': 'private, no-store' } });
+}
+
+export async function PATCH(request: NextRequest) {
+  const user = await userSession();
+  if (!user) return NextResponse.json({ error: 'Authentication required.' }, { status: 401 });
+
+  const contentLength = Number(request.headers.get('content-length') || 0);
+  if (contentLength > 8_000) return NextResponse.json({ error: 'Request is too large.' }, { status: 413 });
+
+  let body: Record<string, unknown>;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: 'Invalid request body.' }, { status: 400 });
+  }
+
+  const proposalId = uuid(body.proposalId);
+  const status = text(body.status, 20);
+  if (!proposalId || !new Set(['draft', 'sent', 'accepted', 'declined']).has(status)) {
+    return NextResponse.json({ error: 'Invalid proposal update.' }, { status: 400 });
+  }
+
+  const service = createServiceClient();
+  const { data, error } = await service
+    .from('proposalflow_proposals')
+    .update({ status, updated_at: new Date().toISOString() })
+    .eq('id', proposalId)
+    .eq('user_id', user.id)
+    .select('id, status')
+    .maybeSingle();
+
+  if (error || !data) {
+    console.error('[proposalflow] status update failed:', error?.message);
+    return NextResponse.json({ error: 'Unable to update proposal.' }, { status: 500 });
+  }
+
+  return NextResponse.json({ proposal: data });
 }

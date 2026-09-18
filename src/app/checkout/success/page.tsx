@@ -7,6 +7,7 @@ import PublicNav from '@/components/PublicNav';
 import PublicFooter from '@/components/PublicFooter';
 import { createClient } from '@/lib/supabase/client';
 import { trackPurchase } from '@/lib/analytics';
+import { trackFunnelEvent } from '@/lib/funnelAnalytics';
 import {
   AlertCircle,
   ArrowRight,
@@ -163,6 +164,39 @@ function CheckoutSuccessInner() {
       if (pollTimer) clearTimeout(pollTimer);
     };
   }, [orderId, supabase]);
+
+  useEffect(() => {
+    if (!order || !order.product_id) return;
+
+    const amount = Number(order.amount ?? NaN);
+    const paidCompleted = order.status === 'completed' && Number.isFinite(amount) && amount > 0;
+    const failedPayment = order.status === 'failed' || order.status === 'cancelled' || order.status === 'refunded';
+    if (!paidCompleted && !failedPayment) return;
+
+    const eventType = paidCompleted ? 'payment_completed' : 'payment_failed';
+    const storageKey = `summeca:funnel:${eventType}:${order.id}`;
+
+    try {
+      if (window.localStorage.getItem(storageKey) === '1') return;
+    } catch {
+      // Funnel tracking is best-effort when browser storage is unavailable.
+    }
+
+    trackFunnelEvent(eventType, {
+      productId: order.product_id,
+      orderId: order.id,
+      amount: Number.isFinite(amount) ? amount : 0,
+      currency: order.currency || 'USD',
+      reason: failedPayment ? order.status : '',
+      source: 'checkout_result',
+    });
+
+    try {
+      window.localStorage.setItem(storageKey, '1');
+    } catch {
+      // Server analytics can still accept the event without local persistence.
+    }
+  }, [order]);
 
   useEffect(() => {
     if (!order || order.status !== 'completed' || !order.product_id) return;

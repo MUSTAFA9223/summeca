@@ -8,6 +8,7 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import {
   LayoutDashboard,
+  Workflow,
   Package,
   CreditCard,
   ShoppingBag,
@@ -57,6 +58,7 @@ const navGroups = [
     id: 'apps',
     label: 'SUMMECA Apps',
     items: [
+      { id: 'workspace', label: 'Business Workspace', icon: Workflow, href: '/user-dashboard/workspace' },
       { id: 'invoiceflow', label: 'InvoiceFlow', icon: FileText, href: '/user-dashboard/invoiceflow' },
       { id: 'leadfollow', label: 'LeadFollow AI', icon: Activity, href: '/user-dashboard/leadfollow' },
       { id: 'proposalflow', label: 'ProposalFlow AI', icon: FileText, href: '/user-dashboard/proposalflow' },

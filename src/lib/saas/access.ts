@@ -19,16 +19,19 @@ export type SaasAccess = {
 
 const LIMITS: Record<SaasProductSlug, Record<string, SaasAccess['limits']>> = {
   'summeca-invoiceflow': {
+    Free: { maxClients: 3, maxInvoices: 5 },
     Starter: { maxClients: 50, maxInvoices: 250 },
     Pro: { maxClients: 5000, maxInvoices: 10000 },
     Agency: { maxClients: 20000, maxInvoices: 50000 },
   },
   'summeca-leadfollow-ai': {
+    Free: { maxLeads: 10, monthlyAi: 5 },
     Starter: { maxLeads: 100, monthlyAi: 50 },
     Pro: { maxLeads: 1000, monthlyAi: 200 },
     Agency: { maxLeads: 5000, monthlyAi: 500 },
   },
   'summeca-proposalflow-ai': {
+    Free: { monthlyProposals: 3 },
     Starter: { monthlyProposals: 30 },
     Pro: { monthlyProposals: 150 },
     Agency: { monthlyProposals: 500 },
@@ -78,8 +81,19 @@ export async function getSaasAccess(userId: string, slug: SaasProductSlug): Prom
     .limit(1)
     .maybeSingle();
 
-  if (orderError || !order?.plan_id) {
+  if (orderError) {
     return { ...denied, productId: product.id };
+  }
+
+  if (!order?.plan_id) {
+    return {
+      allowed: true,
+      productId: product.id,
+      planId: null,
+      planName: 'Free',
+      purchasePath: purchasePath(slug),
+      limits: LIMITS[slug].Free,
+    };
   }
 
   const planRelation = order.product_plans as unknown;

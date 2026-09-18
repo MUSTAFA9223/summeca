@@ -27,6 +27,7 @@ type Client = { id: string; name: string; company: string; email: string; phone:
 type InvoiceItem = { description: string; quantity: number; rate: number; amount: number };
 type Invoice = { id: string; client_id: string; invoice_number: string; issue_date: string; due_date: string | null; status: 'draft' | 'sent' | 'paid' | 'cancelled'; currency: string; items: InvoiceItem[]; subtotal: number; tax_rate: number; tax_amount: number; total: number; notes: string; terms: string; share_token: string; share_enabled: boolean; created_at: string };
 type DashboardData = { access: Access; profile: Profile | null; clients: Client[]; invoices: Invoice[]; counts: { clients: number; invoices: number; outstanding: number; paid: number } };
+type ProposalHandoff = { proposalId: string; clientName: string; clientCompany: string; clientEmail: string; description: string; amount: number; notes: string };
 type Metric = [label: string, value: string | number, icon: LucideIcon];
 
 function formatMoney(value: number, currency = 'USD') {
@@ -76,6 +77,8 @@ export default function InvoiceFlowPage() {
   const [clientForm, setClientForm] = useState({ name: '', company: '', email: '', phone: '', address: '', notes: '' });
   const [invoiceForm, setInvoiceForm] = useState({ clientId: '', dueDate: '', taxRate: '0', notes: '', terms: '' });
   const [items, setItems] = useState([{ description: '', quantity: 1, rate: 0 }]);
+  const [proposalHandoff, setProposalHandoff] = useState<ProposalHandoff | null>(null);
+  const [handoffApplied, setHandoffApplied] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -102,6 +105,66 @@ export default function InvoiceFlowPage() {
   }, []);
 
   useEffect(() => { void load(); }, [load]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('source') !== 'proposalflow') return;
+    const amount = Number(params.get('amount') || 0);
+    setProposalHandoff({
+      proposalId: params.get('proposalId') || '',
+      clientName: params.get('clientName') || '',
+      clientCompany: params.get('clientCompany') || '',
+      clientEmail: params.get('clientEmail') || '',
+      description: params.get('description') || 'Professional services',
+      amount: Number.isFinite(amount) && amount >= 0 ? amount : 0,
+      notes: params.get('notes') || '',
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!data || !proposalHandoff || handoffApplied) return;
+
+    const email = proposalHandoff.clientEmail.trim().toLowerCase();
+    const existingClient = data.clients.find((client) =>
+      (email && client.email?.trim().toLowerCase() === email)
+      || (
+        client.name.trim().toLowerCase() === proposalHandoff.clientName.trim().toLowerCase()
+        && client.company.trim().toLowerCase() === proposalHandoff.clientCompany.trim().toLowerCase()
+      )
+    );
+
+    setItems([{
+      description: proposalHandoff.description || 'Professional services',
+      quantity: 1,
+      rate: proposalHandoff.amount,
+    }]);
+    setInvoiceForm((current) => ({
+      ...current,
+      clientId: existingClient?.id || '',
+      dueDate: current.dueDate || localDateInDays(7),
+      notes: proposalHandoff.notes,
+    }));
+
+    if (existingClient) {
+      setCreateInvoiceAfterClient(false);
+      setShowInvoiceForm(true);
+      toast.success('Proposal details loaded into a new invoice.');
+    } else {
+      setClientForm({
+        name: proposalHandoff.clientName,
+        company: proposalHandoff.clientCompany,
+        email: proposalHandoff.clientEmail,
+        phone: '',
+        address: '',
+        notes: proposalHandoff.proposalId ? `Created from ProposalFlow proposal ${proposalHandoff.proposalId}` : 'Created from ProposalFlow',
+      });
+      setCreateInvoiceAfterClient(true);
+      setShowClientForm(true);
+      setShowInvoiceForm(false);
+      toast.info('Save this client to continue the ProposalFlow invoice handoff.');
+    }
+    setHandoffApplied(true);
+  }, [data, handoffApplied, proposalHandoff]);
 
   const clientById = useMemo(() => Object.fromEntries((data?.clients ?? []).map((client) => [client.id, client])), [data?.clients]);
   const overdueCount = useMemo(() => (data?.invoices ?? []).filter(isInvoiceOverdue).length, [data?.invoices]);
@@ -293,11 +356,17 @@ export default function InvoiceFlowPage() {
             <p className="mt-2 text-sm text-muted-foreground">Create, track, share, print and export professional invoices from one workspace.</p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <span className="rounded-full bg-primary/10 px-3 py-2 text-xs font-bold text-primary">{data.access.planName} · Lifetime</span>
+            <span className="rounded-full bg-primary/10 px-3 py-2 text-xs font-bold text-primary">{data.access.planName} · {data.access.planName === 'Free' ? 'Free tier' : 'Lifetime'}</span>
             <button onClick={exportCsv} className="inline-flex items-center gap-2 rounded-xl border border-border bg-card px-4 py-2 text-sm font-semibold"><Download size={15} /> Export CSV</button>
             <button onClick={startInvoice} className="btn-primary inline-flex items-center gap-2 px-4 py-2"><FilePlus2 size={15} /> New invoice</button>
           </div>
         </header>
+
+        {proposalHandoff && (
+          <div className="rounded-2xl border border-primary/20 bg-primary/5 px-4 py-3 text-sm text-foreground">
+            <span className="font-bold text-primary">ProposalFlow handoff:</span> client and service details are prefilled below. Review them before creating the invoice.
+          </div>
+        )}
 
         <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
           {metrics.map(([label, value, Icon]) => (

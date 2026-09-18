@@ -24,6 +24,7 @@ import Product3DShowcase from '@/components/catalog/Product3DShowcase';
 import SaasProductSalesExperience, { isSaasSalesSlug } from '@/components/catalog/SaasProductSalesExperience';
 import { createClient } from '@/lib/supabase/client';
 import { getEffectivePrice } from '@/lib/pricing';
+import { trackFunnelEvent } from '@/lib/funnelAnalytics';
 
 type BillingPeriod = 'one_time' | 'monthly' | 'yearly' | 'lifetime';
 
@@ -120,6 +121,13 @@ function isSaasProduct(product: Product) {
 
 function isDigitalProduct(product: Product) {
   return product.category === 'template' || product.category === 'dataset';
+}
+
+function freeSaasPath(slug: string) {
+  if (slug === 'summeca-invoiceflow') return '/user-dashboard/invoiceflow';
+  if (slug === 'summeca-leadfollow-ai') return '/user-dashboard/leadfollow';
+  if (slug === 'summeca-proposalflow-ai') return '/user-dashboard/proposalflow';
+  return null;
 }
 
 function productCtaLabel(product: Product, plan: Plan, finalPrice: number) {
@@ -229,6 +237,15 @@ export default function ProductDetailPage() {
     return () => { alive = false; };
   }, []);
 
+  useEffect(() => {
+    if (!product || isSaasSalesSlug(product.slug)) return;
+    trackFunnelEvent('product_view', {
+      productId: product.id,
+      productSlug: product.slug,
+      source: 'product_detail',
+    });
+  }, [product]);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-[#070b10]">
@@ -292,6 +309,19 @@ export default function ProductDetailPage() {
       && (selectedPricing.finalPrice === 0 || !providerCheckComplete || availableProviders.length > 0),
   );
   const selectedFeatures = selectedPlan?.features ?? [];
+  const freeWorkspaceHref = isSaas ? freeSaasPath(product.slug) : null;
+  const recordBuyClick = (source: string) => {
+    if (!selectedPlan || !selectedPricing) return;
+    trackFunnelEvent('buy_click', {
+      productId: product.id,
+      productSlug: product.slug,
+      planId: selectedPlan.id,
+      planName: selectedPlan.name,
+      amount: selectedPricing.finalPrice,
+      currency: selectedPlan.currency,
+      source,
+    });
+  };
   const heroFeatures = selectedFeatures.length > 0
     ? selectedFeatures.slice(0, 4)
     : (product.tags ?? []).slice(0, 4);
@@ -375,6 +405,7 @@ export default function ProductDetailPage() {
                 {canCheckout ? (
                   <Link
                     href={checkoutHref}
+                    onClick={() => recordBuyClick('hero')}
                     className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-gradient-to-r from-teal-500 via-cyan-500 to-cyan-300 px-7 text-sm font-black text-[#041014] shadow-[0_16px_42px_rgba(34,211,238,.22)] transition hover:-translate-y-1 hover:shadow-[0_22px_54px_rgba(34,211,238,.32)]"
                   >
                     {ctaLabel} <ArrowRight size={16} />
@@ -383,6 +414,19 @@ export default function ProductDetailPage() {
                   <span className="inline-flex min-h-12 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] px-7 text-sm font-bold text-slate-500">
                     Payment temporarily unavailable
                   </span>
+                )}
+                {freeWorkspaceHref && (
+                  <Link
+                    href={freeWorkspaceHref}
+                    onClick={() => trackFunnelEvent('trial_started', {
+                      productId: product.id,
+                      productSlug: product.slug,
+                      source: 'hero',
+                    })}
+                    className="inline-flex min-h-12 items-center justify-center rounded-full border border-cyan-300/30 bg-cyan-300/5 px-7 text-sm font-black text-cyan-200 transition hover:border-cyan-300/50 hover:bg-cyan-300/10"
+                  >
+                    Try free
+                  </Link>
                 )}
                 <Link
                   href="#plans"
@@ -551,7 +595,7 @@ export default function ProductDetailPage() {
                   {selectedPricing.finalPrice > 0 && <span className="text-xs font-normal text-slate-500">{suffix(selectedPlan.billing_period)}</span>}
                 </p>
                 {canCheckout ? (
-                  <Link href={checkoutHref} className="mt-5 flex min-h-11 items-center justify-center gap-2 rounded-full bg-cyan-300 px-5 text-sm font-black text-[#041014] transition hover:bg-cyan-200">
+                  <Link href={checkoutHref} onClick={() => recordBuyClick('selected_offer')} className="mt-5 flex min-h-11 items-center justify-center gap-2 rounded-full bg-cyan-300 px-5 text-sm font-black text-[#041014] transition hover:bg-cyan-200">
                     {ctaLabel} <ArrowRight size={14} />
                   </Link>
                 ) : (
@@ -560,7 +604,7 @@ export default function ProductDetailPage() {
                   </div>
                 )}
                 <p className="mt-3 text-center text-[10px] leading-4 text-slate-600">
-                  Access is unlocked only after the payment provider confirms the transaction.
+                  {isSaas ? 'A limited Free tier is available without purchase. Paid limits unlock after verified checkout.' : 'Access is unlocked only after the payment provider confirms the transaction.'}
                 </p>
               </div>
             </div>
@@ -670,7 +714,7 @@ export default function ProductDetailPage() {
                 Your selected plan, current price and delivery entitlement stay connected to the same verified order flow.
               </p>
               {canCheckout && selectedPlan && selectedPricing && (
-                <Link href={checkoutHref} className="mt-7 inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-cyan-300 px-7 text-sm font-black text-[#041014] transition hover:bg-cyan-200">
+                <Link href={checkoutHref} onClick={() => recordBuyClick('bottom_cta')} className="mt-7 inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-cyan-300 px-7 text-sm font-black text-[#041014] transition hover:bg-cyan-200">
                   {ctaLabel} · {money(selectedPricing.finalPrice, selectedPlan.currency)} <ArrowRight size={15} />
                 </Link>
               )}
@@ -695,7 +739,7 @@ export default function ProductDetailPage() {
               </p>
             </div>
             {canCheckout ? (
-              <Link href={checkoutHref} className="shrink-0 rounded-full bg-cyan-300 px-5 py-3 text-sm font-black text-[#041014]">
+              <Link href={checkoutHref} onClick={() => recordBuyClick('mobile_sticky')} className="shrink-0 rounded-full bg-cyan-300 px-5 py-3 text-sm font-black text-[#041014]">
                 {ctaLabel}
               </Link>
             ) : (

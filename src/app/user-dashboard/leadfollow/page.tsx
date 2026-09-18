@@ -10,6 +10,7 @@ import {
   ChevronRight,
   Clipboard,
   ExternalLink,
+  FileText,
   Mail,
   MessageSquareText,
   Plus,
@@ -25,7 +26,7 @@ import DashboardLayout from '@/app/user-dashboard/components/DashboardLayout';
 
 type Access = { allowed: boolean; planName: string | null; purchasePath: string; limits: { maxLeads?: number; monthlyAi?: number } };
 type Profile = { business_name: string; offer: string; target_audience: string; value_proposition: string; default_tone: string };
-type LeadStatus = 'new' | 'contacted' | 'replied' | 'won' | 'lost';
+type LeadStatus = 'new' | 'contacted' | 'proposal_sent' | 'replied' | 'won' | 'lost';
 type Lead = { id: string; name: string; company: string; email: string; phone: string; source: string; status: LeadStatus; notes: string; next_follow_up_at: string | null; last_contacted_at: string | null; created_at: string };
 type Message = { id: string; lead_id: string; channel: string; stage: string; tone: string; language: string; output_text: string; created_at: string };
 type Pagination = { page: number; pageSize: number; total: number; totalPages: number; hasPrevious: boolean; hasNext: boolean };
@@ -34,8 +35,8 @@ type Data = { access: Access; profile: Profile | null; leads: Lead[]; messages: 
 type Metric = [label: string, value: number, icon: LucideIcon];
 
 const emptyProfile: Profile = { business_name: '', offer: '', target_audience: '', value_proposition: '', default_tone: 'professional' };
-const statusOptions: LeadStatus[] = ['new', 'contacted', 'replied', 'won', 'lost'];
-const activeFollowUpStatuses = new Set<LeadStatus>(['new', 'contacted', 'replied']);
+const statusOptions: LeadStatus[] = ['new', 'contacted', 'proposal_sent', 'replied', 'won', 'lost'];
+const activeFollowUpStatuses = new Set<LeadStatus>(['new', 'contacted', 'proposal_sent', 'replied']);
 
 function FieldLabel({ children }: { children: ReactNode }) {
   return <span className="mb-1.5 block text-xs font-semibold text-foreground">{children}</span>;
@@ -88,6 +89,24 @@ function displayDateTime(value: string | null) {
 
 function providerLabel(provider: MailboxConnection['provider']) {
   return provider === 'google' ? 'Google' : 'Microsoft';
+}
+
+function leadStatusLabel(status: LeadStatus) {
+  return status === 'proposal_sent' ? 'Proposal sent' : status.charAt(0).toUpperCase() + status.slice(1);
+}
+
+function proposalHref(lead: Lead) {
+  const params = new URLSearchParams({
+    leadId: lead.id,
+    clientName: lead.name,
+    clientCompany: lead.company || '',
+    clientEmail: lead.email || '',
+    extraContext: [
+      lead.source ? `Lead source: ${lead.source}` : '',
+      lead.notes ? `Lead notes: ${lead.notes}` : '',
+    ].filter(Boolean).join('\n'),
+  });
+  return `/user-dashboard/proposalflow?${params.toString()}`;
 }
 
 function LeadFollowSkeleton() {
@@ -190,7 +209,7 @@ export default function LeadFollowPage() {
     ['Leads', data.counts.leads, Users],
     ['Due now', data.counts.due, CalendarClock],
     ['Contacted', data.counts.pipeline.contacted || 0, MessageSquareText],
-    ['Replies', data.counts.pipeline.replied || 0, Target],
+    ['Proposals', data.counts.pipeline.proposal_sent || 0, Target],
     ['Won', data.counts.pipeline.won || 0, Check],
   ] : [], [data]);
 
@@ -394,7 +413,7 @@ export default function LeadFollowPage() {
             <p className="mt-2 text-sm text-muted-foreground">Keep every lead organized, generate grounded follow-ups, and send reviewed email drafts through your connected mailbox.</p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <span className="rounded-full bg-primary/10 px-3 py-2 text-xs font-bold text-primary">{data.access.planName} · Lifetime</span>
+            <span className="rounded-full bg-primary/10 px-3 py-2 text-xs font-bold text-primary">{data.access.planName} · {data.access.planName === 'Free' ? 'Free tier' : 'Lifetime'}</span>
             <span className="rounded-full border border-border bg-card px-3 py-2 text-xs font-semibold">AI drafts: {data.usage.used}/{data.usage.limit} this month</span>
             <Link href="/user-dashboard/leadfollow/mailbox" className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-2 text-xs font-semibold text-foreground hover:border-primary/40 hover:text-primary">
               <Mail size={13} />
@@ -525,9 +544,9 @@ export default function LeadFollowPage() {
                       <tr key={lead.id} className={`border-b border-border/60 ${selectedLeadId === lead.id ? 'bg-primary/[0.03]' : due ? 'bg-amber-500/[0.035]' : ''}`}>
                         <td className="py-3 pr-4"><button onClick={() => setSelectedLeadId(lead.id)} className="text-left"><div className="font-semibold">{lead.name}</div><div className="text-xs text-muted-foreground">{lead.company || lead.email || 'No company'}</div></button></td>
                         <td className="py-3 pr-4 text-muted-foreground">{lead.source || '—'}</td>
-                        <td className="py-3 pr-4"><select className="rounded-lg border border-border bg-background px-2 py-1.5 text-xs font-semibold capitalize" value={lead.status} onChange={(e) => updateLead(lead.id, { status: e.target.value }, 'Lead status updated.')} disabled={Boolean(activeLeadAction)}>{statusOptions.map((status) => <option key={status} value={status}>{status}</option>)}</select></td>
+                        <td className="py-3 pr-4"><select className="rounded-lg border border-border bg-background px-2 py-1.5 text-xs font-semibold capitalize" value={lead.status} onChange={(e) => updateLead(lead.id, { status: e.target.value }, 'Lead status updated.')} disabled={Boolean(activeLeadAction)}>{statusOptions.map((status) => <option key={status} value={status}>{leadStatusLabel(status)}</option>)}</select></td>
                         <td className="py-3 pr-4"><div className="flex flex-wrap items-center gap-2"><time dir="ltr" className={`inline-block whitespace-nowrap tabular-nums ${due ? 'font-bold text-amber-700 dark:text-amber-400' : ''}`} dateTime={lead.next_follow_up_at ?? undefined}>{displayDateTime(lead.next_follow_up_at)}</time>{due && <span className="rounded-full bg-amber-500/10 px-2 py-1 text-[10px] font-black uppercase tracking-wide text-amber-700 dark:text-amber-400">Due now</span>}</div></td>
-                        <td className="py-3"><div className="flex gap-2"><button disabled={rowBusy} onClick={() => openEmailFollowUp(lead)} className={`rounded-lg border px-2.5 py-1.5 text-xs font-semibold disabled:opacity-50 ${due ? 'border-primary/35 bg-primary/[0.05] text-primary' : 'border-border'}`}>Email follow-up</button>{lead.status !== 'won' && <button disabled={Boolean(activeLeadAction)} onClick={() => updateLead(lead.id, { status: 'won' }, 'Lead marked won.')} className="rounded-lg bg-success/10 px-2.5 py-1.5 text-xs font-bold text-success disabled:opacity-50">{rowBusy ? 'Updating…' : 'Won'}</button>}</div></td>
+                        <td className="py-3"><div className="flex flex-wrap gap-2"><button disabled={rowBusy} onClick={() => openEmailFollowUp(lead)} className={`rounded-lg border px-2.5 py-1.5 text-xs font-semibold disabled:opacity-50 ${due ? 'border-primary/35 bg-primary/[0.05] text-primary' : 'border-border'}`}>Email follow-up</button><Link href={proposalHref(lead)} className="rounded-lg border border-primary/25 bg-primary/[0.05] px-2.5 py-1.5 text-xs font-bold text-primary">Create proposal</Link>{lead.status !== 'won' && <button disabled={Boolean(activeLeadAction)} onClick={() => updateLead(lead.id, { status: 'won' }, 'Lead marked won.')} className="rounded-lg bg-success/10 px-2.5 py-1.5 text-xs font-bold text-success disabled:opacity-50">{rowBusy ? 'Updating…' : 'Won'}</button>}</div></td>
                       </tr>
                     );
                   })}
