@@ -81,7 +81,8 @@ test('hero leads with flagship apps and names the three-part AI and SaaS workflo
   assert.match(hero, /href="\/products\/summeca-leadfollow-ai"/);
   assert.match(hero, /Explore LeadFollow AI/);
   assert.match(hero, /destination: 'summeca-leadfollow-ai'/);
-  assert.match(hero, /ProposalFlow AI/);\n  assert.match(hero, /href="\/products"/);
+  assert.match(hero, /ProposalFlow AI/);
+  assert.match(hero, /href="\/products"/);
   assert.match(hero, /View all products/);
   assert.match(hero, /homepage_view/);
 });
