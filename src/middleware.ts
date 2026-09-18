@@ -1,13 +1,57 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
-import {
-  SEO_LANGUAGE_COOKIE_KEY,
-  getPathLocale,
-  isInternationalSeoPath,
-  isSeoLocale,
-  localizePublicPath,
-  stripLocalePrefix,
-} from '@/lib/locale-routing';
+type SeoLocale = 'en' | 'ar';
+
+const SEO_LANGUAGE_COOKIE_KEY = 'summeca_language';
+const PUBLIC_I18N_PATHS = new Set([
+  '/',
+  '/products',
+  '/ai',
+  '/saas',
+  '/digital',
+  '/pricing',
+  '/about',
+  '/faq',
+  '/support',
+  '/contact',
+  '/status',
+  '/refunds',
+  '/shipping',
+  '/privacy',
+  '/terms',
+  '/cookies',
+]);
+
+function normalizedPath(pathname: string) {
+  if (pathname === '/') return '/';
+  return pathname.replace(/\/+$/, '') || '/';
+}
+
+function getPathLocale(pathname: string): SeoLocale | null {
+  const match = normalizedPath(pathname).match(/^\/(en|ar)(?=\/|$)/);
+  return match ? (match[1] as SeoLocale) : null;
+}
+
+function stripLocalePrefix(pathname: string) {
+  const cleaned = normalizedPath(pathname);
+  const locale = getPathLocale(cleaned);
+  if (!locale) return cleaned;
+  return cleaned.replace(new RegExp(`^/${locale}(?=/|$)`), '') || '/';
+}
+
+function isInternationalSeoPath(pathname: string) {
+  const publicPath = stripLocalePrefix(pathname);
+  return PUBLIC_I18N_PATHS.has(publicPath) || publicPath.startsWith('/products/');
+}
+
+function localizePublicPath(pathname: string, locale: SeoLocale) {
+  const publicPath = stripLocalePrefix(pathname);
+  return publicPath === '/' ? `/${locale}` : `/${locale}${publicPath}`;
+}
+
+function isSeoLocale(value: string | null | undefined): value is SeoLocale {
+  return value === 'en' || value === 'ar';
+}
 
 function getAuthCookiePrefix(): string | null {
   try {
