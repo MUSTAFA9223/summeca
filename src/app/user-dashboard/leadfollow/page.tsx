@@ -10,6 +10,7 @@ import {
   ChevronRight,
   Clipboard,
   ExternalLink,
+  FileText,
   Mail,
   MessageSquareText,
   Plus,
