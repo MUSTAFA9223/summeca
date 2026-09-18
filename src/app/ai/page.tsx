@@ -10,7 +10,6 @@ export const metadata: Metadata = {
   title: 'AI Tools',
   description:
     'Browse published SUMMECA AI tools, APIs, and plugins with pricing from active production plans.',
-  alternates: { canonical: '/ai' },
   robots: { index: true, follow: true },
   openGraph: {
     type: 'website',
