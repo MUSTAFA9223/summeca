@@ -132,6 +132,20 @@ const PRODUCT_SEO: Record<string, ProductSeo> = {
     image: '/assets/products/leadfollow-ai.svg',
     kind: 'software',
   },
+  'summeca-proposalflow-ai': {
+    title: 'SUMMECA ProposalFlow AI | AI Proposal Workspace',
+    description:
+      'Turn verified client requirements into a structured proposal package with scope, deliverables, timeline wording, pricing wording, next steps, and a follow-up email.',
+    keywords: [
+      'AI proposal generator',
+      'freelancer proposal software',
+      'scope of work generator',
+      'agency proposal tool',
+      'client proposal AI',
+    ],
+    image: '/assets/images/summeca-logo.png',
+    kind: 'software',
+  },
   'conversion-rescue-kit-starter': {
     title: 'SUMMECA Conversion Rescue Kit — Starter',
     description:
