@@ -41,6 +41,7 @@ const ORDER_POLL_WINDOW_MS = 120000;
 const SAAS_DESTINATIONS: Record<string, string> = {
   'summeca-invoiceflow': '/user-dashboard/invoiceflow',
   'summeca-leadfollow-ai': '/user-dashboard/leadfollow',
+  'summeca-proposalflow-ai': '/user-dashboard/proposalflow',
 };
 
 const ACCESS_LABELS: Record<string, string> = {

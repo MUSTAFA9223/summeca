@@ -38,6 +38,12 @@ type CatalogRow = Omit<PublicCatalogProduct, 'plans' | 'avg_rating' | 'review_co
   reviews?: Array<{ rating: number | string | null }> | null;
 };
 
+const PUBLIC_PRODUCT_SLUGS = [
+  'summeca-leadfollow-ai',
+  'summeca-proposalflow-ai',
+  'summeca-invoiceflow',
+] as const;
+
 const SELECT = `
   id,name,slug,short_desc,description,category,thumbnail_url,tags,metadata,created_at,
   plans:product_plans!inner(
@@ -64,6 +70,7 @@ export async function getPublicCatalog(): Promise<PublicCatalogProduct[]> {
   const url = new URL(`${supabaseUrl}/rest/v1/products`);
   url.searchParams.set('select', SELECT);
   url.searchParams.set('status', 'eq.active');
+  url.searchParams.set('slug', `in.(${PUBLIC_PRODUCT_SLUGS.join(',')})`);
   url.searchParams.set('plans.is_active', 'eq.true');
   url.searchParams.set('reviews.moderation_status', 'eq.approved');
   url.searchParams.set('order', 'created_at.desc');

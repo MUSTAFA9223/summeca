@@ -83,7 +83,7 @@ const CRYPTO_METHODS = [
   { value: 'crypto_usdt_erc20', label: 'USDT · Ethereum (ERC20)' },
 ];
 
-const SAAS_PRODUCT_SLUGS = new Set(['summeca-invoiceflow', 'summeca-leadfollow-ai']);
+const SAAS_PRODUCT_SLUGS = new Set(['summeca-invoiceflow', 'summeca-leadfollow-ai', 'summeca-proposalflow-ai']);
 
 function cryptoAssetLabel(paymentMethodType: string) {
   if (paymentMethodType === 'crypto_trx') return 'TRX';

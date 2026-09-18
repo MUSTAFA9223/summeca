@@ -21,7 +21,7 @@ export default function HomepagePurchaseGuide() {
         },
         {
           title: 'افتح المنتج داخل حساب SUMMECA',
-          text: 'تظهر تطبيقات SaaS داخل حسابك، بينما تستخدم المنتجات الرقمية المؤهلة تسليمًا محميًا.',
+          text: 'تفتح تطبيقات SUMMECA الحالية داخل حسابك بعد تأكيد الطلب والوصول.',
         },
       ]
     : [
@@ -35,7 +35,7 @@ export default function HomepagePurchaseGuide() {
         },
         {
           title: 'Open the product inside your SUMMECA account',
-          text: 'SaaS tools open from your account, while eligible digital products use protected delivery.',
+          text: 'Current SUMMECA apps open from your account after the order and access are confirmed.',
         },
       ];
 
@@ -43,7 +43,7 @@ export default function HomepagePurchaseGuide() {
     ? [
         {
           question: 'هل المنتج SaaS أم ملف تنزيل؟',
-          answer: 'InvoiceFlow وLeadFollow AI يعملان داخل حساب SUMMECA وليسا ملفات ZIP. أما بعض الحزم والمنتجات الرقمية فتستخدم تنزيلًا محميًا، ويظهر نوع التسليم في صفحة المنتج قبل الدفع.',
+          answer: 'InvoiceFlow وLeadFollow AI وProposalFlow AI تعمل داخل حساب SUMMECA وليست ملفات ZIP. يركز الكتالوج العام حاليًا على تطبيقات AI وSaaS المرتبطة بالحساب.',
         },
         {
           question: 'متى أحصل على الوصول؟',
@@ -69,7 +69,7 @@ export default function HomepagePurchaseGuide() {
     : [
         {
           question: 'Is this SaaS or a download?',
-          answer: 'InvoiceFlow and LeadFollow AI run inside your SUMMECA account and are not ZIP downloads. Some digital kits use protected downloads, and the delivery type is shown on the product page before checkout.',
+          answer: 'InvoiceFlow, LeadFollow AI, and ProposalFlow AI run inside your SUMMECA account and are not ZIP downloads. The public catalog is currently focused on account-based AI and SaaS apps.',
         },
         {
           question: 'When do I get access?',

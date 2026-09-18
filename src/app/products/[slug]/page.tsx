@@ -115,7 +115,7 @@ function suffix(period: BillingPeriod) {
 }
 
 function isSaasProduct(product: Product) {
-  return product.slug === 'summeca-invoiceflow' || product.slug === 'summeca-leadfollow-ai';
+  return product.slug === 'summeca-invoiceflow' || product.slug === 'summeca-leadfollow-ai' || product.slug === 'summeca-proposalflow-ai';
 }
 
 function isDigitalProduct(product: Product) {
@@ -126,6 +126,7 @@ function productCtaLabel(product: Product, plan: Plan, finalPrice: number) {
   if (finalPrice === 0) return 'Continue with free offer';
   if (product.slug === 'summeca-invoiceflow') return 'Get InvoiceFlow';
   if (product.slug === 'summeca-leadfollow-ai') return 'Get LeadFollow AI';
+  if (product.slug === 'summeca-proposalflow-ai') return 'Get ProposalFlow AI';
   if (product.slug === 'conversion-rescue-kit-starter') return 'Get Starter Kit';
   if (product.slug === 'conversion-rescue-kit-pro') return 'Get Pro Kit';
   if (product.slug === 'conversion-rescue-kit-ultimate') return 'Get Ultimate Kit';
@@ -409,7 +410,7 @@ export default function ProductDetailPage() {
               category={product.category}
               eyebrow={categoryLabel(product.category)}
               variant="hero"
-              badge="Actual product preview"
+              badge={product.thumbnail_url ? 'Actual product preview' : isSaas ? 'Account-based SaaS workspace' : 'Product preview'}
               className="relative z-10"
             />
           </div>
