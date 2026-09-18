@@ -14,8 +14,8 @@ function text(value: unknown, max = 1200) {
 
 function jsonFromModel(value: string) {
   const cleaned = value
-    .replace(/^\`\`\`(?:json)?\s*/i, '')
-    .replace(/\s*\`\`\`$/i, '')
+    .replace(/^```(?:json)?\s*/i, '')
+    .replace(/\s*```$/i, '')
     .trim();
   return JSON.parse(cleaned) as {
     executiveSummary: string;
@@ -86,7 +86,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'ProposalFlow AI purchase required.', access }, { status: 403 });
   }
 
-  const burst = await checkRateLimit(\`proposalflow:\${getRequestIdentity(request, user.id)}\`, {
+  const burst = await checkRateLimit(`proposalflow:${getRequestIdentity(request, user.id)}`, {
     limit: 8,
     windowMs: 60_000,
   });
@@ -139,7 +139,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Monthly ProposalFlow AI limit reached.', used, limit }, { status: 429 });
   }
 
-  const systemPrompt = \`You are ProposalFlow AI inside SUMMECA.
+  const systemPrompt = `You are ProposalFlow AI inside SUMMECA.
 Create a practical client proposal package using only facts supplied by the user.
 
 Rules:
@@ -163,29 +163,29 @@ Return exactly:
   "assumptions": ["assumption or clarification 1"],
   "nextStep": "one low-friction next step",
   "followUpEmail": "ready-to-review follow-up email"
-}\`;
+}`;
 
-  const userPrompt = \`Requested language: \${language}
-Tone: \${tone}
+  const userPrompt = `Requested language: ${language}
+Tone: ${tone}
 
-Client name: \${clientName}
-Client company: \${clientCompany || 'Not provided'}
+Client name: ${clientName}
+Client company: ${clientCompany || 'Not provided'}
 Project need:
-\${project}
+${project}
 
 Requested deliverables:
-\${deliverables}
+${deliverables}
 
 Timeline:
-\${timeline || 'Not provided'}
+${timeline || 'Not provided'}
 
 Price or pricing structure:
-\${price}
+${price}
 
 Additional factual context:
-\${extraContext || 'None'}
+${extraContext || 'None'}
 
-Create the proposal package now.\`;
+Create the proposal package now.`;
 
   let result;
   try {
