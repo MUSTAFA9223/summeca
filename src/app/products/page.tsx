@@ -12,7 +12,7 @@ export const revalidate = 300;
 export const metadata: Metadata = {
   title: 'AI & SaaS Products',
   description:
-    'Browse SUMMECA AI and SaaS applications for lead follow-up, proposals, invoicing, and practical business workflows.'
+    'Browse SUMMECA AI and SaaS applications for lead follow-up, proposals, invoicing, and practical business workflows.',
   robots: { index: true, follow: true },
   openGraph: {
     type: 'website',
@@ -20,7 +20,7 @@ export const metadata: Metadata = {
     siteName: 'SUMMECA',
     title: 'SUMMECA Products — AI & SaaS Business Tools',
     description:
-      'Browse focused SUMMECA AI and SaaS applications with live pricing from active offers.'
+      'Browse focused SUMMECA AI and SaaS applications with live pricing from active offers.',
     images: [{
       url: 'https://summeca.com/assets/images/summeca-logo.png',
       width: 1200,
@@ -32,7 +32,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'SUMMECA Products — AI & SaaS Business Tools',
     description:
-      'Browse focused SUMMECA AI and SaaS applications for modern business workflows.'
+      'Browse focused SUMMECA AI and SaaS applications for modern business workflows.',
     images: ['https://summeca.com/assets/images/summeca-logo.png'],
   },
 };
