@@ -47,10 +47,10 @@ test('featured homepage products and prices come from active production records'
   assert.match(homepage, /getEffectivePrice/);
   assert.match(homepage, /summeca-invoiceflow/);
   assert.match(homepage, /summeca-leadfollow-ai/);
-  assert.match(homepage, /conversion-rescue-kit-pro/);
-  assert.match(homepage, /ecommerce-product-page-conversion-kit/);
-  assert.match(homepage, /conversion-rescue-kit-starter/);
-  assert.match(homepage, /conversion-rescue-kit-ultimate/);
+  assert.match(homepage, /summeca-proposalflow-ai/);
+  assert.doesNotMatch(homepage, /conversion-rescue-kit-pro/);
+  assert.doesNotMatch(homepage, /ecommerce-product-page-conversion-kit/);
+  assert.match(publicCatalog, /PUBLIC_PRODUCT_SLUGS/);
   assert.match(homepage, /Starting at/);
   assert.doesNotMatch(homepage, /\$(?:29|39|49|59|79|89|99|129|149)(?:\b|\.)/);
 });
@@ -74,14 +74,14 @@ test('homepage does not advertise an unavailable payment provider as live', () =
   assert.match(cryptoStatus, /const available = Boolean/);
 });
 
-test('hero leads with the two flagship apps and keeps the full catalog secondary', () => {
+test('hero leads with flagship apps and names the three-part AI and SaaS workflow', () => {
   assert.match(hero, /href="\/products\/summeca-invoiceflow"/);
   assert.match(hero, /Explore InvoiceFlow/);
   assert.match(hero, /destination: 'summeca-invoiceflow'/);
   assert.match(hero, /href="\/products\/summeca-leadfollow-ai"/);
   assert.match(hero, /Explore LeadFollow AI/);
   assert.match(hero, /destination: 'summeca-leadfollow-ai'/);
-  assert.match(hero, /href="\/products"/);
+  assert.match(hero, /ProposalFlow AI/);\n  assert.match(hero, /href="\/products"/);
   assert.match(hero, /View all products/);
   assert.match(hero, /homepage_view/);
 });
