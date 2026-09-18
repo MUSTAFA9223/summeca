@@ -36,7 +36,7 @@ test('ProposalFlow does not store proposal body content in usage logs', () => {
 });
 
 test('ProposalFlow workspace is wired into dashboard and public product handling', () => {
-  assert.match(workspace, /Generate proposal package/);
+  assert.match(workspace, /Generate & save proposal/);
   assert.match(workspace, /Executive summary/);
   assert.match(workspace, /Follow-up email/);
   assert.match(sidebar, /\/user-dashboard\/proposalflow/);
