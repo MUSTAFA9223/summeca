@@ -122,8 +122,8 @@ test('public SaaS pricing stays connected to active checkout plans', () => {
   assert.doesNotMatch(salesExperience, /Payoneer|Crypto|FastSpring|Stripe/);
 });
 
-test('public SaaS access copy requires verified payment and rejects ZIP delivery', () => {
-  assert.match(salesExperience, /After verified payment, access is unlocked in your SUMMECA account\./);
-  assert.match(salesExperience, /only after the\s+payment is\s+confirmed/);
+test('public SaaS access copy exposes the limited Free tier while keeping paid verification and rejecting ZIP delivery', () => {
+  assert.match(salesExperience, /limited Free tier/i);
+  assert.match(salesExperience, /higher paid limits unlock after verified checkout/i);
   assert.match(salesExperience, /not\s+delivered\s+as\s+a\s+downloadable\s+ZIP/);
 });
