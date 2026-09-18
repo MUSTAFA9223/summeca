@@ -1,7 +1,10 @@
 import type { MetadataRoute } from 'next';
 import { createClient as createSupabaseClient } from '@supabase/supabase-js';
-
-const siteUrl = 'https://summeca.com';
+import {
+  SEO_LOCALES,
+  localizedAbsoluteUrl,
+  localizedAlternates,
+} from '@/lib/locale-routing';
 
 const publicRoutes = [
   { path: '/', priority: 1, changeFrequency: 'daily' as const },
@@ -30,18 +33,49 @@ function validDate(value: string | null | undefined) {
   return Number.isNaN(date.getTime()) ? null : date;
 }
 
+function pushLocalizedEntries(
+  entries: MetadataRoute.Sitemap,
+  path: string,
+  options: {
+    changeFrequency: NonNullable<MetadataRoute.Sitemap[number]['changeFrequency']>;
+    priority: number;
+    lastModified?: Date | null;
+  },
+) {
+  const alternates = localizedAlternates(path);
+
+  for (const locale of SEO_LOCALES) {
+    entries.push({
+      url: localizedAbsoluteUrl(path, locale),
+      ...(options.lastModified ? { lastModified: options.lastModified } : {}),
+      changeFrequency: options.changeFrequency,
+      priority: options.priority,
+      alternates: {
+        languages: alternates.languages,
+      },
+    });
+  }
+}
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // Static routes intentionally omit lastModified. Using the current time here would
   // falsely tell crawlers that every public page changed whenever this sitemap revalidates.
-  const entries: MetadataRoute.Sitemap = publicRoutes.map((route) => ({
-    url: `${siteUrl}${route.path}`,
-    changeFrequency: route.changeFrequency,
-    priority: route.priority,
-  }));
+  const entries: MetadataRoute.Sitemap = [];
+
+  for (const route of publicRoutes) {
+    pushLocalizedEntries(entries, route.path, {
+      changeFrequency: route.changeFrequency,
+      priority: route.priority,
+    });
+  }
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  const isCiPlaceholder = !supabaseUrl || !anonKey || supabaseUrl.includes('example.supabase.co') || anonKey === 'test-anon-key';
+  const isCiPlaceholder = !supabaseUrl
+    || !anonKey
+    || supabaseUrl.includes('example.supabase.co')
+    || anonKey === 'test-anon-key';
+
   if (isCiPlaceholder) return entries;
 
   try {
@@ -62,12 +96,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     for (const product of data ?? []) {
       if (!product.slug) continue;
       const lastModified = validDate(product.updated_at);
-      entries.push({
-        url: `${siteUrl}/products/${encodeURIComponent(product.slug)}`,
+      const productOptions = {
         ...(lastModified ? { lastModified } : {}),
-        changeFrequency: 'weekly',
+        changeFrequency: 'weekly' as const,
         priority: 0.8,
-      });
+      };
+      pushLocalizedEntries(
+        entries,
+        `/products/${encodeURIComponent(product.slug)}`,
+        productOptions,
+      );
     }
   } catch (error) {
     console.warn('[sitemap] Product sitemap generation failed:', error);

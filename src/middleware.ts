@@ -1,5 +1,57 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
+type SeoLocale = 'en' | 'ar';
+
+const SEO_LANGUAGE_COOKIE_KEY = 'summeca_language';
+const PUBLIC_I18N_PATHS = new Set([
+  '/',
+  '/products',
+  '/ai',
+  '/saas',
+  '/digital',
+  '/pricing',
+  '/about',
+  '/faq',
+  '/support',
+  '/contact',
+  '/status',
+  '/refunds',
+  '/shipping',
+  '/privacy',
+  '/terms',
+  '/cookies',
+]);
+
+function normalizedPath(pathname: string) {
+  if (pathname === '/') return '/';
+  return pathname.replace(/\/+$/, '') || '/';
+}
+
+function getPathLocale(pathname: string): SeoLocale | null {
+  const match = normalizedPath(pathname).match(/^\/(en|ar)(?=\/|$)/);
+  return match ? (match[1] as SeoLocale) : null;
+}
+
+function stripLocalePrefix(pathname: string) {
+  const cleaned = normalizedPath(pathname);
+  const locale = getPathLocale(cleaned);
+  if (!locale) return cleaned;
+  return cleaned.replace(new RegExp(`^/${locale}(?=/|$)`), '') || '/';
+}
+
+function isInternationalSeoPath(pathname: string) {
+  const publicPath = stripLocalePrefix(pathname);
+  return PUBLIC_I18N_PATHS.has(publicPath) || publicPath.startsWith('/products/');
+}
+
+function localizePublicPath(pathname: string, locale: SeoLocale) {
+  const publicPath = stripLocalePrefix(pathname);
+  return publicPath === '/' ? `/${locale}` : `/${locale}${publicPath}`;
+}
+
+function isSeoLocale(value: string | null | undefined): value is SeoLocale {
+  return value === 'en' || value === 'ar';
+}
 
 function getAuthCookiePrefix(): string | null {
   try {
@@ -48,6 +100,42 @@ function getCookiesForSupabase(request: NextRequest) {
 
 export async function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname;
+
+  const pathLocale = getPathLocale(path);
+  if (pathLocale && isInternationalSeoPath(path)) {
+    const publicPath = stripLocalePrefix(path);
+    const rewriteUrl = request.nextUrl.clone();
+    rewriteUrl.pathname = publicPath;
+
+    const requestHeaders = new Headers(request.headers);
+    requestHeaders.set('x-summeca-locale', pathLocale);
+    requestHeaders.set('x-summeca-public-path', publicPath);
+    requestHeaders.set('x-summeca-localized-path', localizePublicPath(publicPath, pathLocale));
+
+    const response = NextResponse.rewrite(rewriteUrl, {
+      request: { headers: requestHeaders },
+    });
+    response.cookies.set(SEO_LANGUAGE_COOKIE_KEY, pathLocale, {
+      path: '/',
+      maxAge: 60 * 60 * 24 * 365,
+      sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production',
+    });
+    response.headers.set('Content-Language', pathLocale);
+    return response;
+  }
+
+  if (
+    !pathLocale
+    && isInternationalSeoPath(path)
+    && ['GET', 'HEAD'].includes(request.method)
+  ) {
+    const cookieLanguage = request.cookies.get(SEO_LANGUAGE_COOKIE_KEY)?.value;
+    const locale = isSeoLocale(cookieLanguage) ? cookieLanguage : 'en';
+    const localizedUrl = request.nextUrl.clone();
+    localizedUrl.pathname = localizePublicPath(path, locale);
+    return NextResponse.redirect(localizedUrl, 308);
+  }
 
   // Keep the inexpensive origin protection for state-changing API requests.
   if (path.startsWith('/api/') && !['GET', 'HEAD', 'OPTIONS'].includes(request.method) && path !== '/api/payment/webhook') {
@@ -138,6 +226,26 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
+    '/',
+    '/products/:path*',
+    '/ai',
+    '/saas',
+    '/digital',
+    '/pricing',
+    '/about',
+    '/faq',
+    '/support',
+    '/contact',
+    '/status',
+    '/refunds',
+    '/shipping',
+    '/privacy',
+    '/terms',
+    '/cookies',
+    '/en',
+    '/en/:path*',
+    '/ar',
+    '/ar/:path*',
     '/user-dashboard/:path*',
     '/admin/:path*',
     '/api/admin/:path*',

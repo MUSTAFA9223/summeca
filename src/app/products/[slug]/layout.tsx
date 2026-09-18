@@ -1,8 +1,10 @@
 import { cache } from 'react';
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
+import { headers } from 'next/headers';
 import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 import { getEffectivePrice } from '@/lib/pricing';
+import { isSeoLocale, localizedAbsoluteUrl, type SeoLocale } from '@/lib/locale-routing';
 
 export const revalidate = 300;
 
@@ -171,8 +173,8 @@ const PRODUCT_SEO: Record<string, ProductSeo> = {
   },
 };
 
-function canonicalFor(slug: string) {
-  return `https://summeca.com/products/${encodeURIComponent(slug)}`;
+function canonicalFor(slug: string, locale: SeoLocale) {
+  return localizedAbsoluteUrl(`/products/${encodeURIComponent(slug)}`, locale);
 }
 
 function absoluteImage(image: string | null | undefined) {
@@ -304,13 +306,15 @@ export async function generateMetadata({
   const entry = PRODUCT_SEO[slug] ?? null;
   const snapshot = await loadPublicProductSnapshot(slug);
   const product = snapshot?.product ?? null;
-  const canonical = canonicalFor(slug);
+  const requestHeaders = await headers();
+  const localeHeader = requestHeaders.get('x-summeca-locale');
+  const locale: SeoLocale = isSeoLocale(localeHeader) ? localeHeader : 'en';
+  const canonical = canonicalFor(slug, locale);
 
   if (!entry && !product) {
     return {
       title: { absolute: 'Product | SUMMECA' },
       description: 'Browse published digital products and software tools from SUMMECA.',
-      alternates: { canonical },
       robots: { index: false, follow: true },
     };
   }
@@ -327,7 +331,6 @@ export async function generateMetadata({
     title: { absolute: title },
     description,
     keywords,
-    alternates: { canonical },
     robots: { index: true, follow: true },
     openGraph: {
       type: 'website',
@@ -365,7 +368,10 @@ export default async function ProductLayout({
 
   if (!entry && !product) return children;
 
-  const canonical = canonicalFor(slug);
+  const requestHeaders = await headers();
+  const localeHeader = requestHeaders.get('x-summeca-locale');
+  const locale: SeoLocale = isSeoLocale(localeHeader) ? localeHeader : 'en';
+  const canonical = canonicalFor(slug, locale);
   const image = absoluteImage(entry?.image ?? product?.thumbnail_url);
   const name = displayName(entry, product);
   const description = entry?.description
@@ -394,6 +400,7 @@ export default async function ProductLayout({
     url: canonical,
     image,
     publisher: { '@id': 'https://summeca.com/#organization' },
+    inLanguage: locale,
     ...(product?.id ? { sku: product.id } : {}),
     ...(offers.length ? { offers } : {}),
     ...(rating ? { aggregateRating: rating } : {}),
