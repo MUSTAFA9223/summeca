@@ -27,6 +27,7 @@ import PublicFooter from '@/components/PublicFooter';
 import PublicNav from '@/components/PublicNav';
 import WishlistButton from '@/components/WishlistButton';
 import { getEffectivePrice } from '@/lib/pricing';
+import { trackFunnelEvent } from '@/lib/funnelAnalytics';
 
 export type BillingPeriod = 'one_time' | 'monthly' | 'yearly' | 'lifetime';
 
@@ -87,8 +88,8 @@ const UI = {
     ar: 'تعيد صفحة الدفع تأكيد المنتج والخطة والسعر والعملة ومدة الوصول قبل إتمام الدفع، كما يتم تأكيد جدول الدفع في صفحة Checkout.',
   },
   trust: {
-    en: 'After verified payment, access is unlocked in your SUMMECA account. This is a working SaaS workspace, not a downloadable ZIP.',
-    ar: 'بعد التحقق من الدفع، يتم فتح الوصول داخل حساب SUMMECA. هذا تطبيق SaaS يعمل داخل الحساب وليس ملف ZIP للتنزيل.',
+    en: 'Start with the limited Free tier in your SUMMECA account. Paid plans unlock higher limits. This is a working SaaS workspace, not a downloadable ZIP.',
+    ar: 'ابدأ بالمستوى المجاني المحدود داخل حساب SUMMECA، وتفتح الخطط المدفوعة حدودًا أعلى. هذا تطبيق SaaS يعمل داخل الحساب وليس ملف ZIP للتنزيل.',
   },
   seePreview: { en: 'See the real product preview', ar: 'شاهد معاينة المنتج الحقيقية' },
   howItWorks: { en: 'How it works', ar: 'كيف يعمل' },
@@ -120,8 +121,8 @@ const UI = {
   afterPurchase: { en: 'What happens after purchase', ar: 'ماذا يحدث بعد الشراء' },
   accountAccess: { en: 'Account access after verified payment', ar: 'الوصول إلى الحساب بعد التحقق من الدفع' },
   deliveryCopy: {
-    en: 'InvoiceFlow and LeadFollow AI run inside your SUMMECA account. They are not ZIP downloads. Access is unlocked only after the payment is confirmed for the account used at checkout.',
-    ar: 'يعمل InvoiceFlow وLeadFollow AI داخل حساب SUMMECA، وليسا ملفات ZIP للتنزيل. يتم فتح الوصول فقط بعد تأكيد الدفع للحساب المستخدم أثناء عملية الشراء.',
+    en: 'InvoiceFlow and LeadFollow AI run inside your SUMMECA account. The limited Free tier works without a purchase; higher paid limits unlock after verified checkout.',
+    ar: 'يعمل InvoiceFlow وLeadFollow AI داخل حساب SUMMECA. يعمل المستوى المجاني المحدود دون شراء، بينما تُفتح الحدود المدفوعة الأعلى بعد التحقق من الدفع.',
   },
   deliveryNote: {
     en: 'Other SUMMECA digital products may use protected downloads. The delivery type for this product is shown before payment.',
@@ -230,7 +231,7 @@ const FAQS: Array<{ question: Copy; answer: Copy }> = [
   },
   {
     question: { en: 'How do I get access?', ar: 'كيف أحصل على الوصول؟' },
-    answer: { en: 'Choose an active plan and complete checkout. Access is unlocked only after the payment is confirmed for the account used at checkout.', ar: 'اختر خطة نشطة وأكمل الدفع. يتم فتح الوصول فقط بعد تأكيد الدفع للحساب المستخدم أثناء عملية الشراء.' },
+    answer: { en: 'You can start with the limited Free tier after signing in. Choose a paid plan only when you need higher limits; paid access is unlocked after verified checkout.', ar: 'يمكنك البدء بالمستوى المجاني المحدود بعد تسجيل الدخول. اختر خطة مدفوعة عندما تحتاج حدودًا أعلى، ويتم فتحها بعد التحقق من الدفع.' },
   },
   {
     question: { en: 'Is it a download or ZIP file?', ar: 'هل هو تنزيل أو ملف ZIP؟' },
@@ -325,6 +326,12 @@ function paymentType(period: BillingPeriod, locale: Locale) {
   return locale === 'ar' ? 'دفعة واحدة' : 'One-time payment';
 }
 
+function freeWorkspacePath(slug: SalesSlug) {
+  return slug === 'summeca-invoiceflow'
+    ? '/user-dashboard/invoiceflow'
+    : '/user-dashboard/leadfollow';
+}
+
 export default function SaasProductSalesExperience({
   product,
   plans,
@@ -355,6 +362,14 @@ export default function SaasProductSalesExperience({
       setSelectedPlanId(lowestPlan?.id ?? null);
     }
   }, [activePlans, lowestPlan, selectedPlanId]);
+
+  useEffect(() => {
+    trackFunnelEvent('product_view', {
+      productId: product.id,
+      productSlug: product.slug,
+      source: 'saas_sales_page',
+    });
+  }, [product.id, product.slug]);
 
   useEffect(() => {
     const node = heroRef.current;
@@ -422,8 +437,15 @@ export default function SaasProductSalesExperience({
               <p className="mt-2 max-w-xl text-xs leading-5 text-muted-foreground">{text(UI.checkoutConfirmation, locale)}</p>
 
               <div className="mt-5 flex flex-col gap-3 sm:flex-row">
-                <Link href="#plans" className="btn-primary inline-flex min-h-12 items-center justify-center gap-2 px-6 text-sm">
-                  {text(story.primaryCta, locale)} <ArrowRight size={15} />
+                <Link
+                  href={freeWorkspacePath(validSlug)}
+                  onClick={() => trackFunnelEvent('trial_started', { productId: product.id, productSlug: product.slug, source: 'hero' })}
+                  className="btn-primary inline-flex min-h-12 items-center justify-center gap-2 px-6 text-sm"
+                >
+                  {locale === 'ar' ? 'جرّب مجانًا' : 'Try free'} <ArrowRight size={15} />
+                </Link>
+                <Link href="#plans" className="inline-flex min-h-12 items-center justify-center rounded-xl border border-primary/30 bg-card px-6 text-sm font-bold text-primary transition-colors hover:bg-primary/5">
+                  {text(story.primaryCta, locale)}
                 </Link>
                 <Link href="#product-preview" className="inline-flex min-h-12 items-center justify-center rounded-xl border border-border bg-card px-6 text-sm font-bold text-foreground transition-colors hover:border-primary/40 hover:text-primary">
                   {text(UI.seePreview, locale)}
@@ -571,7 +593,19 @@ export default function SaasProductSalesExperience({
                       <button type="button" onClick={() => setSelectedPlanId(plan.id)} aria-pressed={selected} className="mt-5 min-h-10 rounded-xl border border-primary/25 bg-primary/5 px-4 text-sm font-bold text-primary transition hover:bg-primary/10">
                         {selected ? text(UI.selected, locale) : text(UI.selectPlan, locale)}
                       </button>
-                      <Link href={`/checkout?product_id=${encodeURIComponent(product.id)}&plan_id=${encodeURIComponent(plan.id)}`} className="btn-primary mt-3 flex min-h-11 items-center justify-center gap-2 px-4 text-sm">
+                      <Link
+                        href={`/checkout?product_id=${encodeURIComponent(product.id)}&plan_id=${encodeURIComponent(plan.id)}`}
+                        onClick={() => trackFunnelEvent('buy_click', {
+                          productId: product.id,
+                          productSlug: product.slug,
+                          planId: plan.id,
+                          planName: plan.name,
+                          amount: price.finalPrice,
+                          currency: plan.currency,
+                          source: 'plan_card',
+                        })}
+                        className="btn-primary mt-3 flex min-h-11 items-center justify-center gap-2 px-4 text-sm"
+                      >
                         {text(UI.continueWith, locale)} {plan.name} <ArrowRight size={14} />
                       </Link>
                     </article>
@@ -641,7 +675,19 @@ export default function SaasProductSalesExperience({
               <p className="truncate text-sm font-black text-foreground">{product.name}</p>
               <p className="truncate text-xs text-muted-foreground">{selectedPlan.name} · {money(selectedPricing.finalPrice, selectedPlan.currency, locale)} · {accessPeriod(selectedPlan.billing_period, locale)}</p>
             </div>
-            <Link href={checkoutHref} className="btn-primary inline-flex min-h-10 shrink-0 items-center justify-center gap-2 px-4 text-xs sm:text-sm">
+            <Link
+              href={checkoutHref}
+              onClick={() => trackFunnelEvent('buy_click', {
+                productId: product.id,
+                productSlug: product.slug,
+                planId: selectedPlan.id,
+                planName: selectedPlan.name,
+                amount: selectedPricing.finalPrice,
+                currency: selectedPlan.currency,
+                source: 'sticky_checkout',
+              })}
+              className="btn-primary inline-flex min-h-10 shrink-0 items-center justify-center gap-2 px-4 text-xs sm:text-sm"
+            >
               {text(UI.buySelected, locale)} <ArrowRight size={14} />
             </Link>
           </div>
