@@ -394,7 +394,7 @@ export default function LeadFollowPage() {
             <p className="mt-2 text-sm text-muted-foreground">Keep every lead organized, generate grounded follow-ups, and send reviewed email drafts through your connected mailbox.</p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <span className="rounded-full bg-primary/10 px-3 py-2 text-xs font-bold text-primary">{data.access.planName} · Lifetime</span>
+            <span className="rounded-full bg-primary/10 px-3 py-2 text-xs font-bold text-primary">{data.access.planName} · {data.access.planName === 'Free' ? 'Free tier' : 'Lifetime'}</span>
             <span className="rounded-full border border-border bg-card px-3 py-2 text-xs font-semibold">AI drafts: {data.usage.used}/{data.usage.limit} this month</span>
             <Link href="/user-dashboard/leadfollow/mailbox" className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-2 text-xs font-semibold text-foreground hover:border-primary/40 hover:text-primary">
               <Mail size={13} />
