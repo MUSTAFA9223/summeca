@@ -13,9 +13,9 @@ test('homepage renders the standalone purchase guide after trust messaging', () 
   assert.match(homepage, /import HomepagePurchaseGuide/);
   assert.match(homepage, /<HomepagePurchaseGuide \/>/);
   assert.match(homepage, /AI-assisted workspace/);
-  assert.match(homepage, /Downloadable digital kit/);
+  assert.match(homepage, /AI proposal workspace/);
   assert.match(homepage, /SaaS workspace/);
-  assert.match(homepage, /Business Template/);
+  assert.match(homepage, /AI & SaaS workspace/);
 });
 
 test('purchase guide explains three-step access flow in English and Arabic', () => {
@@ -39,7 +39,7 @@ test('homepage FAQ covers product type, access, billing, delivery, current payme
     assert.match(guide, new RegExp(question.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
   }
 
-  assert.match(guide, /InvoiceFlow and LeadFollow AI run inside your SUMMECA account/);
+  assert.match(guide, /InvoiceFlow, LeadFollow AI, and ProposalFlow AI run inside your SUMMECA account/);
   assert.match(guide, /server-side/);
   assert.match(guide, /payment provider explicitly state/);
   assert.match(guide, /only payment methods that are currently enabled/);
