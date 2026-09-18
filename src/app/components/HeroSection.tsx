@@ -44,10 +44,10 @@ export default function HeroSection() {
 
   const copy = isArabic
     ? {
-        eyebrow: 'تطبيقات عملية للأعمال والمتاجر الرقمية الصغيرة',
-        headlineOne: 'نظّم الفواتير ومتابعة العملاء',
-        headlineTwo: 'بتطبيقات SUMMECA العملية.',
-        body: 'ابدأ بـ InvoiceFlow لإدارة الفواتير أو LeadFollow AI لتنظيم متابعة العملاء. شاهد الواجهة الحقيقية، المزايا والسعر قبل أن تختار.',
+        eyebrow: 'تطبيقات ذكاء اصطناعي وSaaS للأعمال الحديثة',
+        headlineOne: 'حوّل العميل إلى عرض ثم فاتورة',
+        headlineTwo: 'باستخدام تطبيقات SUMMECA الذكية.',
+        body: 'استخدم LeadFollow AI للمتابعة، وProposalFlow AI لإنشاء عروض العملاء، وInvoiceFlow للفواتير ضمن مجموعة مركزة من تطبيقات AI وSaaS.',
         invoiceFlow: 'استكشف InvoiceFlow',
         leadFollow: 'استكشف LeadFollow AI',
         allProducts: 'عرض كل المنتجات',
@@ -57,10 +57,10 @@ export default function HeroSection() {
         support: 'دعم العملاء',
       }
     : {
-        eyebrow: 'Practical apps for modern small online businesses',
-        headlineOne: 'Organize invoices and customer follow-ups',
-        headlineTwo: 'with focused SUMMECA apps.',
-        body: 'Start with InvoiceFlow for invoicing or LeadFollow AI for customer follow-up. See the real interface, features, and current price before you choose.',
+        eyebrow: 'Focused AI & SaaS apps for modern business',
+        headlineOne: 'Move from lead to proposal to invoice',
+        headlineTwo: 'with focused SUMMECA AI & SaaS apps.',
+        body: 'Use LeadFollow AI for follow-up, ProposalFlow AI for client proposals, and InvoiceFlow for invoicing in one focused SUMMECA product line.',
         invoiceFlow: 'Explore InvoiceFlow',
         leadFollow: 'Explore LeadFollow AI',
         allProducts: 'View all products',
