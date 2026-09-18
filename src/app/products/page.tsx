@@ -10,17 +10,17 @@ import { isSeoLocale, localizedAbsoluteUrl, type SeoLocale } from '@/lib/locale-
 export const revalidate = 300;
 
 export const metadata: Metadata = {
-  title: 'Products',
+  title: 'AI & SaaS Products',
   description:
-    'Browse published SUMMECA AI tools, SaaS applications, and digital products with live pricing from active offers.',
+    'Browse SUMMECA AI and SaaS applications for lead follow-up, proposals, invoicing, and practical business workflows.'
   robots: { index: true, follow: true },
   openGraph: {
     type: 'website',
     url: 'https://summeca.com/products',
     siteName: 'SUMMECA',
-    title: 'SUMMECA Products — AI, SaaS & Digital Tools',
+    title: 'SUMMECA Products — AI & SaaS Business Tools',
     description:
-      'Browse production-ready SUMMECA AI tools, SaaS applications, and digital products with pricing from active offers.',
+      'Browse focused SUMMECA AI and SaaS applications with live pricing from active offers.'
     images: [{
       url: 'https://summeca.com/assets/images/summeca-logo.png',
       width: 1200,
@@ -30,9 +30,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'SUMMECA Products — AI, SaaS & Digital Tools',
+    title: 'SUMMECA Products — AI & SaaS Business Tools',
     description:
-      'Browse production-ready SUMMECA AI tools, SaaS applications, and digital products.',
+      'Browse focused SUMMECA AI and SaaS applications for modern business workflows.'
     images: ['https://summeca.com/assets/images/summeca-logo.png'],
   },
 };
@@ -59,7 +59,7 @@ export default async function ProductsPage() {
     '@context': 'https://schema.org',
     '@type': 'ItemList',
     '@id': `${catalogUrl}#catalog`,
-    name: 'SUMMECA Product Catalog',
+    name: 'SUMMECA AI & SaaS Catalog',
     url: catalogUrl,
     inLanguage: locale,
     numberOfItems: products.length,
@@ -124,9 +124,9 @@ export default async function ProductsPage() {
       <CatalogClient
         initialProducts={products}
         kind="all"
-        eyebrow="SUMMECA Catalog"
-        title="Published digital products"
-        description="Browse only production offers currently published by SUMMECA. Prices, currencies, billing periods, and sale pricing come directly from the active product plans used at checkout."
+        eyebrow="SUMMECA AI & SaaS"
+        title="Focused business applications"
+        description="Use LeadFollow AI, ProposalFlow AI, and InvoiceFlow as a focused workflow from lead follow-up to proposal to invoice. Pricing comes directly from the active plans used at checkout."
       />
       <PublicFooter />
     </div>
