@@ -22,8 +22,8 @@ function uuid(value: unknown) {
 
 function jsonFromModel(value: string) {
   const cleaned = value
-    .replace(/^\`\`\`(?:json)?\s*/i, '')
-    .replace(/\s*\`\`\`$/i, '')
+    .replace(/^```(?:json)?\s*/i, '')
+    .replace(/\s*```$/i, '')
     .trim();
   return JSON.parse(cleaned) as {
     executiveSummary: string;
