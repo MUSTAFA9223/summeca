@@ -21,6 +21,7 @@ import { translateAdminDashboardText } from '@/lib/i18n-admin-dashboard';
 import { translateDashboardDetailsText } from '@/lib/i18n-dashboard-details';
 import { translateLeadFollowEmailText } from '@/lib/i18n-leadfollow-email';
 import { translateSiteText } from '@/lib/i18n-products';
+import { isInternationalSeoPath, localizePublicPath } from '@/lib/locale-routing';
 
 type LanguageContextValue = {
   language: AppLanguage;
@@ -186,6 +187,13 @@ export function LanguageProvider({
     (nextLanguage: AppLanguage) => {
       persistLanguage(nextLanguage);
       if (nextLanguage === language) return;
+
+      if (isInternationalSeoPath(window.location.pathname)) {
+        const nextPath = localizePublicPath(window.location.pathname, nextLanguage);
+        window.location.assign(`${nextPath}${window.location.search}${window.location.hash}`);
+        return;
+      }
+
       window.location.reload();
     },
     [language],
