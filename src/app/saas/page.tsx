@@ -10,7 +10,6 @@ export const metadata: Metadata = {
   title: 'SaaS Applications',
   description:
     'Browse published SUMMECA SaaS applications and related services with pricing from active production plans.',
-  alternates: { canonical: '/saas' },
   robots: { index: true, follow: true },
   openGraph: {
     type: 'website',
