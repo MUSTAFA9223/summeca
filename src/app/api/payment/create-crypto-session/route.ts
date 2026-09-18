@@ -130,7 +130,7 @@ export async function POST(request: NextRequest) {
     && finalAmount + 0.005 < minimumCheck.minimumFiat
   ) {
     return noStoreJson({
-      error: `This payment method currently requires at least ${minimumCheck.minimumFiat.toFixed(2)} ${orderCurrencyPreview}. Try another available crypto option or Payoneer.`,
+      error: `This payment method currently requires at least ${minimumCheck.minimumFiat.toFixed(2)} ${orderCurrencyPreview}. Try another available crypto option.`,
       minimumAmount: minimumCheck.minimumFiat,
       minimumCurrency: orderCurrencyPreview,
       payCurrency: minimumCheck.payCurrency,
