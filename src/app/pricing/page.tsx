@@ -9,7 +9,6 @@ export const metadata: Metadata = {
   title: 'Pricing for Store Tools',
   description:
     'Compare active SUMMECA product plans for small e-commerce workflows with transparent prices, billing periods, included features, and current production offers.',
-  alternates: { canonical: '/pricing' },
   openGraph: {
     type: 'website',
     url: '/pricing',
