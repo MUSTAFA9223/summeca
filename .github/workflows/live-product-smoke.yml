@@ -21,44 +21,42 @@ jobs:
       SUPABASE_URL: https://encrvihpdkvubxyvphlt.supabase.co
       SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
     steps:
-      - name: Verify public product routes, catalog and download protection
+      - name: Verify current AI/SaaS product routes, catalog and download protection
         shell: bash
         run: |
           node <<'NODE'
           const expected = [
             {
-              slug: 'ecommerce-product-page-conversion-kit',
-              title: 'Ecommerce Product Page Conversion Kit',
-              price: 29,
-              asset: 'https://summeca.com/assets/products/ecommerce-product-page-conversion-kit.svg',
+              slug: 'summeca-invoiceflow',
+              title: 'SUMMECA InvoiceFlow',
             },
             {
-              slug: 'ai-social-media-content-kit',
-              title: 'AI Social Media Content Kit',
-              price: 39,
-              asset: 'https://summeca.com/assets/products/ai-social-media-content-kit.svg',
+              slug: 'summeca-leadfollow-ai',
+              title: 'SUMMECA LeadFollow AI',
             },
             {
-              slug: 'freelancer-client-management-kit',
-              title: 'Freelancer Client Management Kit',
-              price: 49,
-              asset: 'https://summeca.com/assets/products/freelancer-client-management-kit.svg',
+              slug: 'summeca-proposalflow-ai',
+              title: 'SUMMECA ProposalFlow AI',
             },
           ];
+
+          const catalog = await fetch('https://summeca.com/products', { redirect: 'follow' });
+          const catalogType = catalog.headers.get('content-type') || '';
+          const catalogHtml = await catalog.text();
+          console.log(`catalog: status=${catalog.status} type=${catalogType}`);
+          if (!catalog.ok || !catalogType.includes('text/html')) process.exit(60);
 
           for (const product of expected) {
             const pageUrl = `https://summeca.com/products/${product.slug}`;
             const page = await fetch(pageUrl, { redirect: 'follow' });
             const pageType = page.headers.get('content-type') || '';
-            const html = await page.text();
             console.log(`${product.slug}: page=${page.status} type=${pageType}`);
             if (!page.ok || !pageType.includes('text/html')) process.exit(61);
-            if (!html.includes(product.title)) process.exit(62);
 
-            const asset = await fetch(product.asset, { redirect: 'follow' });
-            const assetType = asset.headers.get('content-type') || '';
-            console.log(`${product.slug}: asset=${asset.status} type=${assetType}`);
-            if (!asset.ok || !assetType.includes('image/svg+xml')) process.exit(63);
+            if (!catalogHtml.includes(product.title)) {
+              console.error(`Catalog is missing expected product title: ${product.title}`);
+              process.exit(62);
+            }
           }
 
           const unauthDownload = await fetch(
@@ -72,42 +70,61 @@ jobs:
           const supabaseUrl = process.env.SUPABASE_URL || '';
           if (!anonKey || !supabaseUrl) process.exit(65);
 
-          const productQuery = new URL('/rest/v1/products', supabaseUrl);
-          productQuery.searchParams.set('select', 'id,slug,status');
-          productQuery.searchParams.set('status', 'eq.active');
-          productQuery.searchParams.set('slug', `in.(${expected.map((item) => item.slug).join(',')})`);
           const headers = {
             apikey: anonKey,
             authorization: `Bearer ${anonKey}`,
           };
+
+          const productQuery = new URL('/rest/v1/products', supabaseUrl);
+          productQuery.searchParams.set('select', 'id,slug,name,status');
+          productQuery.searchParams.set('status', 'eq.active');
+          productQuery.searchParams.set('slug', `in.(${expected.map((item) => item.slug).join(',')})`);
           const productsResponse = await fetch(productQuery, { headers });
           if (!productsResponse.ok) process.exit(66);
           const products = await productsResponse.json();
-          if (!Array.isArray(products) || products.length !== expected.length) process.exit(67);
+
+          if (!Array.isArray(products) || products.length !== expected.length) {
+            console.error('Current core AI/SaaS products are not all active.');
+            process.exit(67);
+          }
 
           const idBySlug = new Map(products.map((product) => [product.slug, product.id]));
+          for (const product of expected) {
+            const row = products.find((item) => item.slug === product.slug);
+            if (!row || row.name !== product.title) {
+              console.error(`Product metadata mismatch for ${product.slug}`);
+              process.exit(68);
+            }
+          }
+
           const ids = expected.map((item) => idBySlug.get(item.slug));
-          if (ids.some((id) => typeof id !== 'string' || !id)) process.exit(68);
+          if (ids.some((id) => typeof id !== 'string' || !id)) process.exit(69);
 
           const plansQuery = new URL('/rest/v1/product_plans', supabaseUrl);
           plansQuery.searchParams.set('select', 'product_id,name,price,currency,billing_period,is_active');
           plansQuery.searchParams.set('is_active', 'eq.true');
           plansQuery.searchParams.set('product_id', `in.(${ids.join(',')})`);
           const plansResponse = await fetch(plansQuery, { headers });
-          if (!plansResponse.ok) process.exit(69);
+          if (!plansResponse.ok) process.exit(70);
           const plans = await plansResponse.json();
-          if (!Array.isArray(plans) || plans.length !== expected.length) process.exit(70);
+          if (!Array.isArray(plans)) process.exit(71);
 
+          const allowedBillingPeriods = new Set(['one_time', 'monthly', 'yearly', 'lifetime']);
           for (const product of expected) {
             const productId = idBySlug.get(product.slug);
             const matches = plans.filter((plan) => plan.product_id === productId);
-            if (matches.length !== 1) process.exit(71);
-            const [plan] = matches;
-            const price = Number(plan.price);
-            console.log(`${product.slug}: ${plan.name} ${price} ${plan.currency} ${plan.billing_period}`);
-            if (plan.name !== 'Complete Kit') process.exit(72);
-            if (price !== product.price || plan.currency !== 'USD' || plan.billing_period !== 'one_time') process.exit(73);
+            if (matches.length < 1) {
+              console.error(`No active checkout plan found for ${product.slug}`);
+              process.exit(72);
+            }
+
+            for (const plan of matches) {
+              const price = Number(plan.price);
+              console.log(`${product.slug}: ${plan.name} ${price} ${plan.currency} ${plan.billing_period}`);
+              if (!plan.name || !Number.isFinite(price) || price < 0) process.exit(73);
+              if (plan.currency !== 'USD' || !allowedBillingPeriods.has(plan.billing_period)) process.exit(74);
+            }
           }
 
-          console.log('Live digital-product smoke test passed.');
+          console.log('Live AI/SaaS product smoke test passed.');
           NODE
