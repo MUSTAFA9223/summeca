@@ -59,7 +59,7 @@ const AppLogo = memo(function AppLogo({
           sizes={`${width}px`}
           quality={100}
           draggable={false}
-          className={`flex-shrink-0 select-none object-contain ${brandToneClass}`}
+          className={`h-auto max-w-full flex-shrink-0 select-none object-contain ${brandToneClass}`}
           priority
           unoptimized={resolvedSrc.endsWith('.svg')}
         />
