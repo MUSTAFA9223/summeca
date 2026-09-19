@@ -17,6 +17,7 @@ test('checkout summary exposes the purchase facts without changing pricing autho
   }
   assert.match(checkout, /billingPeriodLabel\[cartItem\.plan\.billing_period\]/);
   assert.match(checkout, /deliveryTypeLabel\(cartItem\.product\)/);
+  assert.match(checkout, /summeca-siteagent-ai/);
   assert.match(checkout, /getEffectivePrice\(cartItem\.plan\)/);
   assert.match(checkout, /\/api\/payment\/quote/);
 });
@@ -54,6 +55,8 @@ test('success page opens products only after a completed order state', () => {
   assert.match(success, /Protected digital download/);
   assert.match(success, /\/user-dashboard\/invoiceflow/);
   assert.match(success, /\/user-dashboard\/leadfollow/);
+  assert.match(success, /\/user-dashboard\/siteagent/);
+  assert.match(success, /summeca-siteagent-ai/);
   assert.match(success, /\/user-dashboard\/downloads/);
   assert.doesNotMatch(success, /searchParams\?\.get\(['"]free['"]\)/);
 });
