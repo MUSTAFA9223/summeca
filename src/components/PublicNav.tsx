@@ -13,7 +13,6 @@ import {
   X,
 } from 'lucide-react';
 import AppLogo from '@/components/ui/AppLogo';
-import LanguageSwitcher from '@/components/LanguageSwitcher';
 import { ThemeSwitcher } from '@/components/GlobalThemeSwitcher';
 import { useAuth } from '@/contexts/AuthContext';
 import { trackEvent } from '@/lib/analytics';
@@ -94,7 +93,6 @@ export default function PublicNav() {
           </nav>
 
           <div className="hidden items-center gap-2 lg:flex">
-            <LanguageSwitcher compact />
             <ThemeSwitcher compact />
             {loading ? (
               <div className="h-9 w-24 animate-pulse rounded-lg bg-secondary/70" aria-label="Loading account" />
@@ -144,7 +142,6 @@ export default function PublicNav() {
           </div>
 
           <div className="flex items-center gap-2 lg:hidden">
-            <LanguageSwitcher compact />
             <button className="flex h-9 w-9 items-center justify-center rounded-xl border border-border text-muted-foreground transition hover:border-primary/40 hover:bg-primary/5 hover:text-foreground" onClick={() => setMobileOpen((open) => !open)} aria-label="Toggle mobile menu" aria-expanded={mobileOpen}>
               {mobileOpen ? <X size={18} /> : <Menu size={18} />}
             </button>
