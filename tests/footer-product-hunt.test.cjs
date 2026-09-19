@@ -8,13 +8,24 @@ const footer = fs.readFileSync(path.join(root, 'src/components/PublicFooter.tsx'
 
 test('Product Hunt remains a local text link without a fragile or fake badge asset', () => {
   assert.match(footer, /View SUMMECA on Product Hunt/);
-  assert.match(footer, /https:\/\/www\.producthunt\.com\/products\/summeca\?utm_source=other&utm_medium=social/);
+  assert.match(
+    footer,
+    /https:\/\/www\.producthunt\.com\/products\/summeca\?utm_source=other&utm_medium=social/
+  );
   assert.match(footer, /target="_blank"/);
   assert.match(footer, /rel="noopener noreferrer"/);
   assert.doesNotMatch(footer, /api\.producthunt\.com/i);
   assert.doesNotMatch(footer, /ProductHuntIcon/);
-  assert.doesNotMatch(footer, /Featured on/);
+  assert.doesNotMatch(footer, /Featured on Product Hunt/i);
   assert.doesNotMatch(footer, /<img[^>]+producthunt/i);
+});
+
+test('footer exposes the exact tools.cafe verification badge required by the free listing', () => {
+  assert.match(footer, /href=\{TOOLS_CAFE_URL\}/);
+  assert.match(footer, /src="https:\/\/tools\.cafe\/b\/light\.svg"/);
+  assert.match(footer, /alt="Featured on tools\.cafe"/);
+  assert.match(footer, /width="256"/);
+  assert.match(footer, /height="80"/);
 });
 
 test('footer exposes the verified social, contact, support and legal destinations', () => {
@@ -49,5 +60,9 @@ test('footer keeps mobile touch targets, grouped navigation, and explicit biling
 test('footer preserves the official local SUMMECA logo component and high-contrast dark surface', () => {
   assert.match(footer, /<AppLogo variant="wordmark" tone="light" size=\{52\} \/>/);
   assert.match(footer, /bg-\[#0A0F1E\] text-white/);
-  assert.doesNotMatch(footer, /src="https?:\/\//i);
+  const footerWithoutToolsCafeBadge = footer.replace(
+    'src="https://tools.cafe/b/light.svg"',
+    'src="/tools-cafe-badge.svg"'
+  );
+  assert.doesNotMatch(footerWithoutToolsCafeBadge, /src="https?:\/\//i);
 });
