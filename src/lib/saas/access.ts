@@ -1,6 +1,6 @@
 import { createServiceClient } from '@/lib/supabase/server';
 
-export type SaasProductSlug = 'summeca-invoiceflow' | 'summeca-leadfollow-ai' | 'summeca-proposalflow-ai';
+export type SaasProductSlug = 'summeca-invoiceflow' | 'summeca-leadfollow-ai' | 'summeca-proposalflow-ai' | 'summeca-siteagent-ai';
 
 export type SaasAccess = {
   allowed: boolean;
@@ -14,6 +14,9 @@ export type SaasAccess = {
     maxLeads?: number;
     monthlyAi?: number;
     monthlyProposals?: number;
+    monthlySiteAgentReplies?: number;
+    maxKnowledgeChars?: number;
+    maxSiteAgentDomains?: number;
   };
 };
 
@@ -35,6 +38,12 @@ const LIMITS: Record<SaasProductSlug, Record<string, SaasAccess['limits']>> = {
     Starter: { monthlyProposals: 30 },
     Pro: { monthlyProposals: 150 },
     Agency: { monthlyProposals: 500 },
+  },
+  'summeca-siteagent-ai': {
+    Free: { monthlySiteAgentReplies: 25, maxKnowledgeChars: 5000, maxSiteAgentDomains: 1 },
+    Starter: { monthlySiteAgentReplies: 250, maxKnowledgeChars: 15000, maxSiteAgentDomains: 1 },
+    Pro: { monthlySiteAgentReplies: 1000, maxKnowledgeChars: 30000, maxSiteAgentDomains: 3 },
+    Agency: { monthlySiteAgentReplies: 3000, maxKnowledgeChars: 60000, maxSiteAgentDomains: 10 },
   },
 };
 

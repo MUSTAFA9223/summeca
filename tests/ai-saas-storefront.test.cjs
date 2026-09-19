@@ -5,12 +5,13 @@ const path = require('node:path');
 
 const read = (file) => fs.readFileSync(path.join(process.cwd(), file), 'utf8');
 
-test('public storefront is limited to the three focused AI and SaaS apps', () => {
+test('public storefront is limited to the four focused AI and SaaS apps', () => {
   const catalog = read('src/lib/catalog/publicCatalog.ts');
   const home = read('src/app/page.tsx');
   const hero = read('src/app/components/HeroSection.tsx');
 
   for (const slug of [
+    'summeca-siteagent-ai',
     'summeca-leadfollow-ai',
     'summeca-proposalflow-ai',
     'summeca-invoiceflow',
@@ -21,7 +22,7 @@ test('public storefront is limited to the three focused AI and SaaS apps', () =>
 
   assert.match(catalog, /url\.searchParams\.set\('slug',/);
   assert.doesNotMatch(home, /href="\/products\/conversion-rescue-kit-pro"/);
-  assert.match(home, /Move from lead to proposal to invoice with SUMMECA\./);
+  assert.match(home, /Turn website visitors into leads, proposals, and invoices with SUMMECA\./);
   assert.match(hero, /Focused AI & SaaS apps for modern business/);
   assert.match(hero, /ProposalFlow AI/);
 });

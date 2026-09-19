@@ -42,6 +42,7 @@ const PUBLIC_PRODUCT_SLUGS = [
   'summeca-leadfollow-ai',
   'summeca-proposalflow-ai',
   'summeca-invoiceflow',
+  'summeca-siteagent-ai',
 ] as const;
 
 const SELECT = `

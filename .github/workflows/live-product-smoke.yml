@@ -38,6 +38,10 @@ jobs:
               slug: 'summeca-proposalflow-ai',
               title: 'SUMMECA ProposalFlow AI',
             },
+            {
+              slug: 'summeca-siteagent-ai',
+              title: 'SUMMECA SiteAgent AI',
+            },
           ];
 
           const catalog = await fetch('https://summeca.com/products', { redirect: 'follow' });

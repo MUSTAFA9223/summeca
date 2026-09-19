@@ -28,6 +28,7 @@ import {
   Bell,
   Shield,
   Star,
+  Bot,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -62,6 +63,7 @@ const navGroups = [
       { id: 'invoiceflow', label: 'InvoiceFlow', icon: FileText, href: '/user-dashboard/invoiceflow' },
       { id: 'leadfollow', label: 'LeadFollow AI', icon: Activity, href: '/user-dashboard/leadfollow' },
       { id: 'proposalflow', label: 'ProposalFlow AI', icon: FileText, href: '/user-dashboard/proposalflow' },
+      { id: 'siteagent', label: 'SiteAgent AI', icon: Bot, href: '/user-dashboard/siteagent' },
       { id: 'leadfollow-mailbox', label: 'Email Sender', icon: Mail, href: '/user-dashboard/leadfollow/mailbox' },
     ],
   },
