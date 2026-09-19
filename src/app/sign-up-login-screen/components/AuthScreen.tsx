@@ -15,7 +15,7 @@ type TransitionDirection = 'left' | 'right' | null;
 export default function AuthScreen() {
   const [view, setView] = useState<AuthView>('login');
   const [transitionDirection, setTransitionDirection] = useState<TransitionDirection>(null);
-  const headlineLine = 'block w-fit bg-gradient-to-r from-white from-[0%] via-teal-50 via-[52%] to-teal-300 bg-clip-text text-transparent';
+  const headlineLine = 'summeca-auth-headline-line block w-fit bg-gradient-to-r from-white from-[0%] via-teal-50 via-[52%] to-teal-300 bg-clip-text text-transparent';
 
   const showLogin = () => {
     if (view === 'login') return;
@@ -35,25 +35,25 @@ export default function AuthScreen() {
   };
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-[#050807] text-white">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_22%,rgba(20,184,166,0.16),transparent_30%),radial-gradient(circle_at_78%_76%,rgba(45,212,191,0.10),transparent_32%)]" />
-      <div className="pointer-events-none absolute inset-0 opacity-[0.14] [background-image:linear-gradient(rgba(255,255,255,.08)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.08)_1px,transparent_1px)] [background-size:48px_48px] [mask-image:linear-gradient(to_bottom,black,transparent_90%)]" />
+    <main className="summeca-auth-shell relative min-h-screen overflow-hidden bg-[#050807] text-white">
+      <div className="summeca-auth-ambient pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_22%,rgba(20,184,166,0.16),transparent_30%),radial-gradient(circle_at_78%_76%,rgba(45,212,191,0.10),transparent_32%)]" />
+      <div className="summeca-auth-grid pointer-events-none absolute inset-0 opacity-[0.14] [background-image:linear-gradient(rgba(255,255,255,.08)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.08)_1px,transparent_1px)] [background-size:48px_48px] [mask-image:linear-gradient(to_bottom,black,transparent_90%)]" />
 
       <header className="absolute inset-x-0 top-0 z-30 flex items-center justify-between px-5 py-5 sm:px-8 lg:px-12">
         <Link href="/" className="group flex items-center gap-2.5" aria-label="SUMMECA home">
           <AppLogo variant="wordmark" tone="light" size={46} />
         </Link>
-        <Link href="/" className="flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-xs font-semibold text-white/70 backdrop-blur-xl transition hover:border-teal-300/30 hover:text-white">
+        <Link href="/" className="summeca-auth-back-home flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-xs font-semibold text-white/70 backdrop-blur-xl transition hover:border-teal-300/30 hover:text-white">
           <ArrowLeft size={14} />
           Back home
         </Link>
       </header>
 
       <div className="relative z-10 mx-auto grid min-h-screen w-full max-w-[1500px] items-center gap-4 px-5 pb-8 pt-24 sm:px-8 lg:grid-cols-[1.12fr_.88fr] lg:gap-8 lg:px-12 lg:pb-10 lg:pt-20">
-        <section className="relative hidden h-[min(82vh,820px)] min-h-[620px] overflow-hidden lg:block">
-          <div className="absolute inset-[4%] rounded-[2rem] border border-white/[0.07] bg-white/[0.018] shadow-[inset_0_1px_0_rgba(255,255,255,.06),0_40px_120px_rgba(0,0,0,.35)] backdrop-blur-[2px]" />
+        <section className="summeca-auth-feature-panel relative hidden h-[min(82vh,820px)] min-h-[620px] overflow-hidden lg:block">
+          <div className="summeca-auth-feature-surface absolute inset-[4%] rounded-[2rem] border border-white/[0.07] bg-white/[0.018] shadow-[inset_0_1px_0_rgba(255,255,255,.06),0_40px_120px_rgba(0,0,0,.35)] backdrop-blur-[2px]" />
           <div className="absolute left-[8%] right-[5%] top-[10%] z-20 max-w-lg">
-            <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-teal-300/20 bg-teal-300/[0.08] px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-teal-200">
+            <div className="summeca-auth-badge mb-5 inline-flex items-center gap-2 rounded-full border border-teal-300/20 bg-teal-300/[0.08] px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-teal-200">
               <Sparkles size={13} /> Your purchased tools
             </div>
             <h1 className="text-4xl font-black leading-[1.02] tracking-[-0.04em] xl:text-5xl">
@@ -61,7 +61,7 @@ export default function AuthScreen() {
               <span className={headlineLine}>One secure</span>
               <span className={headlineLine}>workspace.</span>
             </h1>
-            <p className="mt-5 max-w-[430px] pr-5 text-[15px] font-medium leading-7 text-slate-300 xl:text-[16px]">
+            <p className="summeca-auth-copy mt-5 max-w-[430px] pr-5 text-[15px] font-medium leading-7 text-slate-300 xl:text-[16px]">
               Sign in to access your SUMMECA tools, products and workspace from one secure place.
             </p>
           </div>
@@ -72,19 +72,19 @@ export default function AuthScreen() {
           <div className="absolute -inset-12 -z-10 rounded-full bg-teal-400/[0.06] blur-3xl" />
           <div className="mb-4 grid w-full grid-cols-3 gap-2 lg:hidden">
             {['InvoiceFlow', 'LeadFollow AI', 'Secure downloads'].map((label) => (
-              <div key={label} className="border border-white/[0.08] bg-white/[0.025] px-2 py-3 text-center text-[10px] font-bold text-teal-100">
+              <div key={label} className="summeca-auth-chip border border-white/[0.08] bg-white/[0.025] px-2 py-3 text-center text-[10px] font-bold text-teal-100">
                 {label}
               </div>
             ))}
           </div>
-          <div className="w-full rounded-[2rem] border border-white/[0.09] bg-[#0b0f0e]/80 p-5 shadow-[0_30px_100px_rgba(0,0,0,.45)] backdrop-blur-lg sm:p-8 sm:backdrop-blur-2xl">
+          <div className="summeca-auth-card w-full rounded-[2rem] border border-white/[0.09] bg-[#0b0f0e]/80 p-5 shadow-[0_30px_100px_rgba(0,0,0,.45)] backdrop-blur-lg sm:p-8 sm:backdrop-blur-2xl">
             <div className="mb-7 lg:hidden">
               <p className="text-center text-xs font-semibold uppercase tracking-[0.18em] text-teal-300/80">Welcome to SUMMECA</p>
             </div>
 
             {view === 'forgot' ? (
               <div>
-                <button onClick={showLogin} className="mb-6 flex items-center gap-1.5 text-sm text-white/50 transition-colors hover:text-white">
+                <button onClick={showLogin} className="summeca-auth-back-link mb-6 flex items-center gap-1.5 text-sm text-white/50 transition-colors hover:text-white">
                   <ArrowLeft size={14} /> Back to login
                 </button>
                 <ForgotPasswordForm />
@@ -95,7 +95,7 @@ export default function AuthScreen() {
                   key={view}
                   className={`auth-switch-content ${transitionDirection === 'left' ? 'auth-content-left' : transitionDirection === 'right' ? 'auth-content-right' : ''}`}
                 >
-                  <div className="mb-8 flex rounded-2xl border border-white/[0.06] bg-black/30 p-1.5">
+                  <div className="summeca-auth-tabs mb-8 flex rounded-2xl border border-white/[0.06] bg-black/30 p-1.5">
                     <button onClick={showLogin} className={`flex-1 rounded-xl py-2.5 text-sm font-semibold transition-all ${view === 'login' ? 'bg-white text-black shadow-lg' : 'text-white/45 hover:text-white'}`}>
                       Log in
                     </button>
