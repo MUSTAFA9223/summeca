@@ -265,3 +265,103 @@ html[data-site-theme='light'] [class~='bg-[#090e14]'] [class*='border-white/'] {
       #f3fafa;
   }
 }
+
+/* Authentication: the selected Light theme must apply to the whole sign-in surface. */
+html[data-site-theme='light'] .summeca-auth-shell {
+  background:
+    radial-gradient(circle at 16% 20%, rgba(0, 169, 165, 0.12), transparent 30rem),
+    radial-gradient(circle at 82% 74%, rgba(32, 199, 195, 0.08), transparent 32rem),
+    linear-gradient(145deg, #f8fcfc 0%, #f2f9f9 48%, #eaf6f7 100%) !important;
+  color: #062b35 !important;
+}
+
+html[data-site-theme='light'] .summeca-auth-ambient {
+  background:
+    radial-gradient(circle at 18% 22%, rgba(0, 169, 165, 0.09), transparent 30%),
+    radial-gradient(circle at 78% 76%, rgba(20, 155, 179, 0.065), transparent 32%) !important;
+}
+
+html[data-site-theme='light'] .summeca-auth-grid {
+  opacity: 0.5 !important;
+  background-image:
+    linear-gradient(rgba(0, 169, 165, 0.055) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 169, 165, 0.055) 1px, transparent 1px) !important;
+}
+
+html[data-site-theme='light'] .summeca-auth-back-home {
+  background: rgba(255, 255, 255, 0.82) !important;
+  border-color: rgba(0, 169, 165, 0.18) !important;
+  color: #315b63 !important;
+  box-shadow: 0 8px 24px rgba(6, 43, 53, 0.06);
+}
+
+html[data-site-theme='light'] .summeca-auth-back-home:hover {
+  background: #ffffff !important;
+  border-color: rgba(0, 169, 165, 0.34) !important;
+  color: #062b35 !important;
+}
+
+html[data-site-theme='light'] .summeca-auth-feature-surface {
+  background: rgba(255, 255, 255, 0.58) !important;
+  border-color: rgba(0, 169, 165, 0.14) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.94),
+    0 34px 90px rgba(6, 43, 53, 0.08) !important;
+}
+
+html[data-site-theme='light'] .summeca-auth-badge {
+  background: rgba(0, 169, 165, 0.08) !important;
+  border-color: rgba(0, 169, 165, 0.22) !important;
+  color: #087f7b !important;
+}
+
+html[data-site-theme='light'] .summeca-auth-headline-line {
+  background-image: linear-gradient(90deg, #062b35 0%, #0b4c55 54%, #009f9b 100%) !important;
+}
+
+html[data-site-theme='light'] .summeca-auth-copy {
+  color: #315b63 !important;
+}
+
+html[data-site-theme='light'] .summeca-auth-chip {
+  background: rgba(255, 255, 255, 0.74) !important;
+  border-color: rgba(0, 169, 165, 0.14) !important;
+  color: #087f7b !important;
+}
+
+html[data-site-theme='light'] .summeca-auth-card {
+  background: rgba(255, 255, 255, 0.94) !important;
+  border-color: rgba(0, 169, 165, 0.15) !important;
+  color: #062b35 !important;
+  box-shadow:
+    0 26px 72px rgba(6, 43, 53, 0.11),
+    inset 0 1px 0 rgba(255, 255, 255, 0.96) !important;
+}
+
+html[data-site-theme='light'] .summeca-auth-tabs {
+  background: #e8f5f5 !important;
+  border-color: #d5e7e8 !important;
+}
+
+html[data-site-theme='light'] .summeca-auth-tabs .bg-white.text-black {
+  background: #ffffff !important;
+  color: #062b35 !important;
+  box-shadow: 0 5px 16px rgba(6, 43, 53, 0.09) !important;
+}
+
+html[data-site-theme='light'] .summeca-auth-tabs button[class*='text-white/45'] {
+  color: #5d7f86 !important;
+}
+
+html[data-site-theme='light'] .summeca-auth-tabs button[class*='text-white/45']:hover {
+  color: #062b35 !important;
+}
+
+html[data-site-theme='light'] .summeca-auth-back-link {
+  color: #5d7f86 !important;
+}
+
+html[data-site-theme='light'] .summeca-auth-back-link:hover {
+  color: #062b35 !important;
+}
+
