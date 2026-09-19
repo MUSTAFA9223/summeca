@@ -50,3 +50,11 @@ test('account label remains compact, truncates safely, and menu is RTL-safe', ()
   assert.match(siteTheme, /button\[aria-haspopup='menu'\][\s\S]*?max-width: 9\.375rem;/);
   assert.match(siteTheme, /html\[dir='rtl'\] \[data-public-nav='true'\] \.glass-card-premium\[role='menu'\][\s\S]*?right: auto;[\s\S]*?left: 0;/);
 });
+
+
+test('mobile navigation covers the page with an opaque viewport-height surface', () => {
+  assert.match(nav, /data-mobile-nav-panel="true"/);
+  assert.match(nav, /absolute inset-x-0 top-full border-t border-border z-\[70\] min-h-\[calc\(100dvh-70px\)\] overflow-y-auto overscroll-contain bg-background/);
+  assert.doesNotMatch(nav, /bg-background\/\[0\.98\]/);
+  assert.match(siteTheme, /\[data-public-nav='true'\] \[data-mobile-nav-panel='true'\] \{[\s\S]*?background-color: var\(--background\) !important;[\s\S]*?opacity: 1;/);
+});
