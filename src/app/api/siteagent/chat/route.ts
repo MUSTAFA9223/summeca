@@ -367,8 +367,8 @@ Human handoff email: ${agent.human_email || 'Not configured'}`;
   }
 
   const reply = result.text
-    .replace(/^\`\`\`(?:text|markdown)?\s*/i, '')
-    .replace(/\s*\`\`\`$/i, '')
+    .replace(/^```(?:text|markdown)?\s*/i, '')
+    .replace(/\s*```$/i, '')
     .replace(/<[^>]*>/g, '')
     .trim()
     .slice(0, 5000);
