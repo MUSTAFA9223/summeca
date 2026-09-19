@@ -14,6 +14,7 @@ interface Order {
   amount: number;
   currency: string;
   discount_amount: number;
+  purchase_kind: 'real' | 'test';
   provider_payment_ref: string;
   metadata: Record<string, any>;
   created_at: string;
@@ -285,7 +286,7 @@ function OrderDetailModal({
           </div>
 
           {/* Refund button — only for completed orders */}
-          {order.status === 'completed' && (
+          {order.status === 'completed' && order.purchase_kind === 'real' && (
             <div className="pt-2 border-t border-border">
               <button
                 onClick={() => {
@@ -312,6 +313,7 @@ export default function AdminOrdersPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [purchaseKindFilter, setPurchaseKindFilter] = useState('');
   const [page, setPage] = useState(0);
   const [total, setTotal] = useState(0);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
@@ -329,6 +331,7 @@ export default function AdminOrdersPage() {
       .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
 
     if (statusFilter) query = query.eq('status', statusFilter);
+    if (purchaseKindFilter) query = query.eq('purchase_kind', purchaseKindFilter);
 
     const { data, count, error } = await query;
     if (!error) {
@@ -336,7 +339,7 @@ export default function AdminOrdersPage() {
       setTotal(count ?? 0);
     }
     setLoading(false);
-  }, [page, statusFilter]);
+  }, [page, statusFilter, purchaseKindFilter]);
 
   useEffect(() => {
     fetchOrders();
@@ -394,6 +397,22 @@ export default function AdminOrdersPage() {
             <option value="cancelled">Cancelled</option>
           </select>
         </div>
+        <div className="relative">
+          <Filter size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <select
+            value={purchaseKindFilter}
+            onChange={(e) => {
+              setPurchaseKindFilter(e.target.value);
+              setPage(0);
+            }}
+            className="pl-9 pr-8 py-2.5 text-sm bg-card border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/30 appearance-none cursor-pointer"
+            aria-label="Filter by purchase type"
+          >
+            <option value="">All Purchases</option>
+            <option value="real">Real Purchases</option>
+            <option value="test">Test Purchases</option>
+          </select>
+        </div>
       </div>
 
       {/* Table */}
@@ -415,6 +434,9 @@ export default function AdminOrdersPage() {
                   Amount
                 </th>
                 <th className="text-left px-4 py-3 text-xs font-700 text-muted-foreground uppercase tracking-wide">
+                  Purchase Type
+                </th>
+                <th className="text-left px-4 py-3 text-xs font-700 text-muted-foreground uppercase tracking-wide">
                   Status
                 </th>
                 <th className="text-left px-4 py-3 text-xs font-700 text-muted-foreground uppercase tracking-wide">
@@ -427,7 +449,7 @@ export default function AdminOrdersPage() {
               {loading ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <tr key={i} className="border-b border-border">
-                    {Array.from({ length: 7 }).map((_, j) => (
+                    {Array.from({ length: 8 }).map((_, j) => (
                       <td key={j} className="px-4 py-3">
                         <div className="h-4 rounded shimmer w-24" />
                       </td>
@@ -436,7 +458,7 @@ export default function AdminOrdersPage() {
                 ))
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-4 py-12 text-center text-sm text-muted-foreground">
+                  <td colSpan={8} className="px-4 py-12 text-center text-sm text-muted-foreground">
                     No orders found
                   </td>
                 </tr>
@@ -470,6 +492,17 @@ export default function AdminOrdersPage() {
                     </td>
                     <td className="px-4 py-3">
                       <span
+                        className={`inline-flex rounded-full px-2 py-0.5 text-xs font-700 ${
+                          order.purchase_kind === 'test'
+                            ? 'bg-amber-100 text-amber-800'
+                            : 'bg-emerald-100 text-emerald-800'
+                        }`}
+                      >
+                        {order.purchase_kind === 'test' ? 'Test Purchase' : 'Real Purchase'}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span
                         className={`inline-flex px-2 py-0.5 rounded-full text-xs font-600 ${statusColors[order.status] ?? 'bg-muted text-muted-foreground'}`}
                       >
                         {order.status}
@@ -487,7 +520,7 @@ export default function AdminOrdersPage() {
                         >
                           <Eye size={14} />
                         </button>
-                        {order.status === 'completed' && (
+                        {order.status === 'completed' && order.purchase_kind === 'real' && (
                           <button
                             onClick={() => setRefundOrder(order)}
                             className="w-7 h-7 rounded-lg flex items-center justify-center text-muted-foreground hover:text-danger hover:bg-danger/10 transition-all"

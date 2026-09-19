@@ -39,12 +39,24 @@ export default async function AdminReportsPage() {
   const admin = await requireAdmin(supabase);
   if (!admin) redirect('/user-dashboard');
 
-  const [ordersResult, completedResult, pendingResult, failedResult, completedMoneyResult, refundsResult, productsResult] = await Promise.all([
-    supabase.from('orders').select('*', { count: 'exact', head: true }),
-    supabase.from('orders').select('*', { count: 'exact', head: true }).eq('status', 'completed'),
-    supabase.from('orders').select('*', { count: 'exact', head: true }).in('status', ['pending', 'pending_payment']),
-    supabase.from('orders').select('*', { count: 'exact', head: true }).eq('status', 'failed'),
-    supabase.from('orders').select('amount,currency,product_id,user_id').eq('status', 'completed').limit(5000),
+  const [
+    ordersResult,
+    completedResult,
+    pendingResult,
+    failedResult,
+    completedMoneyResult,
+    testOrdersResult,
+    testCompletedResult,
+    refundsResult,
+    productsResult,
+  ] = await Promise.all([
+    supabase.from('orders').select('*', { count: 'exact', head: true }).eq('purchase_kind', 'real'),
+    supabase.from('orders').select('*', { count: 'exact', head: true }).eq('status', 'completed').eq('purchase_kind', 'real'),
+    supabase.from('orders').select('*', { count: 'exact', head: true }).in('status', ['pending', 'pending_payment']).eq('purchase_kind', 'real'),
+    supabase.from('orders').select('*', { count: 'exact', head: true }).eq('status', 'failed').eq('purchase_kind', 'real'),
+    supabase.from('orders').select('amount,currency,product_id,user_id').eq('status', 'completed').eq('purchase_kind', 'real').limit(5000),
+    supabase.from('orders').select('*', { count: 'exact', head: true }).eq('purchase_kind', 'test'),
+    supabase.from('orders').select('*', { count: 'exact', head: true }).eq('status', 'completed').eq('purchase_kind', 'test'),
     supabase.from('refunds').select('amount,currency').eq('status', 'completed').limit(5000),
     supabase.from('products').select('id,name').limit(2000),
   ]);
@@ -77,15 +89,17 @@ export default async function AdminReportsPage() {
     <main className="space-y-6 p-6">
       <div>
         <h1 className="text-2xl font-800 text-foreground">Reports</h1>
-        <p className="mt-1 text-sm text-muted-foreground">Financial totals are intentionally separated by currency. SUMMECA does not add unlike currencies without a documented conversion source.</p>
+        <p className="mt-1 text-sm text-muted-foreground">Business metrics include real customer purchases only. Test purchases are shown separately, and financial totals remain separated by currency.</p>
       </div>
 
-      <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
         {[
-          ['Orders', ordersResult.count || 0],
-          ['Completed', completedResult.count || 0],
-          ['Pending', pendingResult.count || 0],
-          ['Failed', failedResult.count || 0],
+          ['Real Orders', ordersResult.count || 0],
+          ['Real Completed', completedResult.count || 0],
+          ['Real Pending', pendingResult.count || 0],
+          ['Real Failed', failedResult.count || 0],
+          ['Test Orders', testOrdersResult.count || 0],
+          ['Test Completed', testCompletedResult.count || 0],
         ].map(([label, value]) => (
           <div key={String(label)} className="rounded-xl border border-border bg-card p-5">
             <p className="text-xs font-600 uppercase tracking-wide text-muted-foreground">{label}</p>
