@@ -11,18 +11,20 @@ const hero = read('src/app/components/HeroSection.tsx');
 const nav = read('src/components/PublicNav.tsx');
 const footer = read('src/components/PublicFooter.tsx');
 
-test('homepage keeps three focused AI and SaaS products and stays outcome-led', () => {
-  assert.match(home, /\.slice\(0, 3\)/);
+test('homepage keeps four focused AI and SaaS products and stays outcome-led', () => {
+  assert.match(home, /\.slice\(0, 4\)/);
+  assert.match(home, /summeca-siteagent-ai/);
   assert.match(home, /summeca-invoiceflow/);
   assert.match(home, /summeca-leadfollow-ai/);
   assert.match(home, /summeca-proposalflow-ai/);
   assert.doesNotMatch(home, /conversion-rescue-kit-pro/);
   assert.match(home, /SaaS workspace/);
+  assert.match(home, /AI website agent/);
   assert.match(home, /AI-assisted workspace/);
   assert.match(home, /AI proposal workspace/);
   assert.match(home, /AI & SaaS workspace/);
   assert.match(home, /One connected business workflow/);
-  assert.match(home, /Capture the lead, prepare the proposal, then invoice the work/);
+  assert.match(home, /Capture the visitor, qualify the lead, prepare the proposal, then invoice the work/);
   assert.match(home, /Buy with clarity/);
   assert.match(home, /Build one connected workflow/);
   assert.doesNotMatch(home, /Browse by category/);
