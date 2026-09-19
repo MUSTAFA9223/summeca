@@ -147,6 +147,33 @@ async function captureLead(input: {
   return { leadId: created.data.id as string, captured: true, reason: 'captured' };
 }
 
+export async function GET(request: NextRequest) {
+  const agentKey = text(request.nextUrl.searchParams.get('agent_key'), 36);
+  if (!UUID.test(agentKey)) return response({ error: 'A valid agent key is required.' }, 400);
+
+  const service = createServiceClient();
+  const agentResult = await service
+    .from('siteagent_agents')
+    .select('agent_name, welcome_message, allowed_domains, is_enabled')
+    .eq('public_key', agentKey)
+    .maybeSingle();
+
+  if (agentResult.error || !agentResult.data || agentResult.data.is_enabled !== true) {
+    return response({ error: 'This SiteAgent is not available.' }, 404);
+  }
+
+  const host = normalizedHost(request.headers.get('origin') || request.headers.get('referer') || '');
+  const domains = (agentResult.data.allowed_domains ?? []) as string[];
+  if (!hostAllowed(host, domains)) {
+    return response({ error: 'This website is not authorized for this SiteAgent.' }, 403);
+  }
+
+  return response({
+    agentName: agentResult.data.agent_name || 'SiteAgent AI',
+    welcomeMessage: agentResult.data.welcome_message || 'Hi! How can I help today?',
+  });
+}
+
 export async function OPTIONS() {
   return new NextResponse(null, { status: 204, headers: CORS_HEADERS });
 }
