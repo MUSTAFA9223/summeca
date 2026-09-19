@@ -71,6 +71,7 @@
   launcher.textContent = '✦';
 
   document.body.append(panel, launcher);
+  const heading = panel.querySelector('.summeca-siteagent-head strong');
   const messages = panel.querySelector('.summeca-siteagent-messages');
   const form = panel.querySelector('.summeca-siteagent-form');
   const messageInput = form.querySelector('[name="message"]');
@@ -78,6 +79,20 @@
   const emailInput = panel.querySelector('[name="email"]');
   const sendButton = panel.querySelector('.summeca-siteagent-send');
   const status = panel.querySelector('.summeca-siteagent-status');
+
+  async function loadPublicConfig() {
+    try {
+      const res = await fetch(apiBase + '/api/siteagent/chat?agent_key=' + encodeURIComponent(agentKey), {
+        headers: { 'Accept': 'application/json' },
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data.agentName) heading.textContent = data.agentName;
+      const firstMessage = messages.querySelector('.summeca-siteagent-msg.ai');
+      if (firstMessage && data.welcomeMessage) firstMessage.textContent = data.welcomeMessage;
+    } catch {}
+  }
+  void loadPublicConfig();
 
   function addMessage(role, content) {
     const item = document.createElement('div');
