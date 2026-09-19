@@ -3,7 +3,6 @@
 import React, { createContext, useContext, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import AdminSidebar from './AdminSidebar';
-import CompactLanguageSwitcher from '@/components/CompactLanguageSwitcher';
 import { ThemeSwitcher } from '@/components/GlobalThemeSwitcher';
 import MarketingCampaignActionsPanel from '@/app/admin/marketing/components/MarketingCampaignActionsPanel';
 
@@ -58,7 +57,6 @@ export default function AdminShell({
           className={`flex-1 flex flex-col min-w-0 transition-all duration-300 ${sidebarCollapsed ? 'lg:ml-16' : 'lg:ml-64'}`}
         >
           <header
-            data-language-switcher-host="true"
             data-theme-switcher-host="true"
             className="h-14 border-b border-border bg-card flex items-center px-4 lg:px-6 gap-3 sticky top-0 z-20"
           >
@@ -74,7 +72,6 @@ export default function AdminShell({
             <div className="flex-1" />
             <div className="flex items-center gap-2">
               <ThemeSwitcher compact />
-              <CompactLanguageSwitcher />
               {adminEmail && <span className="text-xs font-600 text-muted-foreground hidden sm:block" data-ltr>{adminEmail}</span>}
               <div className="w-7 h-7 rounded-full bg-primary/20 flex items-center justify-center">
                 <span className="text-xs font-700 text-primary">{adminName.charAt(0).toUpperCase()}</span>

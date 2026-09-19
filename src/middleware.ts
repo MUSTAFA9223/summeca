@@ -49,10 +49,6 @@ function localizePublicPath(pathname: string, locale: SeoLocale) {
   return publicPath === '/' ? `/${locale}` : `/${locale}${publicPath}`;
 }
 
-function isSeoLocale(value: string | null | undefined): value is SeoLocale {
-  return value === 'en' || value === 'ar';
-}
-
 function getAuthCookiePrefix(): string | null {
   try {
     const projectRef = new URL(process.env.NEXT_PUBLIC_SUPABASE_URL!).hostname.split('.')[0];
@@ -102,26 +98,40 @@ export async function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname;
 
   const pathLocale = getPathLocale(path);
-  if (pathLocale && isInternationalSeoPath(path)) {
+
+  // Arabic public URLs are legacy URLs now. Preserve any SEO equity by
+  // permanently redirecting each one to its exact English counterpart.
+  if (
+    pathLocale === 'ar'
+    && isInternationalSeoPath(path)
+    && ['GET', 'HEAD'].includes(request.method)
+  ) {
+    const publicPath = stripLocalePrefix(path);
+    const englishUrl = request.nextUrl.clone();
+    englishUrl.pathname = localizePublicPath(publicPath, 'en');
+    return NextResponse.redirect(englishUrl, 301);
+  }
+
+  if (pathLocale === 'en' && isInternationalSeoPath(path)) {
     const publicPath = stripLocalePrefix(path);
     const rewriteUrl = request.nextUrl.clone();
     rewriteUrl.pathname = publicPath;
 
     const requestHeaders = new Headers(request.headers);
-    requestHeaders.set('x-summeca-locale', pathLocale);
+    requestHeaders.set('x-summeca-locale', 'en');
     requestHeaders.set('x-summeca-public-path', publicPath);
-    requestHeaders.set('x-summeca-localized-path', localizePublicPath(publicPath, pathLocale));
+    requestHeaders.set('x-summeca-localized-path', localizePublicPath(publicPath, 'en'));
 
     const response = NextResponse.rewrite(rewriteUrl, {
       request: { headers: requestHeaders },
     });
-    response.cookies.set(SEO_LANGUAGE_COOKIE_KEY, pathLocale, {
+    response.cookies.set(SEO_LANGUAGE_COOKIE_KEY, 'en', {
       path: '/',
       maxAge: 60 * 60 * 24 * 365,
       sameSite: 'lax',
       secure: process.env.NODE_ENV === 'production',
     });
-    response.headers.set('Content-Language', pathLocale);
+    response.headers.set('Content-Language', 'en');
     return response;
   }
 
@@ -130,10 +140,8 @@ export async function middleware(request: NextRequest) {
     && isInternationalSeoPath(path)
     && ['GET', 'HEAD'].includes(request.method)
   ) {
-    const cookieLanguage = request.cookies.get(SEO_LANGUAGE_COOKIE_KEY)?.value;
-    const locale = isSeoLocale(cookieLanguage) ? cookieLanguage : 'en';
     const localizedUrl = request.nextUrl.clone();
-    localizedUrl.pathname = localizePublicPath(path, locale);
+    localizedUrl.pathname = localizePublicPath(path, 'en');
     return NextResponse.redirect(localizedUrl, 308);
   }
 

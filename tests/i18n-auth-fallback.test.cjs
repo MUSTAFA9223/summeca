@@ -4,10 +4,11 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const root = path.resolve(__dirname, '..');
-const globalSwitcher = fs.readFileSync(path.join(root, 'src/components/GlobalLanguageSwitcher.tsx'), 'utf8');
+const layout = fs.readFileSync(path.join(root, 'src/app/layout.tsx'), 'utf8');
 const auth = fs.readFileSync(path.join(root, 'src/app/sign-up-login-screen/components/AuthScreen.tsx'), 'utf8');
 
-test('auth surface has no public nav host so it uses the global top selector', () => {
-  assert.doesNotMatch(auth, /data-public-nav=/);
-  assert.match(globalSwitcher, /hasHostedSwitcher !== false/);
+test('auth surface stays English-only without a global language fallback', () => {
+  assert.doesNotMatch(auth, /LanguageSwitcher|CompactLanguageSwitcher/);
+  assert.doesNotMatch(layout, /GlobalLanguageSwitcher/);
+  assert.match(layout, /const language = 'en' as const/);
 });
