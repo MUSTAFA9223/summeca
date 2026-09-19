@@ -228,7 +228,7 @@ export default function WishlistPage() {
         <div className="flex items-center justify-between gap-4 mb-8">
           <div>
             <div className="flex items-center gap-2.5 mb-1">
-              <div className="w-8 h-8 rounded-xl bg-danger/10 flex items-center justify-center"><Heart size={16} className="text-danger" aria-hidden="true" /></div>
+              <div className="w-8 h-8 rounded-xl bg-secondary border border-border flex items-center justify-center"><Heart size={16} className="text-primary" aria-hidden="true" /></div>
               <h1 className="text-2xl font-800 text-foreground">My Wishlist</h1>
             </div>
             <p className="text-sm text-secondary-foreground">
@@ -250,11 +250,11 @@ export default function WishlistPage() {
         )}
 
         {!loading && !error && visibleItems.length === 0 && (
-          <div className="flex flex-col items-center justify-center py-20 text-center">
-            <div className="w-20 h-20 rounded-full bg-danger/5 flex items-center justify-center mb-5 border border-danger/10"><Heart size={34} className="text-danger/40" /></div>
+          <div className="flex flex-col items-center justify-center rounded-3xl border border-border bg-card px-6 py-16 text-center shadow-card">
+            <div className="w-20 h-20 rounded-full bg-secondary flex items-center justify-center mb-5 border border-border"><Heart size={34} className="text-primary" /></div>
             <h2 className="text-xl font-700 text-foreground mb-2">Your wishlist is empty</h2>
             <p className="text-sm text-secondary-foreground mb-6 max-w-xs">Browse SUMMECA products and use the heart button to save items for later.</p>
-            <Link href="/products" className="inline-flex items-center gap-2 bg-primary text-primary-foreground px-6 py-2.5 rounded-xl font-600 text-sm"><Star size={14} /> Explore Products</Link>
+            <Link href="/products" className="btn-primary inline-flex items-center gap-2"><Star size={14} /> Explore Products</Link>
           </div>
         )}
 
