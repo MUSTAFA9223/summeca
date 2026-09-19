@@ -1,4 +1,5 @@
-export type SeoLocale = 'en' | 'ar';
+export type SeoLocale = 'en';
+export type PublicPathLocale = SeoLocale | 'ar';
 
 export const SEO_LOCALES: readonly SeoLocale[] = ['en'] as const;
 export const DEFAULT_SEO_LOCALE: SeoLocale = 'en';
@@ -30,9 +31,9 @@ function cleanPathname(pathname: string) {
   return withLeadingSlash.replace(/\/+$/, '') || '/';
 }
 
-export function getPathLocale(pathname: string): SeoLocale | null {
+export function getPathLocale(pathname: string): PublicPathLocale | null {
   const match = cleanPathname(pathname).match(/^\/(en|ar)(?=\/|$)/);
-  return match ? (match[1] as SeoLocale) : null;
+  return match ? (match[1] as PublicPathLocale) : null;
 }
 
 export function stripLocalePrefix(pathname: string) {
@@ -48,7 +49,7 @@ export function isInternationalSeoPath(pathname: string) {
   return PUBLIC_EXACT_PATHS.has(publicPath) || publicPath.startsWith('/products/');
 }
 
-export function localizePublicPath(pathname: string, locale: SeoLocale) {
+export function localizePublicPath(pathname: string, locale: PublicPathLocale) {
   const publicPath = stripLocalePrefix(pathname);
   if (!isInternationalSeoPath(publicPath)) return cleanPathname(pathname);
   return publicPath === '/' ? `/${locale}` : `/${locale}${publicPath}`;
