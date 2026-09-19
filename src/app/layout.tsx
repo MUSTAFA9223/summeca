@@ -1,7 +1,7 @@
 import { Suspense } from 'react';
 import React from 'react';
 import type { Metadata, Viewport } from 'next';
-import { cookies, headers } from 'next/headers';
+import { headers } from 'next/headers';
 import { Plus_Jakarta_Sans } from 'next/font/google';
 import '../styles/tailwind.css';
 import '../styles/site-theme.css';
@@ -17,7 +17,6 @@ import { AuthProvider } from '@/contexts/AuthContext';
 import { LanguageProvider } from '@/contexts/LanguageContext';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import DeferredStoreAssistant from '@/components/DeferredStoreAssistant';
-import GlobalLanguageSwitcher from '@/components/GlobalLanguageSwitcher';
 import GlobalThemeSwitcher from '@/components/GlobalThemeSwitcher';
 import GoogleAnalytics from '@/components/GoogleAnalytics';
 import VisitorTracker from '@/components/VisitorTracker';
@@ -25,7 +24,6 @@ import LaunchOfferBanner from '@/components/LaunchOfferBanner';
 import ProductPageEnhancements from '@/components/catalog/ProductPageEnhancements';
 import ProductPageVideoPreview from '@/components/catalog/ProductPageVideoPreview';
 import SkipToContent from '@/components/SkipToContent';
-import { isAppLanguage, LANGUAGE_COOKIE_KEY } from '@/lib/i18n';
 import { isInternationalSeoPath, isSeoLocale, localizedAlternates } from '@/lib/locale-routing';
 
 const plusJakartaSans = Plus_Jakarta_Sans({
@@ -87,7 +85,7 @@ const structuredData = {
       url: 'https://summeca.com',
       description: siteDescription,
       publisher: { '@id': 'https://summeca.com/#organization' },
-      inLanguage: ['en', 'ar'],
+      inLanguage: 'en',
     },
   ],
 };
@@ -170,13 +168,9 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
-  const requestHeaders = await headers();
-  const cookieStore = await cookies();
-  const headerLanguage = requestHeaders.get('x-summeca-locale');
-  const cookieLanguage = cookieStore.get(LANGUAGE_COOKIE_KEY)?.value;
-  const requestedLanguage = isSeoLocale(headerLanguage) ? headerLanguage : cookieLanguage;
-  const language = isAppLanguage(requestedLanguage) ? requestedLanguage : 'en';
-  const direction = language === 'ar' ? 'rtl' : 'ltr';
+  await headers();
+  const language = 'en' as const;
+  const direction = 'ltr' as const;
 
   return (
     <html
@@ -210,7 +204,6 @@ export default async function RootLayout({
               <ProductPageVideoPreview />
               <ProductPageEnhancements />
             </AuthProvider>
-            <GlobalLanguageSwitcher />
             <DeferredStoreAssistant />
             <Toaster position="bottom-right" richColors closeButton />
           </LanguageProvider>
