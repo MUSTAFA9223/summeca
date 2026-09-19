@@ -77,7 +77,7 @@ export default function PublicNav() {
       <div className="mx-auto max-w-screen-xl px-5 sm:px-6 lg:px-8">
         <div className="flex h-[70px] items-center justify-between">
           <Link href="/" className="group flex shrink-0 items-center" aria-label="SUMMECA home">
-            <AppLogo variant="wordmark" size={46} className="transition-transform duration-200 group-hover:scale-[1.025]" />
+            <AppLogo variant="wordmark" size={50} className="transition-transform duration-200 group-hover:scale-[1.025]" />
           </Link>
 
           <nav className="hidden items-center gap-1 lg:flex" aria-label="Primary navigation">
