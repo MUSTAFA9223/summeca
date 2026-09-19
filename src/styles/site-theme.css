@@ -216,6 +216,13 @@ html[data-site-theme='light'] [class~='bg-[#070b10]'] [class*='shadow-[0_-12px_3
   -webkit-backdrop-filter: blur(10px) !important;
 }
 
+/* Mobile navigation is an opaque overlay: page content must never show through the menu. */
+[data-public-nav='true'] [data-mobile-nav-panel='true'] {
+  background-color: var(--background) !important;
+  opacity: 1;
+  isolation: isolate;
+}
+
 /* Legacy 68/70px padding compensated for the old negative header margin. The header now owns its height in flow. */
 html [data-public-nav='true'] + main[class*='pt-[68px]'] {
   padding-top: 0 !important;

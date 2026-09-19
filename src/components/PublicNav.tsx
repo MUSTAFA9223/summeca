@@ -150,7 +150,7 @@ export default function PublicNav() {
       </div>
 
       {mobileOpen && (
-        <div className="absolute inset-x-0 top-full border-t border-border bg-background/[0.98] shadow-xl backdrop-blur-xl lg:hidden">
+        <div data-mobile-nav-panel="true" className="absolute inset-x-0 top-full border-t border-border z-[70] min-h-[calc(100dvh-70px)] overflow-y-auto overscroll-contain bg-background shadow-2xl lg:hidden">
           <div className="h-0.5 bg-gradient-to-r from-primary via-accent to-transparent" />
           <div className="space-y-1 px-4 py-4">
             {navLinks.map((item) => (
