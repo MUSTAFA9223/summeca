@@ -43,6 +43,7 @@ const SAAS_DESTINATIONS: Record<string, string> = {
   'summeca-invoiceflow': '/user-dashboard/invoiceflow',
   'summeca-leadfollow-ai': '/user-dashboard/leadfollow',
   'summeca-proposalflow-ai': '/user-dashboard/proposalflow',
+  'summeca-siteagent-ai': '/user-dashboard/siteagent',
 };
 
 const ACCESS_LABELS: Record<string, string> = {
