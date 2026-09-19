@@ -116,7 +116,7 @@ function suffix(period: BillingPeriod) {
 }
 
 function isSaasProduct(product: Product) {
-  return product.slug === 'summeca-invoiceflow' || product.slug === 'summeca-leadfollow-ai' || product.slug === 'summeca-proposalflow-ai';
+  return product.slug === 'summeca-invoiceflow' || product.slug === 'summeca-leadfollow-ai' || product.slug === 'summeca-proposalflow-ai' || product.slug === 'summeca-siteagent-ai';
 }
 
 function isDigitalProduct(product: Product) {
@@ -127,6 +127,7 @@ function freeSaasPath(slug: string) {
   if (slug === 'summeca-invoiceflow') return '/user-dashboard/invoiceflow';
   if (slug === 'summeca-leadfollow-ai') return '/user-dashboard/leadfollow';
   if (slug === 'summeca-proposalflow-ai') return '/user-dashboard/proposalflow';
+  if (slug === 'summeca-siteagent-ai') return '/user-dashboard/siteagent';
   return null;
 }
 
@@ -135,6 +136,7 @@ function productCtaLabel(product: Product, plan: Plan, finalPrice: number) {
   if (product.slug === 'summeca-invoiceflow') return 'Get InvoiceFlow';
   if (product.slug === 'summeca-leadfollow-ai') return 'Get LeadFollow AI';
   if (product.slug === 'summeca-proposalflow-ai') return 'Get ProposalFlow AI';
+  if (product.slug === 'summeca-siteagent-ai') return 'Get SiteAgent AI';
   if (product.slug === 'conversion-rescue-kit-starter') return 'Get Starter Kit';
   if (product.slug === 'conversion-rescue-kit-pro') return 'Get Pro Kit';
   if (product.slug === 'conversion-rescue-kit-ultimate') return 'Get Ultimate Kit';
