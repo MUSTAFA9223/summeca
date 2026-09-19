@@ -5,7 +5,9 @@ import { ArrowUpRight, Mail } from 'lucide-react';
 import AppLogo from '@/components/ui/AppLogo';
 import { useLanguage } from '@/contexts/LanguageContext';
 
-const PRODUCT_HUNT_URL = 'https://www.producthunt.com/products/summeca?utm_source=other&utm_medium=social';
+const PRODUCT_HUNT_URL =
+  'https://www.producthunt.com/products/summeca?utm_source=other&utm_medium=social';
+const TOOLS_CAFE_URL = 'https://tools.cafe';
 const X_URL = 'https://x.com/summeca_';
 const CONTACT_EMAIL = 'hello@summeca.com';
 
@@ -68,6 +70,7 @@ export default function PublicFooter() {
         emailLabel: 'راسل SUMMECA',
         productHunt: 'عرض SUMMECA على Product Hunt',
         productHuntHint: 'يفتح الموقع الرسمي في علامة تبويب جديدة',
+        toolsCafe: 'SUMMECA مميزة على tools.cafe',
         rights: 'جميع الحقوق محفوظة.',
       }
     : {
@@ -77,6 +80,7 @@ export default function PublicFooter() {
         emailLabel: 'Email SUMMECA',
         productHunt: 'View SUMMECA on Product Hunt',
         productHuntHint: 'Opens the official listing in a new tab',
+        toolsCafe: 'SUMMECA is featured on tools.cafe',
         rights: 'All rights reserved.',
       };
 
@@ -107,7 +111,9 @@ export default function PublicFooter() {
             </div>
             <p className="mt-4 max-w-sm text-sm leading-6 text-slate-300">{copy.description}</p>
 
-            <p className="mt-5 text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">{copy.follow}</p>
+            <p className="mt-5 text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
+              {copy.follow}
+            </p>
             <div className="mt-2 flex flex-wrap gap-2">
               <a
                 href={X_URL}
@@ -138,9 +144,30 @@ export default function PublicFooter() {
             >
               <span className="min-w-0">
                 <span className="block text-sm font-semibold">{copy.productHunt}</span>
-                <span className="mt-0.5 block text-xs leading-5 text-slate-400">{copy.productHuntHint}</span>
+                <span className="mt-0.5 block text-xs leading-5 text-slate-400">
+                  {copy.productHuntHint}
+                </span>
               </span>
               <ArrowUpRight className="h-4 w-4 shrink-0" aria-hidden="true" />
+            </a>
+
+            <a
+              href={TOOLS_CAFE_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={copy.toolsCafe}
+              className="mt-4 inline-flex max-w-full rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            >
+              {/* tools.cafe verifies this official badge URL for free listings. */}
+              {/* eslint-disable-next-line @next/next/no-img-element -- the directory requires its exact external badge URL. */}
+              <img
+                src="https://tools.cafe/b/light.svg"
+                alt="Featured on tools.cafe"
+                width="256"
+                height="80"
+                loading="lazy"
+                className="h-auto max-w-full"
+              />
             </a>
           </div>
 
@@ -167,7 +194,9 @@ export default function PublicFooter() {
 
         <div className="mt-10 flex flex-col gap-2 border-t border-white/10 pt-5 text-xs text-slate-400 sm:flex-row sm:items-center sm:justify-between">
           <p>© 2026 SUMMECA. {copy.rights}</p>
-          <p dir="ltr" className={isArabic ? 'self-end sm:self-auto' : undefined}>summeca.com</p>
+          <p dir="ltr" className={isArabic ? 'self-end sm:self-auto' : undefined}>
+            summeca.com
+          </p>
         </div>
       </div>
     </footer>
