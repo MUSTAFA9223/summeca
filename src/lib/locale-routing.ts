@@ -1,6 +1,6 @@
 export type SeoLocale = 'en' | 'ar';
 
-export const SEO_LOCALES: readonly SeoLocale[] = ['en', 'ar'] as const;
+export const SEO_LOCALES: readonly SeoLocale[] = ['en'] as const;
 export const DEFAULT_SEO_LOCALE: SeoLocale = 'en';
 export const SEO_LANGUAGE_COOKIE_KEY = 'summeca_language';
 export const SITE_ORIGIN = 'https://summeca.com';
@@ -61,17 +61,15 @@ export function localizedAbsoluteUrl(pathname: string, locale: SeoLocale) {
 export function localizedAlternates(pathname: string) {
   const publicPath = stripLocalePrefix(pathname);
   const en = localizedAbsoluteUrl(publicPath, 'en');
-  const ar = localizedAbsoluteUrl(publicPath, 'ar');
   return {
-    canonicalByLocale: { en, ar },
+    canonicalByLocale: { en },
     languages: {
       en,
-      ar,
       'x-default': en,
     },
   } as const;
 }
 
 export function isSeoLocale(value: string | null | undefined): value is SeoLocale {
-  return value === 'en' || value === 'ar';
+  return value === 'en';
 }
