@@ -73,12 +73,12 @@ export default function WishlistButton({
       aria-label={wishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
       className={`${btnSize} rounded-full flex items-center justify-center transition-all duration-200 ${
         wishlisted
-          ? 'bg-red-50 text-red-500 hover:bg-red-100' :'bg-white/80 text-muted-foreground hover:text-red-400 hover:bg-red-50'
-      } shadow-sm border border-border/60 ${loading ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'} ${className}`}
+          ? 'bg-secondary text-primary hover:bg-secondary' : 'bg-card text-muted-foreground hover:text-primary hover:bg-secondary'
+      } shadow-sm border border-border ${loading ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'} ${className}`}
     >
       <Heart
         size={iconSize}
-        className={`transition-all duration-200 ${wishlisted ? 'fill-red-500' : ''}`}
+        className={`transition-all duration-200 ${wishlisted ? 'fill-current' : ''}`}
       />
     </button>
   );
