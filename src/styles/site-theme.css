@@ -22,6 +22,32 @@ html[data-site-theme='light'] {
   color-scheme: light;
 }
 
+/* Brand logo contrast: preserve the official artwork on light surfaces and only
+   recolor it when a light-on-dark treatment is required. */
+.summeca-brand-logo {
+  opacity: 1 !important;
+  image-rendering: auto;
+  filter: none;
+}
+
+html[data-site-theme='light'] .summeca-brand-logo--adaptive {
+  filter: none !important;
+}
+
+html[data-site-theme='dark'] .summeca-brand-logo--adaptive,
+.summeca-brand-logo--light {
+  filter:
+    brightness(0)
+    saturate(100%)
+    invert(84%)
+    sepia(54%)
+    saturate(1040%)
+    hue-rotate(119deg)
+    brightness(102%)
+    contrast(106%)
+    drop-shadow(0 0 4px rgba(45, 212, 191, 0.24)) !important;
+}
+
 html[data-site-theme='dark'] body {
   background: #0d1116;
   color: #f8fafc;
