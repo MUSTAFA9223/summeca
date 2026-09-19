@@ -14,7 +14,7 @@ interface DashboardLayoutProps {
 
 function DashboardShellSkeleton() {
   return (
-    <div className="min-h-screen bg-[#F8FAFB]" aria-busy="true" aria-label="Loading dashboard">
+    <div className="min-h-screen bg-background text-foreground" aria-busy="true" aria-label="Loading dashboard">
       <aside className="fixed inset-y-0 left-0 hidden w-60 border-r border-border bg-card lg:block">
         <div className="h-16 border-b border-border px-4 py-3">
           <div className="h-9 w-32 animate-pulse rounded-xl bg-primary/10" />
@@ -83,7 +83,7 @@ export default function DashboardLayout({ children, activeRoute }: DashboardLayo
   }
 
   return (
-    <div className="min-h-screen bg-[#F8FAFB] flex">
+    <div className="min-h-screen bg-background text-foreground flex">
       {activeRoute === 'leadfollow' && <LeadFollowEnglishDateTimeInputs />}
 
       <DashboardSidebar
