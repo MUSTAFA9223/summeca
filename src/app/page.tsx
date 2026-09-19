@@ -21,7 +21,7 @@ export const revalidate = 300;
 export const metadata = {
   title: { absolute: 'SUMMECA — AI & SaaS Tools for Modern Business' },
   description:
-    'Focused SUMMECA AI and SaaS applications for lead follow-up, client proposals, invoicing, and practical business workflows.',
+    'Focused SUMMECA AI and SaaS applications for website AI agents, lead follow-up, client proposals, invoicing, and practical business workflows.',
 };
 
 type ProductPlan = {
@@ -49,12 +49,14 @@ type PublishedProduct = {
 };
 
 const FEATURED_PRODUCT_ORDER = [
+  'summeca-siteagent-ai',
   'summeca-leadfollow-ai',
   'summeca-proposalflow-ai',
   'summeca-invoiceflow',
 ];
 
 function productTypeLabel(product: PublishedProduct) {
+  if (product.slug === 'summeca-siteagent-ai') return 'AI website agent';
   if (product.slug === 'summeca-invoiceflow') return 'SaaS workspace';
   if (product.slug === 'summeca-leadfollow-ai') return 'AI-assisted workspace';
   if (product.slug === 'summeca-proposalflow-ai') return 'AI proposal workspace';
@@ -106,6 +108,7 @@ function billingSuffix(period: string) {
 }
 
 function productCta(product: PublishedProduct) {
+  if (product.slug === 'summeca-siteagent-ai') return 'Explore SiteAgent';
   if (product.slug === 'summeca-invoiceflow') return 'Explore InvoiceFlow';
   if (product.slug === 'summeca-leadfollow-ai') return 'Explore LeadFollow';
   if (product.slug === 'summeca-proposalflow-ai') return 'Explore ProposalFlow';
@@ -190,7 +193,7 @@ export default async function HomePage() {
 
   const featuredProducts = [...products]
     .sort((a, b) => productRank(a) - productRank(b))
-    .slice(0, 3);
+    .slice(0, 4);
 
   return (
     <div className="min-h-screen overflow-x-clip bg-background">
@@ -249,7 +252,7 @@ export default async function HomePage() {
                 id="featured-products-title"
                 className="mt-2 max-w-2xl text-2xl font-800 tracking-tight text-foreground sm:text-3xl"
               >
-                Move from lead to proposal to invoice with SUMMECA.
+                Turn website visitors into leads, proposals, and invoices with SUMMECA.
               </h2>
             </div>
             <Link
@@ -293,7 +296,7 @@ export default async function HomePage() {
                   id="solutions-title"
                   className="mt-2 max-w-2xl text-2xl font-800 tracking-tight text-foreground sm:text-3xl"
                 >
-                  Capture the lead, prepare the proposal, then invoice the work.
+                  Capture the visitor, qualify the lead, prepare the proposal, then invoice the work.
                 </h2>
               </div>
             </div>
