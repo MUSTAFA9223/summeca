@@ -4,9 +4,16 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const root = path.resolve(__dirname, '..');
-const switcher = fs.readFileSync(path.join(root, 'src/components/LanguageSwitcher.tsx'), 'utf8');
+const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
 
-test('top language control visibly offers English and Arabic', () => {
-  assert.match(switcher, />\s*EN\s*</);
-  assert.match(switcher, />\s*العربية\s*</);
+test('visible top-level controls do not offer Arabic', () => {
+  for (const file of [
+    'src/components/PublicNav.tsx',
+    'src/app/user-dashboard/components/DashboardTopbar.tsx',
+    'src/app/admin/components/AdminShell.tsx',
+    'src/app/layout.tsx',
+  ]) {
+    const source = read(file);
+    assert.doesNotMatch(source, /<LanguageSwitcher|<CompactLanguageSwitcher|GlobalLanguageSwitcher/);
+  }
 });
