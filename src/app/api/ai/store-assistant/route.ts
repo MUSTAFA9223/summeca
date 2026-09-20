@@ -13,6 +13,16 @@ import { getEffectivePrice } from '@/lib/pricing';
 
 const MAX_HISTORY = 10;
 const ALLOWED_HISTORY_ROLES = new Set(['user', 'assistant']);
+const STORE_ASSISTANT_PRODUCT_SLUGS = [
+  'summeca-leadfollow-ai',
+  'summeca-proposalflow-ai',
+  'summeca-invoiceflow',
+  'summeca-siteagent-ai',
+];
+
+const STORE_ASSISTANT_PRODUCT_ORDER = new Map(
+  STORE_ASSISTANT_PRODUCT_SLUGS.map((slug, index) => [slug, index]),
+);
 
 type PlanRow = {
   name: string;
@@ -90,14 +100,21 @@ export async function POST(request: NextRequest) {
         )
       `)
       .eq('status', 'active')
-      .limit(30);
+      .in('slug', STORE_ASSISTANT_PRODUCT_SLUGS)
+      .limit(STORE_ASSISTANT_PRODUCT_SLUGS.length);
 
     if (productsError) {
       console.error('[store-assistant] product load failed:', productsError.message);
       return NextResponse.json({ error: 'Assistant catalog is temporarily unavailable' }, { status: 503 });
     }
 
-    const productList = (products ?? []).map((product) => ({
+    const productList = (products ?? [])
+      .sort(
+        (a, b) =>
+          (STORE_ASSISTANT_PRODUCT_ORDER.get(a.slug) ?? Number.MAX_SAFE_INTEGER) -
+          (STORE_ASSISTANT_PRODUCT_ORDER.get(b.slug) ?? Number.MAX_SAFE_INTEGER),
+      )
+      .map((product) => ({
       name: product.name,
       description: product.short_desc || product.description || '',
       slug: product.slug,
@@ -119,7 +136,7 @@ export async function POST(request: NextRequest) {
             features: Array.isArray(plan.features) ? plan.features.slice(0, 8) : [],
           };
         }),
-    }));
+      }));
 
     let result;
     try {
