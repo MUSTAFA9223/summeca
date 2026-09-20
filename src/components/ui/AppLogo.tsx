@@ -61,6 +61,7 @@ const AppLogo = memo(function AppLogo({
           draggable={false}
           className={`h-auto max-w-full flex-shrink-0 select-none object-contain ${brandToneClass}`}
           priority
+          showLoadingBackground={false}
           unoptimized={resolvedSrc.endsWith('.svg')}
         />
       ) : (
