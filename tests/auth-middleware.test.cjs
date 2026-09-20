@@ -12,7 +12,7 @@ function harness({ user = null, admin = false, refresh = false, profileError = n
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 },
   }).outputText;
   const context = {
-    exports: {}, process: { env: { NODE_ENV: 'production' } },
+    exports: {}, Headers, process: { env: { NODE_ENV: 'production' } },
     require(name) {
       if (name === 'next/server') return { NextResponse };
       if (name !== '@supabase/ssr') throw new Error(`Unexpected import: ${name}`);
