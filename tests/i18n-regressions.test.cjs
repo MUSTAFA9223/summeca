@@ -22,7 +22,8 @@ test('root layout renders the production UI in English LTR only', () => {
   assert.match(layout, /const language = 'en' as const/);
   assert.match(layout, /const direction = 'ltr' as const/);
   assert.doesNotMatch(layout, /GlobalLanguageSwitcher/);
-  assert.doesNotMatch(layout, /await cookies\(\)/);
+  assert.match(layout, /cookieStore\.get\('summeca:theme'\)/);
+  assert.doesNotMatch(layout, /cookieStore\.get\(['"](?:language|locale|summeca:language)['"]\)/);
   assert.match(layout, /lang=\{language\}/);
   assert.match(layout, /dir=\{direction\}/);
   assert.match(layout, /data-language=\{language\}/);
