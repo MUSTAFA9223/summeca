@@ -33,6 +33,7 @@ function harness({ user = null, admin = false, refresh = false, profileError = n
   vm.runInNewContext(source, context);
   return {
     run(path, init) { return context.exports.middleware(new NextRequest(`https://summeca.com${path}`, init)); },
+    runUrl(url, init) { return context.exports.middleware(new NextRequest(url, init)); },
     calls() { return calls; },
   };
 }
@@ -57,6 +58,25 @@ test('auth entry bypasses Supabase middleware work', async () => {
   const response = await h.run('/sign-up-login-screen?next=%2Fcheckout');
   assert.equal(response.status, 200);
   assert.equal(h.calls(), 0);
+});
+
+test('public English URLs stay unprefixed and expose English request metadata', async () => {
+  const response = await harness().run('/products');
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get('x-middleware-request-x-summeca-locale'), 'en');
+  assert.equal(response.headers.get('x-middleware-request-x-summeca-public-path'), '/products');
+});
+
+test('legacy locale prefixes permanently redirect to the clean English URL', async () => {
+  const response = await harness().run('/en/products?ref=legacy');
+  assert.equal(response.status, 308);
+  assert.equal(response.headers.get('location'), 'https://summeca.com/products?ref=legacy');
+});
+
+test('www host permanently redirects to the canonical apex domain', async () => {
+  const response = await harness().runUrl('https://www.summeca.com/products?ref=www');
+  assert.equal(response.status, 308);
+  assert.equal(response.headers.get('location'), 'https://summeca.com/products?ref=www');
 });
 test('refreshed cookies are forwarded to downstream handlers', async () => {
   const response = await harness({ user: { id: 'customer' }, refresh: true }).run('/user-dashboard');
