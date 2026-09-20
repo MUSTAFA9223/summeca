@@ -40,6 +40,16 @@ const nextConfig = {
     minimumCacheTTL: 60,
     qualities: [75, 85, 100],
   },
+  async redirects() {
+    return [
+      {
+        source: '/:path*',
+        has: [{ type: 'host', value: 'www.summeca.com' }],
+        destination: 'https://summeca.com/:path*',
+        permanent: true,
+      },
+    ];
+  },
   async headers() {
     return [{ source: '/:path*', headers: securityHeaders }];
   },
