@@ -63,3 +63,8 @@ test('mobile menu responsive rules no longer depend on being nested inside the p
   assert.match(responsiveCss, /\[data-mobile-nav-panel="true"\] \{/);
   assert.doesNotMatch(responsiveCss, /\[data-public-nav="true"\] \[data-mobile-nav-panel="true"\]/);
 });
+
+
+test('mobile public header keeps the SUMMECA wordmark compact beside the menu button', () => {
+  assert.match(responsiveCss, /a\[aria-label="SUMMECA home"\] \.summeca-brand-logo[\s\S]*?max-height:\s*46px;/);
+});

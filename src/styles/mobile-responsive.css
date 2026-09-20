@@ -83,6 +83,12 @@ pre {
     height: 44px;
   }
 
+  [data-public-nav="true"] a[aria-label="SUMMECA home"] .summeca-brand-logo {
+    width: auto;
+    max-width: 100%;
+    max-height: 46px;
+  }
+
   [data-mobile-nav-panel="true"] {
     max-height: none;
     overflow-y: auto;
