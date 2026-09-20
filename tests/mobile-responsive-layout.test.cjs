@@ -11,6 +11,7 @@ const responsiveCss = read('src/styles/mobile-responsive.css');
 const themeSwitcher = read('src/components/GlobalThemeSwitcher.tsx');
 const publicNav = read('src/components/PublicNav.tsx');
 const storeAssistant = read('src/components/StoreAssistant.tsx');
+const deferredStoreAssistant = read('src/components/DeferredStoreAssistant.tsx');
 const siteTheme = read('src/styles/site-theme.css');
 const catalog = read('src/components/catalog/CatalogClient.tsx');
 const invoiceFlow = read('src/app/user-dashboard/invoiceflow/page.tsx');
@@ -67,4 +68,10 @@ test('mobile menu responsive rules no longer depend on being nested inside the p
 
 test('mobile public header keeps the SUMMECA wordmark compact beside the menu button', () => {
   assert.match(responsiveCss, /a\[aria-label="SUMMECA home"\] \.summeca-brand-logo[\s\S]*?max-height:\s*46px;/);
+});
+
+
+test('support pages do not show the floating sales assistant over help content', () => {
+  assert.match(deferredStoreAssistant, /pathname === '\/support'/);
+  assert.match(deferredStoreAssistant, /pathname\.startsWith\('\/support\/'\)/);
 });
