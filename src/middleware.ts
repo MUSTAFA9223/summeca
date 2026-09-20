@@ -94,16 +94,20 @@ export async function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname;
   const pathLocale = getPathLocale(path);
   const isPublicSeoPath = isInternationalSeoPath(path);
-  const isCanonicalHost = request.nextUrl.hostname.toLowerCase() === CANONICAL_HOST;
+  const requestHostname = request.nextUrl.hostname.toLowerCase();
+  const isWwwHost = requestHostname === `www.${CANONICAL_HOST}`;
 
   // Keep one clean public URL: https://summeca.com/... .
   // Legacy /en and /ar URLs permanently collapse to the unprefixed English URL.
   // www is also canonicalized here for routes that pass through middleware.
-  if (!isCanonicalHost || (pathLocale && isPublicSeoPath)) {
+  if (isWwwHost || (pathLocale && isPublicSeoPath)) {
     const canonicalUrl = request.nextUrl.clone();
-    canonicalUrl.protocol = 'https:';
-    canonicalUrl.hostname = CANONICAL_HOST;
-    canonicalUrl.port = '';
+
+    if (isWwwHost) {
+      canonicalUrl.protocol = 'https:';
+      canonicalUrl.hostname = CANONICAL_HOST;
+      canonicalUrl.port = '';
+    }
 
     if (pathLocale && isPublicSeoPath) {
       canonicalUrl.pathname = stripLocalePrefix(path);
