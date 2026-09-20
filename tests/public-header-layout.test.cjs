@@ -60,7 +60,16 @@ test('mobile navigation covers the remaining viewport, locks page scroll, and tr
   assert.match(nav, /--mobile-nav-viewport-top/);
   assert.doesNotMatch(nav, /min-h-\[calc\(100dvh-70px\)\]/);
   assert.doesNotMatch(nav, /bg-background\/\[0\.98\]/);
-  assert.match(siteTheme, /\[data-public-nav='true'\] \[data-mobile-nav-panel='true'\] \{[\s\S]*?top: var\(--mobile-nav-viewport-top, 70px\);[\s\S]*?background-color: var\(--background\) !important;/);
+  assert.match(siteTheme, /\[data-mobile-nav-panel='true'\] \{[\s\S]*?top: var\(--mobile-nav-viewport-top, 70px\);[\s\S]*?background-color: var\(--background\) !important;/);
   assert.match(siteTheme, /html\[data-mobile-nav-open='true'\][\s\S]*?overflow: hidden !important;/);
   assert.match(siteTheme, /\[data-store-assistant-floating='true'\][\s\S]*?visibility: hidden !important;/);
+});
+
+
+test('mobile menu is rendered outside the sticky backdrop-filter header so fixed positioning stays viewport-based', () => {
+  const headerClose = nav.indexOf('</header>');
+  const mobilePanel = nav.indexOf('data-mobile-nav-panel="true"');
+  assert.ok(headerClose >= 0);
+  assert.ok(mobilePanel > headerClose);
+  assert.match(nav, /return \(\s*<>[\s\S]*?<header/);
 });
