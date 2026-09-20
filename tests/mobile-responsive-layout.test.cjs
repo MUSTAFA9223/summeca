@@ -57,3 +57,9 @@ test('mobile menu owns the viewport and suppresses floating UI while open', () =
   assert.match(siteTheme, /data-mobile-nav-open='true'/);
   assert.match(siteTheme, /data-store-assistant-floating='true'/);
 });
+
+
+test('mobile menu responsive rules no longer depend on being nested inside the public header', () => {
+  assert.match(responsiveCss, /\[data-mobile-nav-panel="true"\] \{/);
+  assert.doesNotMatch(responsiveCss, /\[data-public-nav="true"\] \[data-mobile-nav-panel="true"\]/);
+});
