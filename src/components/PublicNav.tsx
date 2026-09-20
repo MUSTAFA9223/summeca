@@ -29,6 +29,7 @@ export default function PublicNav() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
   const accountMenuRef = useRef<HTMLDivElement>(null);
+  const headerRef = useRef<HTMLElement>(null);
 
   const rawDisplayName =
     user?.user_metadata?.full_name?.trim() ||
@@ -54,6 +55,48 @@ export default function PublicNav() {
     return () => document.removeEventListener('pointerdown', onPointerDown);
   }, []);
 
+  useEffect(() => {
+    const root = document.documentElement;
+
+    if (!mobileOpen) {
+      root.removeAttribute('data-mobile-nav-open');
+      root.style.removeProperty('--mobile-nav-viewport-top');
+      return;
+    }
+
+    root.setAttribute('data-mobile-nav-open', 'true');
+
+    const syncViewportTop = () => {
+      if (window.innerWidth >= 1024) {
+        setMobileOpen(false);
+        return;
+      }
+
+      const headerBottom = headerRef.current?.getBoundingClientRect().bottom ?? 70;
+      root.style.setProperty(
+        '--mobile-nav-viewport-top',
+        `${Math.max(0, Math.ceil(headerBottom))}px`,
+      );
+    };
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setMobileOpen(false);
+    };
+
+    syncViewportTop();
+    window.addEventListener('resize', syncViewportTop);
+    window.addEventListener('scroll', syncViewportTop, { passive: true });
+    document.addEventListener('keydown', onKeyDown);
+
+    return () => {
+      window.removeEventListener('resize', syncViewportTop);
+      window.removeEventListener('scroll', syncViewportTop);
+      document.removeEventListener('keydown', onKeyDown);
+      root.removeAttribute('data-mobile-nav-open');
+      root.style.removeProperty('--mobile-nav-viewport-top');
+    };
+  }, [mobileOpen]);
+
   const handleSignOut = async () => {
     setAccountOpen(false);
     setMobileOpen(false);
@@ -70,13 +113,14 @@ export default function PublicNav() {
 
   return (
     <header
+      ref={headerRef}
       data-public-nav="true"
       data-theme-switcher-host="true"
       className="sticky top-0 z-50 -mb-[70px] border-b border-primary/10 bg-background/90 shadow-sm shadow-primary/5 backdrop-blur-xl transition-[background-color,box-shadow,border-color] duration-300"
     >
       <div className="mx-auto max-w-screen-xl px-5 sm:px-6 lg:px-8">
         <div className="flex h-[70px] items-center justify-between">
-          <Link href="/" className="group flex shrink-0 items-center" aria-label="SUMMECA home">
+          <Link href="/" className="group flex min-w-0 shrink-0 items-center" aria-label="SUMMECA home">
             <AppLogo variant="wordmark" size={50} className="transition-transform duration-200 group-hover:scale-[1.025]" />
           </Link>
 
@@ -150,7 +194,7 @@ export default function PublicNav() {
       </div>
 
       {mobileOpen && (
-        <div data-mobile-nav-panel="true" className="absolute inset-x-0 top-full border-t border-border z-[70] min-h-[calc(100dvh-70px)] overflow-y-auto overscroll-contain bg-background shadow-2xl lg:hidden">
+        <div data-mobile-nav-panel="true" className="fixed inset-x-0 bottom-0 z-[70] overflow-y-auto overscroll-contain border-t border-border bg-background shadow-2xl lg:hidden">
           <div className="h-0.5 bg-gradient-to-r from-primary via-accent to-transparent" />
           <div className="space-y-1 px-4 py-4">
             {navLinks.map((item) => (
