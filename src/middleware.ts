@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 type SeoLocale = 'en' | 'ar';
 
 const SEO_LANGUAGE_COOKIE_KEY = 'summeca_language';
+const CANONICAL_HOST = 'summeca.com';
 const PUBLIC_I18N_PATHS = new Set([
   '/',
   '/products',
@@ -42,11 +43,6 @@ function stripLocalePrefix(pathname: string) {
 function isInternationalSeoPath(pathname: string) {
   const publicPath = stripLocalePrefix(pathname);
   return PUBLIC_I18N_PATHS.has(publicPath) || publicPath.startsWith('/products/');
-}
-
-function localizePublicPath(pathname: string, locale: SeoLocale) {
-  const publicPath = stripLocalePrefix(pathname);
-  return publicPath === '/' ? `/${locale}` : `/${locale}${publicPath}`;
 }
 
 function getAuthCookiePrefix(): string | null {
@@ -96,33 +92,35 @@ function getCookiesForSupabase(request: NextRequest) {
 
 export async function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname;
-
   const pathLocale = getPathLocale(path);
+  const isPublicSeoPath = isInternationalSeoPath(path);
+  const isCanonicalHost = request.nextUrl.hostname.toLowerCase() === CANONICAL_HOST;
 
-  // Arabic public URLs are legacy URLs now. Preserve any SEO equity by
-  // permanently redirecting each one to its exact English counterpart.
-  if (
-    pathLocale === 'ar'
-    && isInternationalSeoPath(path)
-    && ['GET', 'HEAD'].includes(request.method)
-  ) {
-    const publicPath = stripLocalePrefix(path);
-    const englishUrl = request.nextUrl.clone();
-    englishUrl.pathname = localizePublicPath(publicPath, 'en');
-    return NextResponse.redirect(englishUrl, 301);
+  // Keep one clean public URL: https://summeca.com/... .
+  // Legacy /en and /ar URLs permanently collapse to the unprefixed English URL.
+  // www is also canonicalized here for routes that pass through middleware.
+  if (!isCanonicalHost || (pathLocale && isPublicSeoPath)) {
+    const canonicalUrl = request.nextUrl.clone();
+    canonicalUrl.protocol = 'https:';
+    canonicalUrl.hostname = CANONICAL_HOST;
+    canonicalUrl.port = '';
+
+    if (pathLocale && isPublicSeoPath) {
+      canonicalUrl.pathname = stripLocalePrefix(path);
+    }
+
+    return NextResponse.redirect(canonicalUrl, 308);
   }
 
-  if (pathLocale === 'en' && isInternationalSeoPath(path)) {
-    const publicPath = stripLocalePrefix(path);
-    const rewriteUrl = request.nextUrl.clone();
-    rewriteUrl.pathname = publicPath;
-
+  // Public storefront pages are English-only now. Keep the visible URL
+  // unprefixed while still supplying locale/path metadata to the app.
+  if (!pathLocale && isPublicSeoPath && ['GET', 'HEAD'].includes(request.method)) {
     const requestHeaders = new Headers(request.headers);
     requestHeaders.set('x-summeca-locale', 'en');
-    requestHeaders.set('x-summeca-public-path', publicPath);
-    requestHeaders.set('x-summeca-localized-path', localizePublicPath(publicPath, 'en'));
+    requestHeaders.set('x-summeca-public-path', path);
+    requestHeaders.set('x-summeca-localized-path', path);
 
-    const response = NextResponse.rewrite(rewriteUrl, {
+    const response = NextResponse.next({
       request: { headers: requestHeaders },
     });
     response.cookies.set(SEO_LANGUAGE_COOKIE_KEY, 'en', {
@@ -133,16 +131,6 @@ export async function middleware(request: NextRequest) {
     });
     response.headers.set('Content-Language', 'en');
     return response;
-  }
-
-  if (
-    !pathLocale
-    && isInternationalSeoPath(path)
-    && ['GET', 'HEAD'].includes(request.method)
-  ) {
-    const localizedUrl = request.nextUrl.clone();
-    localizedUrl.pathname = localizePublicPath(path, 'en');
-    return NextResponse.redirect(localizedUrl, 308);
   }
 
   // Keep the inexpensive origin protection for state-changing API requests.
