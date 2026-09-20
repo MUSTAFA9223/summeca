@@ -4,7 +4,7 @@ import {
   createContext,
   useCallback,
   useContext,
-  useEffect,
+  useLayoutEffect,
   useMemo,
   useState,
   type ReactNode,
@@ -13,6 +13,8 @@ import {
 export type SiteTheme = 'dark' | 'light';
 
 const THEME_STORAGE_KEY = 'summeca:theme';
+const THEME_COOKIE_KEY = 'summeca:theme';
+const THEME_COOKIE_MAX_AGE = 60 * 60 * 24 * 365;
 
 type ThemeContextValue = {
   theme: SiteTheme;
@@ -22,7 +24,7 @@ type ThemeContextValue = {
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
-function isSiteTheme(value: string | null): value is SiteTheme {
+function isSiteTheme(value: string | null | undefined): value is SiteTheme {
   return value === 'dark' || value === 'light';
 }
 
@@ -31,26 +33,50 @@ function applyTheme(theme: SiteTheme) {
   document.documentElement.style.colorScheme = theme;
 }
 
-export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setThemeState] = useState<SiteTheme>('light');
+function persistTheme(theme: SiteTheme) {
+  try {
+    window.localStorage.setItem(THEME_STORAGE_KEY, theme);
+  } catch {
+    // The active page should still honor the selected theme if storage is unavailable.
+  }
 
-  useEffect(() => {
-    const stored = window.localStorage.getItem(THEME_STORAGE_KEY);
+  document.cookie =
+    `${THEME_COOKIE_KEY}=${theme}; Path=/; Max-Age=${THEME_COOKIE_MAX_AGE}; SameSite=Lax`;
+}
+
+export function ThemeProvider({
+  children,
+  initialTheme = 'light',
+}: {
+  children: ReactNode;
+  initialTheme?: SiteTheme;
+}) {
+  const [theme, setThemeState] = useState<SiteTheme>(initialTheme);
+
+  useLayoutEffect(() => {
+    let stored: string | null = null;
+    try {
+      stored = window.localStorage.getItem(THEME_STORAGE_KEY);
+    } catch {
+      // Fall back to the theme that the inline bootstrap script/server selected.
+    }
+
     const fromDocument = document.documentElement.dataset.siteTheme ?? null;
     const preferred = isSiteTheme(stored)
       ? stored
       : isSiteTheme(fromDocument)
         ? fromDocument
-        : 'light';
+        : initialTheme;
 
     setThemeState(preferred);
     applyTheme(preferred);
-  }, []);
+    persistTheme(preferred);
+  }, [initialTheme]);
 
   const setTheme = useCallback((nextTheme: SiteTheme) => {
-    window.localStorage.setItem(THEME_STORAGE_KEY, nextTheme);
     setThemeState(nextTheme);
     applyTheme(nextTheme);
+    persistTheme(nextTheme);
   }, []);
 
   const toggleTheme = useCallback(() => {
