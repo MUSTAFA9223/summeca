@@ -25,7 +25,11 @@ type IdleWindow = Window & {
 export default function DeferredStoreAssistant() {
   const pathname = usePathname();
   const [ready, setReady] = useState(false);
-  const hiddenOnCurrentRoute = pathname === '/sign-up-login-screen' || pathname.startsWith('/reset-password');
+  const hiddenOnCurrentRoute =
+    pathname === '/sign-up-login-screen' ||
+    pathname.startsWith('/reset-password') ||
+    pathname === '/support' ||
+    pathname.startsWith('/support/');
 
   useEffect(() => {
     const win = window as IdleWindow;
