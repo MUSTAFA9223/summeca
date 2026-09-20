@@ -21,9 +21,9 @@ interface Message {
 type ServiceStatus = 'ready' | 'error';
 
 const QUICK_PROMPTS = [
-  'ساعدني أختار المنتج المناسب',
-  'قارن لي الخطط والأسعار',
-  'ما هو أرخص خيار مناسب لي؟',
+  'Show me the current SUMMECA products',
+  'Compare products and prices',
+  'Which plan is the best fit for me?',
 ];
 
 function MessageContent({ content }: { content: string }) {
@@ -38,7 +38,7 @@ function MessageContent({ content }: { content: string }) {
             href={part}
             className="font-700 text-primary underline underline-offset-2 hover:opacity-80"
           >
-            عرض المنتج
+            View product
           </a>
         ) : (
           <React.Fragment key={index}>{part}</React.Fragment>
@@ -56,7 +56,7 @@ export default function StoreAssistant() {
     {
       role: 'assistant',
       content:
-        'مرحبًا! أنا موظف مبيعات SUMMECA الذكي. أخبرني ماذا تريد أن تنجز وسأساعدك في اختيار المنتج والخطة الأنسب من منتجاتنا الفعلية.',
+        'Hi! I’m SUMMECA Sales AI. Tell me what you want to accomplish and I’ll help you choose from our current products and live plans: LeadFollow AI, ProposalFlow AI, InvoiceFlow, and SiteAgent AI.',
     },
   ]);
   const [input, setInput] = useState('');
@@ -106,8 +106,8 @@ export default function StoreAssistant() {
         setServiceStatus('error');
         const message =
           res.status === 429
-            ? 'تم الوصول إلى الحد المؤقت للمحادثات. انتظر قليلًا ثم حاول مرة أخرى.'
-            : 'موظف المبيعات غير متاح مؤقتًا من جهة الخادم. حاول مرة أخرى بعد قليل.';
+            ? 'The temporary chat limit has been reached. Please wait a moment and try again.'
+            : 'SUMMECA Sales AI is temporarily unavailable. Please try again shortly.';
         setMessages((prev) => [...prev, { role: 'assistant', content: message }]);
       } else {
         setServiceStatus('ready');
@@ -119,7 +119,7 @@ export default function StoreAssistant() {
         ...prev,
         {
           role: 'assistant',
-          content: 'تعذر الوصول إلى SUMMECA من جهازك الآن. تحقق من الاتصال ثم حاول مرة أخرى.',
+          content: 'SUMMECA could not be reached from your device. Check your connection and try again.',
         },
       ]);
     } finally {
@@ -142,7 +142,7 @@ export default function StoreAssistant() {
           className={`fixed bottom-20 right-3 z-50 flex w-[calc(100vw-24px)] max-w-96 flex-col rounded-2xl border border-border bg-card shadow-2xl transition-all duration-200 print:hidden sm:right-4 ${
             minimized ? 'h-14' : 'h-[min(520px,72vh)]'
           }`}
-          dir="auto"
+          dir="ltr"
         >
           <div className="flex items-center justify-between rounded-t-2xl border-b border-border bg-primary/5 px-4 py-3">
             <div className="flex items-center gap-2">
@@ -162,8 +162,8 @@ export default function StoreAssistant() {
                     }`}
                   />
                   {serviceStatus === 'ready'
-                    ? 'موظف مبيعات ذكي · جاهز للمساعدة'
-                    : 'الخدمة غير متاحة مؤقتًا'}
+                    ? 'Live catalog · Ready to help'
+                    : 'Service temporarily unavailable'}
                 </p>
               </div>
             </div>
@@ -171,14 +171,14 @@ export default function StoreAssistant() {
               <button
                 onClick={() => setMinimized((previous) => !previous)}
                 className="flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground transition-all hover:bg-secondary hover:text-foreground"
-                aria-label={minimized ? 'تكبير المحادثة' : 'تصغير المحادثة'}
+                aria-label={minimized ? 'Expand chat' : 'Minimize chat'}
               >
                 {minimized ? <Maximize2 size={13} /> : <Minimize2 size={13} />}
               </button>
               <button
                 onClick={() => setOpen(false)}
                 className="flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground transition-all hover:bg-secondary hover:text-foreground"
-                aria-label="إغلاق المحادثة"
+                aria-label="Close chat"
               >
                 <X size={13} />
               </button>
@@ -250,7 +250,7 @@ export default function StoreAssistant() {
                     value={input}
                     onChange={(event) => setInput(event.target.value)}
                     onKeyDown={handleKeyDown}
-                    placeholder="ما الذي تبحث عنه؟"
+                    placeholder="What are you looking for?"
                     disabled={loading}
                     maxLength={1000}
                     className="max-h-24 flex-1 resize-none rounded-xl border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:opacity-50"
@@ -260,13 +260,13 @@ export default function StoreAssistant() {
                     onClick={() => void sendMessage()}
                     disabled={loading || !input.trim()}
                     className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
-                    aria-label="إرسال"
+                    aria-label="Send"
                   >
                     <Send size={14} />
                   </button>
                 </div>
                 <p className="mt-1.5 flex items-center justify-center gap-1 text-center text-xs text-muted-foreground">
-                  <Sparkles size={11} /> Cloudflare Workers AI · يعتمد على منتجات SUMMECA الفعلية
+                  <Sparkles size={11} /> Cloudflare Workers AI · Grounded in the live SUMMECA catalog
                 </p>
               </div>
             </>
@@ -281,7 +281,7 @@ export default function StoreAssistant() {
           setMinimized(false);
         }}
         className="fixed bottom-4 right-4 z-50 flex h-12 w-12 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition-all hover:scale-105 hover:bg-primary/90 print:hidden"
-        aria-label="فتح موظف مبيعات SUMMECA"
+        aria-label="Open SUMMECA Sales AI"
       >
         {open ? <X size={20} /> : <MessageCircle size={20} />}
       </button>
