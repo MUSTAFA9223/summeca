@@ -83,15 +83,15 @@ pre {
     height: 44px;
   }
 
-  [data-public-nav="true"] [data-mobile-nav-panel="true"] {
+  [data-mobile-nav-panel="true"] {
     max-height: none;
     overflow-y: auto;
     overscroll-behavior: contain;
     -webkit-overflow-scrolling: touch;
   }
 
-  [data-public-nav="true"] [data-mobile-nav-panel="true"] a,
-  [data-public-nav="true"] [data-mobile-nav-panel="true"] button {
+  [data-mobile-nav-panel="true"] a,
+  [data-mobile-nav-panel="true"] button {
     min-height: 44px;
   }
 
