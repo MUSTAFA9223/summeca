@@ -30,7 +30,7 @@ test('public header owns its real layout height with a readable light glass surf
   assert.match(siteTheme, /background-color: color-mix\(in srgb, var\(--background\) 95%, transparent\) !important;/);
   assert.match(siteTheme, /backdrop-filter: blur\(10px\) !important;/);
   assert.doesNotMatch(nav, /--launch-offer-height/);
-  assert.match(nav, /absolute inset-x-0 top-full border-t/);
+  assert.match(nav, /data-mobile-nav-panel="true" className="fixed inset-x-0 bottom-0/);
 });
 
 test('legacy top padding is neutralized only for public-header compensation paths', () => {
@@ -52,9 +52,15 @@ test('account label remains compact, truncates safely, and menu is RTL-safe', ()
 });
 
 
-test('mobile navigation covers the page with an opaque viewport-height surface', () => {
+test('mobile navigation covers the remaining viewport, locks page scroll, and tracks the sticky header', () => {
   assert.match(nav, /data-mobile-nav-panel="true"/);
-  assert.match(nav, /absolute inset-x-0 top-full border-t border-border z-\[70\] min-h-\[calc\(100dvh-70px\)\] overflow-y-auto overscroll-contain bg-background/);
+  assert.match(nav, /fixed inset-x-0 bottom-0 z-\[70\] overflow-y-auto overscroll-contain/);
+  assert.match(nav, /data-mobile-nav-open/);
+  assert.match(nav, /getBoundingClientRect\(\)\.bottom/);
+  assert.match(nav, /--mobile-nav-viewport-top/);
+  assert.doesNotMatch(nav, /min-h-\[calc\(100dvh-70px\)\]/);
   assert.doesNotMatch(nav, /bg-background\/\[0\.98\]/);
-  assert.match(siteTheme, /\[data-public-nav='true'\] \[data-mobile-nav-panel='true'\] \{[\s\S]*?background-color: var\(--background\) !important;[\s\S]*?opacity: 1;/);
+  assert.match(siteTheme, /\[data-public-nav='true'\] \[data-mobile-nav-panel='true'\] \{[\s\S]*?top: var\(--mobile-nav-viewport-top, 70px\);[\s\S]*?background-color: var\(--background\) !important;/);
+  assert.match(siteTheme, /html\[data-mobile-nav-open='true'\][\s\S]*?overflow: hidden !important;/);
+  assert.match(siteTheme, /\[data-store-assistant-floating='true'\][\s\S]*?visibility: hidden !important;/);
 });

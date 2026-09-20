@@ -11,7 +11,8 @@ const styles = fs.readFileSync(path.join(root, 'src/styles/i18n.css'), 'utf8');
 test('document language and direction are fixed to English LTR', () => {
   assert.match(layout, /const language = 'en' as const/);
   assert.match(layout, /const direction = 'ltr' as const/);
-  assert.doesNotMatch(layout, /await cookies\(\)/);
+  assert.match(layout, /cookieStore\.get\('summeca:theme'\)/);
+  assert.doesNotMatch(layout, /cookieStore\.get\(['"](?:language|locale|summeca:language)['"]\)/);
   assert.match(layout, /lang=\{language\}/);
   assert.match(layout, /dir=\{direction\}/);
   assert.match(layout, /data-language=\{language\}/);

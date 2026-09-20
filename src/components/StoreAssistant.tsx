@@ -138,6 +138,7 @@ export default function StoreAssistant() {
     <>
       {open && (
         <div
+          data-store-assistant-floating="true"
           className={`fixed bottom-20 right-3 z-50 flex w-[calc(100vw-24px)] max-w-96 flex-col rounded-2xl border border-border bg-card shadow-2xl transition-all duration-200 print:hidden sm:right-4 ${
             minimized ? 'h-14' : 'h-[min(520px,72vh)]'
           }`}
@@ -274,6 +275,7 @@ export default function StoreAssistant() {
       )}
 
       <button
+        data-store-assistant-floating="true"
         onClick={() => {
           setOpen((previous) => !previous);
           setMinimized(false);

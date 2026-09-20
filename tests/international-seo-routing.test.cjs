@@ -37,7 +37,8 @@ test('sitemap publishes only the English localized public and product URLs', () 
 test('root layout is pinned to English instead of a persisted language cookie', () => {
   assert.match(layout, /const language = 'en' as const/);
   assert.match(layout, /const direction = 'ltr' as const/);
-  assert.doesNotMatch(layout, /await cookies\(\)/);
+  assert.match(layout, /cookieStore\.get\('summeca:theme'\)/);
+  assert.doesNotMatch(layout, /cookieStore\.get\(['"](?:language|locale|summeca:language)['"]\)/);
   assert.doesNotMatch(layout, /GlobalLanguageSwitcher/);
 });
 

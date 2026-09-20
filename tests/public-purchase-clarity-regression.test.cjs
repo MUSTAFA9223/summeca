@@ -9,10 +9,13 @@ const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
 const hero = read('src/app/components/HeroSection.tsx');
 const pricing = read('src/components/catalog/PricingCatalogView.tsx');
 const featured = read('src/app/components/FeaturedProducts.tsx');
+const darkHeroCss = read('src/styles/summeca-home-dark.css');
+const lightHeroCss = read('src/styles/summeca-light-premium.css');
 
 test('homepage hero keeps a readable filled headline and flagship product CTA hierarchy', () => {
-  assert.match(hero, /color: isLight \? '#062b35' : '#e8fbfa'/);
-  assert.match(hero, /WebkitTextStroke/);
+  assert.match(hero, /summeca-hero-headline-line/);
+  assert.match(darkHeroCss, /\.summeca-hero-headline-line[\s\S]*?color: #e8fbfa;[\s\S]*?-webkit-text-stroke:/);
+  assert.match(lightHeroCss, /html\[data-site-theme='light'\] \.summeca-hero-headline-line[\s\S]*?color: #062b35;[\s\S]*?-webkit-text-stroke:/);
   assert.match(hero, /href="\/products\/summeca-invoiceflow"[\s\S]*?primary_cta_click/);
   assert.match(hero, /invoiceFlow: 'Explore InvoiceFlow'/);
   assert.match(hero, /invoiceFlow: 'استكشف InvoiceFlow'/);

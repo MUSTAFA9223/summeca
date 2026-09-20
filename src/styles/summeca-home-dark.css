@@ -117,6 +117,56 @@ body.summeca-home-theme main article:hover img {
     linear-gradient(135deg, #0d1116 0%, #0c1217 46%, #0a151b 100%);
 }
 
+.summeca-hero-top-fade {
+  background: linear-gradient(to bottom, #06151c 0%, rgba(6, 21, 28, 0.88) 42%, transparent 100%);
+}
+
+.summeca-hero-eyebrow {
+  border: 1px solid rgba(88, 234, 216, 0.15);
+  background: rgba(88, 234, 216, 0.055);
+  color: #ccebed;
+}
+
+.summeca-hero-headline-line {
+  color: #e8fbfa;
+  -webkit-text-stroke: 0.6px rgba(32, 217, 189, 0.34);
+  text-shadow: 0 0 30px rgba(34, 211, 238, 0.08);
+}
+
+.summeca-hero-copy,
+.summeca-hero-tertiary-link {
+  color: #9abec8;
+}
+
+.summeca-hero-tertiary-link:hover,
+.summeca-hero-support-link:hover {
+  color: #ffffff;
+}
+
+.summeca-hero-secondary-cta {
+  border-color: rgba(116, 216, 216, 0.2);
+  background: rgba(10, 34, 41, 0.65);
+  color: #d5eef0;
+}
+
+.summeca-hero-secondary-cta:hover {
+  border-color: rgba(75, 205, 246, 0.45);
+  color: #ffffff;
+}
+
+.summeca-hero-trust {
+  border-color: rgba(116, 216, 216, 0.1);
+  color: #91b5bf;
+}
+
+.summeca-hero-preview-orb {
+  background: rgba(32, 217, 189, 0.1);
+}
+
+.summeca-hero-bottom-fade {
+  background: linear-gradient(to top, #06151c 0%, transparent 100%);
+}
+
 .summeca-hero-grid {
   opacity: 0.8;
   background-image:

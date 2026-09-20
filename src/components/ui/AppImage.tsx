@@ -19,6 +19,7 @@ interface AppImageProps {
     fallbackSrc?: string;
     loading?: 'lazy' | 'eager';
     unoptimized?: boolean;
+    showLoadingBackground?: boolean;
     [key: string]: any;
 }
 
@@ -38,6 +39,7 @@ const AppImage = memo(function AppImage({
     fallbackSrc = '/assets/images/no_image.png',
     loading = 'lazy',
     unoptimized = false,
+    showLoadingBackground = true,
     ...props
 }: AppImageProps) {
     const [imageSrc, setImageSrc] = useState(src);
@@ -62,10 +64,10 @@ const AppImage = memo(function AppImage({
 
     const imageClassName = useMemo(() => {
         const classes = [className];
-        if (isLoading) classes.push('bg-gray-200');
+        if (isLoading && showLoadingBackground) classes.push('bg-gray-200');
         if (onClick) classes.push('cursor-pointer hover:opacity-90 transition-opacity duration-200');
         return classes.filter(Boolean).join(' ');
-    }, [className, isLoading, onClick]);
+    }, [className, isLoading, onClick, showLoadingBackground]);
 
     const imageProps = useMemo(() => {
         const baseProps: any = {

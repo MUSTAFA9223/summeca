@@ -83,15 +83,15 @@ pre {
     height: 44px;
   }
 
-  [data-public-nav="true"] > div.absolute {
-    max-height: calc(100dvh - 70px - var(--launch-offer-height, 0px) - env(safe-area-inset-bottom));
+  [data-public-nav="true"] [data-mobile-nav-panel="true"] {
+    max-height: none;
     overflow-y: auto;
     overscroll-behavior: contain;
     -webkit-overflow-scrolling: touch;
   }
 
-  [data-public-nav="true"] > div.absolute a,
-  [data-public-nav="true"] > div.absolute button {
+  [data-public-nav="true"] [data-mobile-nav-panel="true"] a,
+  [data-public-nav="true"] [data-mobile-nav-panel="true"] button {
     min-height: 44px;
   }
 
@@ -143,13 +143,18 @@ pre {
   }
 
   [data-public-nav="true"] a[aria-label="SUMMECA home"] {
-    max-width: 9rem;
-    overflow: hidden;
+    max-width: calc(100vw - 5.75rem);
+    overflow: visible;
+  }
+
+  [data-public-nav="true"] a[aria-label="SUMMECA home"] .summeca-brand-logo {
+    width: auto;
+    max-width: 100%;
   }
 }
 
 @media (max-width: 360px) {
   [data-public-nav="true"] a[aria-label="SUMMECA home"] {
-    max-width: 7.75rem;
+    max-width: calc(100vw - 5.25rem);
   }
 }

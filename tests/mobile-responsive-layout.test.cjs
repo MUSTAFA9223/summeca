@@ -9,6 +9,9 @@ const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
 const layout = read('src/app/layout.tsx');
 const responsiveCss = read('src/styles/mobile-responsive.css');
 const themeSwitcher = read('src/components/GlobalThemeSwitcher.tsx');
+const publicNav = read('src/components/PublicNav.tsx');
+const storeAssistant = read('src/components/StoreAssistant.tsx');
+const siteTheme = read('src/styles/site-theme.css');
 const catalog = read('src/components/catalog/CatalogClient.tsx');
 const invoiceFlow = read('src/app/user-dashboard/invoiceflow/page.tsx');
 const leadFollow = read('src/app/user-dashboard/leadfollow/page.tsx');
@@ -44,4 +47,13 @@ test('latest checkout remains mobile-first while summary becomes sticky only on 
   assert.match(checkout, /lg:sticky lg:top-24/);
   assert.match(checkout, /min-w-0/);
   assert.match(checkout, /safe-area-inset-bottom/);
+});
+
+
+test('mobile menu owns the viewport and suppresses floating UI while open', () => {
+  assert.match(publicNav, /data-mobile-nav-open/);
+  assert.match(publicNav, /--mobile-nav-viewport-top/);
+  assert.match(storeAssistant, /data-store-assistant-floating="true"/);
+  assert.match(siteTheme, /data-mobile-nav-open='true'/);
+  assert.match(siteTheme, /data-store-assistant-floating='true'/);
 });

@@ -1,7 +1,7 @@
 import { Suspense } from 'react';
 import React from 'react';
 import type { Metadata, Viewport } from 'next';
-import { headers } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import { Plus_Jakarta_Sans } from 'next/font/google';
 import '../styles/tailwind.css';
 import '../styles/site-theme.css';
@@ -39,10 +39,18 @@ const siteDescription =
 const themeInitScript = `
 try {
   var storedTheme = window.localStorage.getItem('summeca:theme');
-  if (storedTheme === 'light' || storedTheme === 'dark') {
-    document.documentElement.dataset.siteTheme = storedTheme;
-    document.documentElement.style.colorScheme = storedTheme;
-  }
+  var documentTheme = document.documentElement.dataset.siteTheme;
+  var resolvedTheme =
+    storedTheme === 'light' || storedTheme === 'dark'
+      ? storedTheme
+      : documentTheme === 'dark'
+        ? 'dark'
+        : 'light';
+
+  document.documentElement.dataset.siteTheme = resolvedTheme;
+  document.documentElement.style.colorScheme = resolvedTheme;
+  document.cookie =
+    'summeca:theme=' + resolvedTheme + '; Path=/; Max-Age=31536000; SameSite=Lax';
 } catch (_) {}
 `;
 
@@ -169,6 +177,9 @@ export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   await headers();
+  const cookieStore = await cookies();
+  const cookieTheme = cookieStore.get('summeca:theme')?.value;
+  const initialTheme = cookieTheme === 'dark' ? 'dark' : 'light';
   const language = 'en' as const;
   const direction = 'ltr' as const;
 
@@ -178,7 +189,7 @@ export default async function RootLayout({
       dir={direction}
       suppressHydrationWarning
       className={plusJakartaSans.variable}
-      data-site-theme="light"
+      data-site-theme={initialTheme}
       data-language={language}
     >
       <head>
@@ -195,7 +206,7 @@ export default async function RootLayout({
           <GoogleAnalytics />
           <VisitorTracker />
         </Suspense>
-        <ThemeProvider>
+        <ThemeProvider initialTheme={initialTheme}>
           <LanguageProvider initialLanguage={language}>
             <SkipToContent />
             <AuthProvider>

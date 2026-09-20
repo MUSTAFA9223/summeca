@@ -196,6 +196,57 @@ html[data-site-theme='light'] .summeca-home-hero {
     linear-gradient(145deg, #f8fcfc 0%, #f2f9f9 48%, #eaf6f7 100%);
 }
 
+html[data-site-theme='light'] .summeca-hero-top-fade {
+  background: linear-gradient(to bottom, #f8fcfc 0%, rgba(248, 252, 252, 0.9) 42%, transparent 100%);
+}
+
+html[data-site-theme='light'] .summeca-hero-eyebrow {
+  border-color: rgba(0, 169, 165, 0.2);
+  background: rgba(255, 255, 255, 0.8);
+  color: #315b63;
+  box-shadow: 0 8px 24px rgba(6, 43, 53, 0.05);
+}
+
+html[data-site-theme='light'] .summeca-hero-headline-line {
+  color: #062b35;
+  -webkit-text-stroke: 0.6px rgba(0, 169, 165, 0.34);
+  text-shadow: 0 10px 32px rgba(6, 43, 53, 0.055);
+}
+
+html[data-site-theme='light'] .summeca-hero-copy,
+html[data-site-theme='light'] .summeca-hero-tertiary-link {
+  color: #5d7f86;
+}
+
+html[data-site-theme='light'] .summeca-hero-tertiary-link:hover,
+html[data-site-theme='light'] .summeca-hero-support-link:hover {
+  color: #007f7c;
+}
+
+html[data-site-theme='light'] .summeca-hero-secondary-cta {
+  border-color: rgba(0, 169, 165, 0.25);
+  background: rgba(255, 255, 255, 0.7);
+  color: #24515a;
+}
+
+html[data-site-theme='light'] .summeca-hero-secondary-cta:hover {
+  border-color: rgba(0, 169, 165, 0.45);
+  color: #007f7c;
+}
+
+html[data-site-theme='light'] .summeca-hero-trust {
+  border-color: rgba(0, 169, 165, 0.15);
+  color: #5d7f86;
+}
+
+html[data-site-theme='light'] .summeca-hero-preview-orb {
+  background: rgba(0, 169, 165, 0.1);
+}
+
+html[data-site-theme='light'] .summeca-hero-bottom-fade {
+  background: linear-gradient(to top, #f3fafa 0%, transparent 100%);
+}
+
 html[data-site-theme='light'] .summeca-hero-grid {
   opacity: 0.7;
   background-image:
