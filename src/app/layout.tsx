@@ -20,7 +20,6 @@ import DeferredStoreAssistant from '@/components/DeferredStoreAssistant';
 import GlobalThemeSwitcher from '@/components/GlobalThemeSwitcher';
 import GoogleAnalytics from '@/components/GoogleAnalytics';
 import VisitorTracker from '@/components/VisitorTracker';
-import LaunchOfferBanner from '@/components/LaunchOfferBanner';
 import ProductPageEnhancements from '@/components/catalog/ProductPageEnhancements';
 import ProductPageVideoPreview from '@/components/catalog/ProductPageVideoPreview';
 import SkipToContent from '@/components/SkipToContent';
@@ -210,7 +209,6 @@ export default async function RootLayout({
           <LanguageProvider initialLanguage={language}>
             <SkipToContent />
             <AuthProvider>
-              <LaunchOfferBanner />
               {children}
               <ProductPageVideoPreview />
               <ProductPageEnhancements />
