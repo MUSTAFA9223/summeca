@@ -49,10 +49,13 @@ export function isInternationalSeoPath(pathname: string) {
   return PUBLIC_EXACT_PATHS.has(publicPath) || publicPath.startsWith('/products/');
 }
 
-export function localizePublicPath(pathname: string, locale: PublicPathLocale) {
+export function localizePublicPath(pathname: string, _locale: PublicPathLocale) {
   const publicPath = stripLocalePrefix(pathname);
   if (!isInternationalSeoPath(publicPath)) return cleanPathname(pathname);
-  return publicPath === '/' ? `/${locale}` : `/${locale}${publicPath}`;
+
+  // SUMMECA is English-only on the public storefront. Keep the canonical
+  // English URL unprefixed and collapse legacy /en and /ar URLs to it.
+  return publicPath;
 }
 
 export function localizedAbsoluteUrl(pathname: string, locale: SeoLocale) {
