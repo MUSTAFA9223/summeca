@@ -12,12 +12,13 @@ const layout = read('src/app/layout.tsx');
 const sitemap = read('src/app/sitemap.ts');
 const productLayout = read('src/app/products/[slug]/layout.tsx');
 
-test('public SEO routing publishes English only and preserves legacy Arabic URLs', () => {
+test('public SEO routing publishes English only on clean unprefixed URLs', () => {
   assert.match(routing, /SEO_LOCALES[^\n]+\['en'\]/);
   assert.doesNotMatch(routing, /SEO_LOCALES[^\n]+\['en', 'ar'\]/);
-  assert.match(middleware, /pathLocale === 'ar'/);
-  assert.match(middleware, /localizePublicPath\(publicPath, 'en'\)/);
-  assert.match(middleware, /NextResponse\.redirect\(englishUrl, 301\)/);
+  assert.match(routing, /return publicPath;/);
+  assert.match(middleware, /pathLocale && isPublicSeoPath/);
+  assert.match(middleware, /canonicalUrl\.pathname = stripLocalePrefix\(path\)/);
+  assert.match(middleware, /NextResponse\.redirect\(canonicalUrl, 308\)/);
   assert.match(middleware, /Content-Language', 'en'/);
 });
 
@@ -28,7 +29,7 @@ test('root metadata emits only English and x-default alternates', () => {
   assert.match(layout, /inLanguage: 'en'/);
 });
 
-test('sitemap publishes only the English localized public and product URLs', () => {
+test('sitemap publishes only the English canonical public and product URLs', () => {
   assert.match(sitemap, /for \(const locale of SEO_LOCALES\)/);
   assert.match(sitemap, /\/products\/\$\{encodeURIComponent\(product\.slug\)\}/);
   assert.match(routing, /SEO_LOCALES[^\n]+\['en'\]/);
