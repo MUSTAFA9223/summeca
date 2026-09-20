@@ -216,11 +216,26 @@ html[data-site-theme='light'] [class~='bg-[#070b10]'] [class*='shadow-[0_-12px_3
   -webkit-backdrop-filter: blur(10px) !important;
 }
 
-/* Mobile navigation is an opaque overlay: page content must never show through the menu. */
+/* Mobile navigation is an opaque viewport overlay: page content must never show through it. */
 [data-public-nav='true'] [data-mobile-nav-panel='true'] {
+  top: var(--mobile-nav-viewport-top, 70px);
   background-color: var(--background) !important;
   opacity: 1;
   isolation: isolate;
+  padding-bottom: env(safe-area-inset-bottom);
+  -webkit-overflow-scrolling: touch;
+}
+
+html[data-mobile-nav-open='true'],
+html[data-mobile-nav-open='true'] body {
+  overflow: hidden !important;
+  overscroll-behavior: none;
+}
+
+html[data-mobile-nav-open='true'] [data-store-assistant-floating='true'] {
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
 }
 
 /* Legacy 68/70px padding compensated for the old negative header margin. The header now owns its height in flow. */
