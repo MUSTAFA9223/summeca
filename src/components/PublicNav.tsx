@@ -112,7 +112,8 @@ export default function PublicNav() {
   };
 
   return (
-    <header
+    <>
+      <header
       ref={headerRef}
       data-public-nav="true"
       data-theme-switcher-host="true"
@@ -193,6 +194,7 @@ export default function PublicNav() {
         </div>
       </div>
 
+    </header>
       {mobileOpen && (
         <div data-mobile-nav-panel="true" className="fixed inset-x-0 bottom-0 z-[70] overflow-y-auto overscroll-contain border-t border-border bg-background shadow-2xl lg:hidden">
           <div className="h-0.5 bg-gradient-to-r from-primary via-accent to-transparent" />
@@ -238,6 +240,6 @@ export default function PublicNav() {
           </div>
         </div>
       )}
-    </header>
+    </>
   );
 }
