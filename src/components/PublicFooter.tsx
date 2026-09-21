@@ -8,6 +8,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 const PRODUCT_HUNT_URL =
   'https://www.producthunt.com/products/summeca?utm_source=other&utm_medium=social';
 const TOOLS_CAFE_URL = 'https://tools.cafe';
+const LAUNCHSTAG_URL = 'https://launchstag.com/p/summeca';
 const X_URL = 'https://x.com/summeca_';
 const CONTACT_EMAIL = 'hello@summeca.com';
 
@@ -71,6 +72,7 @@ export default function PublicFooter() {
         productHunt: 'عرض SUMMECA على Product Hunt',
         productHuntHint: 'يفتح الموقع الرسمي في علامة تبويب جديدة',
         toolsCafe: 'SUMMECA مميزة على tools.cafe',
+        launchstag: 'SUMMECA مميزة على Launchstag',
         rights: 'جميع الحقوق محفوظة.',
       }
     : {
@@ -81,6 +83,7 @@ export default function PublicFooter() {
         productHunt: 'View SUMMECA on Product Hunt',
         productHuntHint: 'Opens the official listing in a new tab',
         toolsCafe: 'SUMMECA is featured on tools.cafe',
+        launchstag: 'SUMMECA is featured on Launchstag',
         rights: 'All rights reserved.',
       };
 
@@ -151,24 +154,45 @@ export default function PublicFooter() {
               <ArrowUpRight className="h-4 w-4 shrink-0" aria-hidden="true" />
             </a>
 
-            <a
-              href={TOOLS_CAFE_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label={copy.toolsCafe}
-              className="mt-4 inline-flex max-w-full rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-            >
-              {/* tools.cafe verifies this official badge URL for free listings. */}
-              {/* eslint-disable-next-line @next/next/no-img-element -- the directory requires its exact external badge URL. */}
-              <img
-                src="https://tools.cafe/b/light.svg"
-                alt="Featured on tools.cafe"
-                width="256"
-                height="80"
-                loading="lazy"
-                className="h-auto max-w-full"
-              />
-            </a>
+            <div className="mt-4 flex flex-wrap items-center gap-3">
+              <a
+                href={TOOLS_CAFE_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={copy.toolsCafe}
+                className="inline-flex max-w-full rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+              >
+                {/* tools.cafe verifies this official badge URL for free listings. */}
+                {/* eslint-disable-next-line @next/next/no-img-element -- the directory requires its exact external badge URL. */}
+                <img
+                  src="https://tools.cafe/b/light.svg"
+                  alt="Featured on tools.cafe"
+                  width="256"
+                  height="80"
+                  loading="lazy"
+                  className="h-auto max-w-full"
+                />
+              </a>
+
+              <a
+                href={LAUNCHSTAG_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={copy.launchstag}
+                className="inline-flex max-w-full rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+              >
+                {/* Launchstag verifies this exact badge and destination for free listings. */}
+                {/* eslint-disable-next-line @next/next/no-img-element -- the directory requires its exact external badge URL. */}
+                <img
+                  src="https://launchstag.com/badge-light.svg"
+                  alt="Featured on Launchstag"
+                  width="198"
+                  height="62"
+                  loading="lazy"
+                  className="h-auto max-w-full"
+                />
+              </a>
+            </div>
           </div>
 
           {footerSections.map((section) => (
