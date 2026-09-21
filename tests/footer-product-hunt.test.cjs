@@ -28,6 +28,15 @@ test('footer exposes the exact tools.cafe verification badge required by the fre
   assert.match(footer, /height="80"/);
 });
 
+test('footer exposes the exact Launchstag verification badge required by the free listing', () => {
+  assert.match(footer, /href=\{LAUNCHSTAG_URL\}/);
+  assert.match(footer, /https:\/\/launchstag\.com\/p\/summeca/);
+  assert.match(footer, /src="https:\/\/launchstag\.com\/badge-light\.svg"/);
+  assert.match(footer, /alt="Featured on Launchstag"/);
+  assert.match(footer, /width="198"/);
+  assert.match(footer, /height="62"/);
+});
+
 test('footer exposes the verified social, contact, support and legal destinations', () => {
   for (const destination of [
     'https://x.com/summeca_',
@@ -60,9 +69,8 @@ test('footer keeps mobile touch targets, grouped navigation, and explicit biling
 test('footer preserves the official local SUMMECA logo component and high-contrast dark surface', () => {
   assert.match(footer, /<AppLogo variant="wordmark" tone="light" size=\{52\} \/>/);
   assert.match(footer, /bg-\[#0A0F1E\] text-white/);
-  const footerWithoutToolsCafeBadge = footer.replace(
-    'src="https://tools.cafe/b/light.svg"',
-    'src="/tools-cafe-badge.svg"'
-  );
-  assert.doesNotMatch(footerWithoutToolsCafeBadge, /src="https?:\/\//i);
+  const footerWithoutDirectoryBadges = footer
+    .replace('src="https://tools.cafe/b/light.svg"', 'src="/tools-cafe-badge.svg"')
+    .replace('src="https://launchstag.com/badge-light.svg"', 'src="/launchstag-badge.svg"');
+  assert.doesNotMatch(footerWithoutDirectoryBadges, /src="https?:\/\//i);
 });
