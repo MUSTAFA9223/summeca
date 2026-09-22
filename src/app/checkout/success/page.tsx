@@ -46,6 +46,8 @@ const SAAS_DESTINATIONS: Record<string, string> = {
   'summeca-siteagent-ai': '/user-dashboard/siteagent',
 };
 
+const SERVICE_PRODUCT_SLUGS = new Set(['summeca-landing-page-sprint']);
+
 const ACCESS_LABELS: Record<string, string> = {
   one_time: 'One-time purchase',
   monthly: '1-month access',
@@ -54,12 +56,22 @@ const ACCESS_LABELS: Record<string, string> = {
 };
 
 function getDeliveryDetails(slug: string) {
+  if (SERVICE_PRODUCT_SLUGS.has(slug)) {
+    return {
+      destination: '/services/landing-page-sprint',
+      deliveryType: 'Same-day professional service',
+      locationHint: 'Your service order is confirmed. Send your page URL, main conversion goal, and target customer to hello@summeca.com to begin.',
+      actionLabel: 'View service details',
+    };
+  }
+
   const destination = SAAS_DESTINATIONS[slug];
   if (destination) {
     return {
       destination,
       deliveryType: 'Account-based SaaS access',
       locationHint: 'You can open this product later from your SUMMECA dashboard.',
+      actionLabel: 'Open your product',
     };
   }
 
@@ -67,6 +79,7 @@ function getDeliveryDetails(slug: string) {
     destination: '/user-dashboard/downloads',
     deliveryType: 'Protected digital download',
     locationHint: 'You can find protected product files later in Dashboard → Downloads.',
+    actionLabel: 'Open your product',
   };
 }
 
@@ -374,7 +387,7 @@ function CheckoutSuccessInner() {
               href={delivery.destination}
               className="btn-primary px-6 py-3 text-sm flex items-center gap-2 justify-center min-h-11"
             >
-              Open your product <ArrowRight size={14} />
+              {delivery.actionLabel} <ArrowRight size={14} />
             </Link>
           )}
           <Link
