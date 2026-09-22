@@ -381,6 +381,36 @@ export default function AuthScreen() {
           transform-origin: left center;
         }
 
+        @keyframes auth-content-left {
+          0% {
+            opacity: 0.38;
+            transform: translate3d(28px, 0, -64px) rotateY(5deg) scale(0.986);
+          }
+          52% {
+            opacity: 0.82;
+            transform: translate3d(8px, 0, -18px) rotateY(1.5deg) scale(0.996);
+          }
+          100% {
+            opacity: 1;
+            transform: translate3d(0, 0, 0) rotateY(0deg) scale(1);
+          }
+        }
+
+        @keyframes auth-content-right {
+          0% {
+            opacity: 0.38;
+            transform: translate3d(-28px, 0, -64px) rotateY(-5deg) scale(0.986);
+          }
+          52% {
+            opacity: 0.82;
+            transform: translate3d(-8px, 0, -18px) rotateY(-1.5deg) scale(0.996);
+          }
+          100% {
+            opacity: 1;
+            transform: translate3d(0, 0, 0) rotateY(0deg) scale(1);
+          }
+        }
+
         @media (prefers-reduced-motion: reduce) {
           .auth-content-left,
           .auth-content-right,
