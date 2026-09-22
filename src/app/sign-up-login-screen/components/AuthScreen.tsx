@@ -50,7 +50,7 @@ export default function AuthScreen() {
       </header>
 
       <div className="relative z-10 mx-auto grid min-h-screen w-full max-w-[1500px] items-center gap-4 px-5 pb-8 pt-24 sm:px-8 lg:grid-cols-[1.12fr_.88fr] lg:gap-8 lg:px-12 lg:pb-10 lg:pt-20">
-        <section className="summeca-auth-feature-panel relative hidden h-[min(82vh,820px)] min-h-[620px] overflow-hidden lg:block">
+        <section className={`summeca-auth-feature-panel relative hidden h-[min(82vh,820px)] min-h-[620px] overflow-hidden lg:block ${transitionDirection === 'left' ? 'auth-feature-left' : transitionDirection === 'right' ? 'auth-feature-right' : ''}`}>
           <div className="summeca-auth-feature-surface absolute inset-[4%] rounded-[2rem] border border-white/[0.07] bg-white/[0.018] shadow-[inset_0_1px_0_rgba(255,255,255,.06),0_40px_120px_rgba(0,0,0,.35)] backdrop-blur-[2px]" />
           <div className="absolute left-[8%] right-[5%] top-[10%] z-20 max-w-lg">
             <div className="summeca-auth-badge mb-5 inline-flex items-center gap-2 rounded-full border border-teal-300/20 bg-teal-300/[0.08] px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-teal-200">
@@ -68,7 +68,7 @@ export default function AuthScreen() {
           <WorkspaceOverviewPreview className="absolute bottom-[8%] left-[8%] right-[5%] z-20" />
         </section>
 
-        <section className="relative mx-auto flex w-full max-w-[510px] flex-col items-center justify-center py-6 lg:py-0">
+        <section className={`auth-form-panel relative mx-auto flex w-full max-w-[510px] flex-col items-center justify-center py-6 lg:py-0 ${transitionDirection === 'left' ? 'auth-panel-left' : transitionDirection === 'right' ? 'auth-panel-right' : ''}`}>
           <div className="absolute -inset-12 -z-10 rounded-full bg-teal-400/[0.06] blur-3xl" />
           <div className="mb-4 grid w-full grid-cols-3 gap-2 lg:hidden">
             {['InvoiceFlow', 'LeadFollow AI', 'Secure downloads'].map((label) => (
@@ -124,6 +124,90 @@ export default function AuthScreen() {
       </div>
 
       <style jsx>{`
+
+        .auth-form-panel,
+        .summeca-auth-feature-panel {
+          transform-style: preserve-3d;
+          backface-visibility: hidden;
+          will-change: transform, opacity;
+        }
+
+        .auth-panel-left {
+          animation: auth-panel-left 900ms cubic-bezier(0.77, 0, 0.18, 1) both;
+        }
+
+        .auth-panel-right {
+          animation: auth-panel-right 900ms cubic-bezier(0.77, 0, 0.18, 1) both;
+        }
+
+        .auth-feature-left {
+          animation: auth-feature-left 900ms cubic-bezier(0.77, 0, 0.18, 1) both;
+        }
+
+        .auth-feature-right {
+          animation: auth-feature-right 900ms cubic-bezier(0.77, 0, 0.18, 1) both;
+        }
+
+        @keyframes auth-panel-left {
+          0% {
+            opacity: 0.72;
+            transform: translate3d(82px, 0, -70px) rotateY(-4deg) scale(0.985);
+          }
+          54% {
+            opacity: 0.96;
+            transform: translate3d(-12px, 0, 18px) rotateY(1deg) scale(1.008);
+          }
+          100% {
+            opacity: 1;
+            transform: translate3d(0, 0, 0) rotateY(0deg) scale(1);
+          }
+        }
+
+        @keyframes auth-panel-right {
+          0% {
+            opacity: 0.72;
+            transform: translate3d(-82px, 0, -70px) rotateY(4deg) scale(0.985);
+          }
+          54% {
+            opacity: 0.96;
+            transform: translate3d(12px, 0, 18px) rotateY(-1deg) scale(1.008);
+          }
+          100% {
+            opacity: 1;
+            transform: translate3d(0, 0, 0) rotateY(0deg) scale(1);
+          }
+        }
+
+        @keyframes auth-feature-left {
+          0% {
+            opacity: 0.82;
+            transform: translate3d(-34px, 0, -36px) rotateY(2deg) scale(0.992);
+          }
+          58% {
+            opacity: 1;
+            transform: translate3d(8px, 0, 8px) rotateY(-0.5deg) scale(1.003);
+          }
+          100% {
+            opacity: 1;
+            transform: translate3d(0, 0, 0) rotateY(0deg) scale(1);
+          }
+        }
+
+        @keyframes auth-feature-right {
+          0% {
+            opacity: 0.82;
+            transform: translate3d(34px, 0, -36px) rotateY(-2deg) scale(0.992);
+          }
+          58% {
+            opacity: 1;
+            transform: translate3d(-8px, 0, 8px) rotateY(0.5deg) scale(1.003);
+          }
+          100% {
+            opacity: 1;
+            transform: translate3d(0, 0, 0) rotateY(0deg) scale(1);
+          }
+        }
+
         .auth-switch-stage {
           position: relative;
           perspective: 1500px;
@@ -277,7 +361,11 @@ export default function AuthScreen() {
 
         @media (prefers-reduced-motion: reduce) {
           .auth-content-left,
-          .auth-content-right {
+          .auth-content-right,
+          .auth-panel-left,
+          .auth-panel-right,
+          .auth-feature-left,
+          .auth-feature-right {
             animation: none;
           }
 
