@@ -37,6 +37,15 @@ test('footer exposes the exact Launchstag verification badge required by the fre
   assert.match(footer, /height="62"/);
 });
 
+test('footer exposes the SellWithBoost backlink and official badge for the free listing', () => {
+  assert.match(footer, /href=\{SELLWITHBOOST_URL\}/);
+  assert.match(footer, /https:\/\/sellwithboost\.com/);
+  assert.match(footer, /src="https:\/\/sellwithboost\.com\/badge\/listing-dark\.svg"/);
+  assert.match(footer, /alt="Listed on Sell With boost"/);
+  assert.match(footer, /width="160"/);
+  assert.match(footer, /height="40"/);
+});
+
 test('footer exposes the verified social, contact, support and legal destinations', () => {
   for (const destination of [
     'https://x.com/summeca_',
@@ -71,6 +80,7 @@ test('footer preserves the official local SUMMECA logo component and high-contra
   assert.match(footer, /bg-\[#0A0F1E\] text-white/);
   const footerWithoutDirectoryBadges = footer
     .replace('src="https://tools.cafe/b/light.svg"', 'src="/tools-cafe-badge.svg"')
-    .replace('src="https://launchstag.com/badge-light.svg"', 'src="/launchstag-badge.svg"');
+    .replace('src="https://launchstag.com/badge-light.svg"', 'src="/launchstag-badge.svg"')
+    .replace('src="https://sellwithboost.com/badge/listing-dark.svg"', 'src="/sellwithboost-badge.svg"');
   assert.doesNotMatch(footerWithoutDirectoryBadges, /src="https?:\/\//i);
 });
