@@ -1,6 +1,6 @@
 'use client';
 
-import { type PointerEvent as ReactPointerEvent } from 'react';
+import { type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
 import {
   ArrowRight,
   Bot,
@@ -18,7 +18,7 @@ const FLOW = [
   { label: 'InvoiceFlow', meta: 'Invoice & billing', icon: ReceiptText, depth: 66, x: 155, y: 102 },
 ];
 
-export default function SummecaHero3DScene() {
+export default function SummecaHero3DScene({ children }: { children?: ReactNode }) {
   const handlePointerMove = (event: ReactPointerEvent<HTMLDivElement>) => {
     if (event.pointerType === 'touch') return;
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
@@ -215,6 +215,16 @@ export default function SummecaHero3DScene() {
             </div>
 
             <div className="relative flex-1 p-3 sm:p-4">
+              {children && (
+                <div
+                  aria-hidden="true"
+                  className="pointer-events-none absolute inset-x-3 bottom-12 top-3 overflow-hidden rounded-2xl opacity-[0.22] saturate-[0.75] sm:inset-x-4 sm:bottom-14"
+                  style={{ transform: 'translateZ(-6px) scale(.985)' }}
+                >
+                  {children}
+                </div>
+              )}
+
               <div className="absolute left-1/2 top-1/2 h-[70%] w-px -translate-x-1/2 -translate-y-1/2 bg-gradient-to-b from-transparent via-cyan-300/18 to-transparent" />
               <div className="absolute left-[12%] right-[12%] top-1/2 h-px -translate-y-1/2 bg-gradient-to-r from-transparent via-cyan-300/18 to-transparent" />
 
