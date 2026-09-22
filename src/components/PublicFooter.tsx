@@ -9,7 +9,7 @@ const PRODUCT_HUNT_URL =
   'https://www.producthunt.com/products/summeca?utm_source=other&utm_medium=social';
 const TOOLS_CAFE_URL = 'https://tools.cafe';
 const LAUNCHSTAG_URL = 'https://launchstag.com/p/summeca';
-const SELLWITHBOOST_URL = 'https://sellwithboost.com';
+const FAZIER_URL = 'https://fazier.com';
 const X_URL = 'https://x.com/summeca_';
 const CONTACT_EMAIL = 'hello@summeca.com';
 
@@ -74,7 +74,7 @@ export default function PublicFooter() {
         productHuntHint: 'يفتح الموقع الرسمي في علامة تبويب جديدة',
         toolsCafe: 'SUMMECA مميزة على tools.cafe',
         launchstag: 'SUMMECA مميزة على Launchstag',
-        sellWithBoost: 'SUMMECA مدرجة على SellWithBoost',
+        fazier: 'تم إطلاق SUMMECA على Fazier',
         rights: 'جميع الحقوق محفوظة.',
       }
     : {
@@ -86,7 +86,7 @@ export default function PublicFooter() {
         productHuntHint: 'Opens the official listing in a new tab',
         toolsCafe: 'SUMMECA is featured on tools.cafe',
         launchstag: 'SUMMECA is featured on Launchstag',
-        sellWithBoost: 'SUMMECA is listed on SellWithBoost',
+        fazier: 'SUMMECA launched on Fazier',
         rights: 'All rights reserved.',
       };
 
@@ -197,19 +197,18 @@ export default function PublicFooter() {
               </a>
 
               <a
-                href={SELLWITHBOOST_URL}
+                href={FAZIER_URL}
                 target="_blank"
                 rel="noopener noreferrer"
-                aria-label={copy.sellWithBoost}
+                aria-label={copy.fazier}
                 className="inline-flex max-w-full rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
               >
-                {/* SellWithBoost requires a public do-follow backlink for its free listing. */}
-                {/* eslint-disable-next-line @next/next/no-img-element -- use the directory's official dark badge asset. */}
+                {/* Fazier verifies this exact badge and destination for free launches. */}
+                {/* eslint-disable-next-line @next/next/no-img-element -- the directory requires its exact external badge URL. */}
                 <img
-                  src="https://sellwithboost.com/badge/listing-dark.svg"
-                  alt="Listed on Sell With boost"
-                  width="160"
-                  height="40"
+                  src="https://fazier.com/api/v1//public/badges/launch_badges.svg?badge_type=launched&theme=light"
+                  alt="Fazier badge"
+                  width="120"
                   loading="lazy"
                   className="h-auto max-w-full"
                 />
