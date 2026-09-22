@@ -9,6 +9,7 @@ const PRODUCT_HUNT_URL =
   'https://www.producthunt.com/products/summeca?utm_source=other&utm_medium=social';
 const TOOLS_CAFE_URL = 'https://tools.cafe';
 const LAUNCHSTAG_URL = 'https://launchstag.com/p/summeca';
+const SELLWITHBOOST_URL = 'https://sellwithboost.com';
 const X_URL = 'https://x.com/summeca_';
 const CONTACT_EMAIL = 'hello@summeca.com';
 
@@ -73,6 +74,7 @@ export default function PublicFooter() {
         productHuntHint: 'يفتح الموقع الرسمي في علامة تبويب جديدة',
         toolsCafe: 'SUMMECA مميزة على tools.cafe',
         launchstag: 'SUMMECA مميزة على Launchstag',
+        sellWithBoost: 'SUMMECA مدرجة على SellWithBoost',
         rights: 'جميع الحقوق محفوظة.',
       }
     : {
@@ -84,6 +86,7 @@ export default function PublicFooter() {
         productHuntHint: 'Opens the official listing in a new tab',
         toolsCafe: 'SUMMECA is featured on tools.cafe',
         launchstag: 'SUMMECA is featured on Launchstag',
+        sellWithBoost: 'SUMMECA is listed on SellWithBoost',
         rights: 'All rights reserved.',
       };
 
@@ -188,6 +191,25 @@ export default function PublicFooter() {
                   alt="Featured on Launchstag"
                   width="198"
                   height="62"
+                  loading="lazy"
+                  className="h-auto max-w-full"
+                />
+              </a>
+
+              <a
+                href={SELLWITHBOOST_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={copy.sellWithBoost}
+                className="inline-flex max-w-full rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+              >
+                {/* SellWithBoost requires a public do-follow backlink for its free listing. */}
+                {/* eslint-disable-next-line @next/next/no-img-element -- use the directory's official dark badge asset. */}
+                <img
+                  src="https://sellwithboost.com/badge/listing-dark.svg"
+                  alt="Listed on Sell With boost"
+                  width="160"
+                  height="40"
                   loading="lazy"
                   className="h-auto max-w-full"
                 />
