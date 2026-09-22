@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, type PointerEvent as ReactPointerEvent } from 'react';
 import Link from 'next/link';
 import {
   ArrowRight,
@@ -203,6 +203,30 @@ function isRecommended(product: Product) {
   return product.slug === 'summeca-invoiceflow';
 }
 
+function updateCardTilt(event: ReactPointerEvent<HTMLElement>) {
+  if (event.pointerType === 'touch') return;
+  if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+  const rect = event.currentTarget.getBoundingClientRect();
+  const x = Math.min(1, Math.max(0, (event.clientX - rect.left) / rect.width));
+  const y = Math.min(1, Math.max(0, (event.clientY - rect.top) / rect.height));
+  const rotateX = (0.5 - y) * 8;
+  const rotateY = (x - 0.5) * 10;
+
+  event.currentTarget.style.setProperty('--card-rotate-x', `${rotateX.toFixed(2)}deg`);
+  event.currentTarget.style.setProperty('--card-rotate-y', `${rotateY.toFixed(2)}deg`);
+  event.currentTarget.style.setProperty('--card-glare-x', `${(x * 100).toFixed(1)}%`);
+  event.currentTarget.style.setProperty('--card-glare-y', `${(y * 100).toFixed(1)}%`);
+}
+
+function resetCardTilt(event: ReactPointerEvent<HTMLElement>) {
+  event.currentTarget.style.setProperty('--card-rotate-x', '0deg');
+  event.currentTarget.style.setProperty('--card-rotate-y', '0deg');
+  event.currentTarget.style.setProperty('--card-glare-x', '50%');
+  event.currentTarget.style.setProperty('--card-glare-y', '35%');
+}
+
 function InteractiveProductCard({
   product,
   index,
@@ -235,7 +259,10 @@ function InteractiveProductCard({
       style={{ animationDelay: `${Math.min(index, 8) * 55}ms` }}
     >
       <article
-        className={`relative flex h-full min-h-[510px] flex-col overflow-hidden rounded-[22px] border bg-[#101820] p-4 shadow-[0_16px_42px_rgba(0,0,0,.24)] transition duration-200 group-hover:shadow-[0_22px_54px_rgba(0,0,0,.34)] ${
+        onPointerMove={updateCardTilt}
+        onPointerLeave={resetCardTilt}
+        onPointerCancel={resetCardTilt}
+        className={`summeca-product-card-3d relative flex h-full min-h-[510px] flex-col overflow-hidden rounded-[22px] border bg-[#101820] p-4 shadow-[0_16px_42px_rgba(0,0,0,.24)] transition-[border-color,box-shadow] duration-200 group-hover:shadow-[0_24px_64px_rgba(0,0,0,.42)] ${
           recommended
             ? 'border-cyan-300/45 ring-1 ring-cyan-300/10'
             : 'border-slate-700/80 group-hover:border-cyan-300/35'
@@ -247,10 +274,10 @@ function InteractiveProductCard({
           category={product.category}
           eyebrow={displayCategory}
           variant="card"
-          className="relative z-10"
+          className="summeca-product-card-3d-preview relative z-10"
         />
 
-        <div className="relative z-20 flex flex-1 flex-col px-2 pb-2 pt-5">
+        <div className="summeca-product-card-3d-content relative z-20 flex flex-1 flex-col px-2 pb-2 pt-5">
           <div className="flex min-w-0 items-start justify-between gap-3">
             <div className="min-w-0">
               <p className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-[0.13em] text-cyan-300">
@@ -415,7 +442,60 @@ export default function CatalogClient({
           to { opacity: 1; transform: translateY(0); }
         }
         .summeca-catalog-enter { animation: summeca-catalog-enter .22s cubic-bezier(.2,.8,.2,1) both; }
-        @media (prefers-reduced-motion: reduce) { .summeca-catalog-enter { animation: none; } }
+        .summeca-product-card-3d {
+          --card-rotate-x: 0deg;
+          --card-rotate-y: 0deg;
+          --card-glare-x: 50%;
+          --card-glare-y: 35%;
+          transform: perspective(1100px) rotateX(var(--card-rotate-x)) rotateY(var(--card-rotate-y)) translateZ(0);
+          transform-style: preserve-3d;
+          transform-origin: center;
+          will-change: transform;
+          backface-visibility: hidden;
+          transition:
+            transform 170ms cubic-bezier(.2,.8,.2,1),
+            border-color 200ms ease,
+            box-shadow 200ms ease;
+        }
+        .summeca-product-card-3d::after {
+          content: '';
+          position: absolute;
+          inset: 0;
+          z-index: 40;
+          border-radius: inherit;
+          pointer-events: none;
+          opacity: 0;
+          background:
+            radial-gradient(
+              circle at var(--card-glare-x) var(--card-glare-y),
+              rgba(103, 232, 249, .18) 0,
+              rgba(34, 211, 238, .07) 18%,
+              transparent 46%
+            );
+          mix-blend-mode: screen;
+          transition: opacity 180ms ease;
+        }
+        .summeca-product-card-3d-preview,
+        .summeca-product-card-3d-content {
+          transform: translateZ(0);
+          transition: transform 170ms cubic-bezier(.2,.8,.2,1);
+          backface-visibility: hidden;
+        }
+        @media (hover: hover) and (pointer: fine) {
+          .summeca-product-card-3d:hover::after { opacity: 1; }
+          .summeca-product-card-3d-preview { transform: translateZ(28px); }
+          .summeca-product-card-3d-content { transform: translateZ(18px); }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .summeca-catalog-enter { animation: none; }
+          .summeca-product-card-3d,
+          .summeca-product-card-3d-preview,
+          .summeca-product-card-3d-content {
+            transform: none !important;
+            transition: none !important;
+          }
+          .summeca-product-card-3d::after { display: none; }
+        }
       `}</style>
 
       <section className="relative overflow-hidden border-b border-white/[0.08]">
