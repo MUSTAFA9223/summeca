@@ -138,7 +138,7 @@ export default function AuthScreen() {
           z-index: 1;
           transform-style: preserve-3d;
           backface-visibility: hidden;
-          will-change: transform, opacity, filter;
+          will-change: transform, opacity;
         }
 
         .auth-content-left {
@@ -200,17 +200,14 @@ export default function AuthScreen() {
         @keyframes auth-content-left {
           0% {
             opacity: 0.34;
-            filter: blur(6px);
             transform: translate3d(34px, 0, -82px) rotateY(6deg) scale(0.982);
           }
           52% {
             opacity: 0.76;
-            filter: blur(2px);
             transform: translate3d(10px, 0, -24px) rotateY(2deg) scale(0.994);
           }
           100% {
             opacity: 1;
-            filter: blur(0);
             transform: translate3d(0, 0, 0) rotateY(0deg) scale(1);
           }
         }
@@ -218,17 +215,14 @@ export default function AuthScreen() {
         @keyframes auth-content-right {
           0% {
             opacity: 0.34;
-            filter: blur(6px);
             transform: translate3d(-34px, 0, -82px) rotateY(-6deg) scale(0.982);
           }
           52% {
             opacity: 0.76;
-            filter: blur(2px);
             transform: translate3d(-10px, 0, -24px) rotateY(-2deg) scale(0.994);
           }
           100% {
             opacity: 1;
-            filter: blur(0);
             transform: translate3d(0, 0, 0) rotateY(0deg) scale(1);
           }
         }
@@ -285,7 +279,6 @@ export default function AuthScreen() {
           .auth-content-left,
           .auth-content-right {
             animation: none;
-            filter: none;
           }
 
           .auth-transition-sweep {
