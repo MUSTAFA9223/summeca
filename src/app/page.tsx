@@ -141,7 +141,7 @@ function ProductCard({ product }: { product: PublishedProduct }) {
         />
       </div>
 
-      <div className="flex flex-1 flex-col p-4 sm:p-5">
+      <div className="flex flex-1 flex-col p-4 sm:p-5" style={{ transform: 'translateZ(16px)' }}>
         <h3 className="text-lg font-800 tracking-tight text-foreground">{product.name}</h3>
         <p className="mt-2 line-clamp-2 min-h-12 text-sm leading-6 text-muted-foreground">
           {description}
@@ -224,7 +224,7 @@ export default async function HomePage() {
             transition-duration: 200ms !important;
             transition-timing-function: ease !important;
           }
-          body.summeca-home-theme .summeca-home-motion-scope article:hover,
+          body.summeca-home-theme .summeca-home-motion-scope article:not(.summeca-home-product-3d):hover,
           body.summeca-home-theme .summeca-home-motion-scope a[class*='rounded-2xl'][class*='bg-card']:hover,
           body.summeca-home-theme .summeca-home-motion-scope div[class*='rounded-2xl'][class*='bg-card']:hover {
             transform: translateY(-4px) !important;
