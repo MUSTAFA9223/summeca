@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import Link from 'next/link';
 import { ArrowRight, LifeBuoy, LockKeyhole, ShieldCheck, Store, User } from 'lucide-react';
 import SummecaHero3DScene from '@/components/home/SummecaHero3DScene';
+import { WorkspaceOverviewPreview } from '@/components/catalog/ProductProofPreview';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { trackEvent } from '@/lib/analytics';
 
@@ -158,7 +159,9 @@ export default function HeroSection() {
         <div className="relative flex min-h-[400px] items-center self-stretch overflow-hidden px-4 py-5 sm:min-h-[450px] sm:px-8 lg:min-h-[550px] lg:overflow-visible lg:pl-1 lg:pr-10 xl:pr-14">
           <div className="summeca-hero-preview-orb pointer-events-none absolute left-[52%] top-[50%] h-[54%] aspect-square -translate-x-1/2 -translate-y-1/2 rounded-full blur-[82px]" />
           <div className="summeca-reveal summeca-reveal-3 relative z-10 w-full">
-            <SummecaHero3DScene />
+            <SummecaHero3DScene>
+              <WorkspaceOverviewPreview className="h-full w-full border-slate-700/60 shadow-none" />
+            </SummecaHero3DScene>
           </div>
         </div>
       </div>
