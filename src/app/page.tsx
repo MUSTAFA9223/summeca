@@ -13,7 +13,8 @@ import PublicNav from '@/components/PublicNav';
 import PublicFooter from '@/components/PublicFooter';
 import HomepagePurchaseGuide from '@/components/home/HomepagePurchaseGuide';
 import HeroSection from '@/app/components/HeroSection';
-import ProductProofPreview from '@/components/catalog/ProductProofPreview';
+import Product3DShowcase from '@/components/catalog/Product3DShowcase';
+import HomeProduct3DCard from '@/components/home/HomeProduct3DCard';
 import { getEffectivePrice } from '@/lib/pricing';
 import { getPublicCatalog } from '@/lib/catalog/publicCatalog';
 
@@ -129,12 +130,15 @@ function ProductCard({ product }: { product: PublishedProduct }) {
     product.short_desc || product.description || 'Explore the product page for current details.';
 
   return (
-    <article className="group flex h-full min-h-[400px] flex-col overflow-hidden rounded-[22px] border border-border bg-card shadow-sm transition duration-200 hover:-translate-y-1 hover:border-primary/35 hover:shadow-lg focus-within:border-primary/40 motion-reduce:transform-none motion-reduce:transition-none">
-      <div className="relative overflow-hidden bg-[#0c1218] p-3">
-        <ProductProofPreview name={product.name} />
-        <span className="absolute left-5 top-5 rounded-md border border-white/15 bg-[#101820]/90 px-2.5 py-1 text-[9px] font-800 uppercase tracking-[0.14em] text-cyan-200 shadow-sm backdrop-blur">
-          {productTypeLabel(product)}
-        </span>
+    <HomeProduct3DCard>
+      <div className="relative bg-[#0c1218] p-3" style={{ transform: 'translateZ(26px)' }}>
+        <Product3DShowcase
+          name={product.name}
+          thumbnailUrl={product.thumbnail_url}
+          category={product.category}
+          eyebrow={productTypeLabel(product)}
+          variant="card"
+        />
       </div>
 
       <div className="flex flex-1 flex-col p-4 sm:p-5">
@@ -172,7 +176,7 @@ function ProductCard({ product }: { product: PublishedProduct }) {
           </Link>
         </div>
       </div>
-    </article>
+    </HomeProduct3DCard>
   );
 }
 
