@@ -115,13 +115,6 @@ export default function AuthScreen() {
           </div>
         </section>
 
-        {transitionDirection && view !== 'forgot' && (
-          <div
-            key={`auth-layout-sweep-${view}`}
-            aria-hidden="true"
-            className={`auth-layout-transition-sweep ${transitionDirection === 'left' ? 'auth-layout-sweep-left' : 'auth-layout-sweep-right'}`}
-          />
-        )}
       </div>
 
       <style jsx>{`
