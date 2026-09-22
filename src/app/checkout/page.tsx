@@ -85,6 +85,7 @@ const CRYPTO_METHODS = [
 ];
 
 const SAAS_PRODUCT_SLUGS = new Set(['summeca-invoiceflow', 'summeca-leadfollow-ai', 'summeca-proposalflow-ai', 'summeca-siteagent-ai']);
+const SERVICE_PRODUCT_SLUGS = new Set(['summeca-landing-page-sprint']);
 
 function cryptoAssetLabel(paymentMethodType: string) {
   if (paymentMethodType === 'crypto_trx') return 'TRX';
@@ -102,12 +103,16 @@ const billingPeriodLabel: Record<string, string> = {
 };
 
 function deliveryTypeLabel(product: Product) {
+  if (SERVICE_PRODUCT_SLUGS.has(product.slug)) return 'Same-day professional service';
   return SAAS_PRODUCT_SLUGS.has(product.slug)
     ? 'Account-based SaaS access'
     : 'Protected digital download';
 }
 
 function verifiedDeliveryText(product: Product) {
+  if (SERVICE_PRODUCT_SLUGS.has(product.slug)) {
+    return 'After verified payment, your service order is confirmed. Send your page URL, main goal, and target customer to hello@summeca.com.';
+  }
   return SAAS_PRODUCT_SLUGS.has(product.slug)
     ? 'After verified payment, access appears in your SUMMECA dashboard.'
     : 'After verified payment, the protected file appears in your SUMMECA downloads.';
