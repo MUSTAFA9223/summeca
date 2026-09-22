@@ -44,7 +44,7 @@ export default function HomeProduct3DCard({ children }: HomeProduct3DCardProps) 
       onPointerMove={handlePointerMove}
       onPointerLeave={reset}
       onPointerCancel={reset}
-      className="group relative flex h-full min-h-[470px] flex-col overflow-hidden rounded-[22px] border border-border bg-card shadow-sm transition-[transform,border-color,box-shadow] duration-200 ease-out hover:border-primary/35 hover:shadow-xl focus-within:border-primary/40 motion-reduce:transform-none motion-reduce:transition-none"
+      className="summeca-home-product-3d group relative flex h-full min-h-[470px] flex-col overflow-hidden rounded-[22px] border border-border bg-card shadow-sm transition-[transform,border-color,box-shadow] duration-200 ease-out hover:border-primary/35 hover:shadow-xl focus-within:border-primary/40 motion-reduce:transform-none motion-reduce:transition-none"
       style={{
         transform: 'perspective(1100px) rotateX(0deg) rotateY(0deg) translateY(0)',
         transformStyle: 'preserve-3d',
