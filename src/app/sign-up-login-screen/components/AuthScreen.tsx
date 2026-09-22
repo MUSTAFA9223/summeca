@@ -193,15 +193,15 @@ export default function AuthScreen() {
           width: 44%;
           pointer-events: none;
           opacity: 0;
-          border: 1px solid rgba(153, 246, 228, 0.22);
+          border: 1px solid rgba(153, 246, 228, 0.10);
           background:
-            radial-gradient(circle at 78% 20%, rgba(255,255,255,0.18), transparent 26%),
-            linear-gradient(135deg, rgba(15,118,110,0.96), rgba(20,184,166,0.94) 52%, rgba(45,212,191,0.9));
+            radial-gradient(circle at 78% 20%, rgba(255,255,255,0.08), transparent 28%),
+            linear-gradient(135deg, rgba(13,148,136,0.24), rgba(20,184,166,0.20) 52%, rgba(45,212,191,0.16));
           clip-path: polygon(16% 0, 100% 0, 84% 100%, 0 100%);
           box-shadow:
-            0 30px 100px rgba(0, 0, 0, 0.34),
-            0 0 90px rgba(45, 212, 191, 0.18),
-            inset 0 1px 0 rgba(255,255,255,0.22);
+            0 24px 70px rgba(0, 0, 0, 0.16),
+            0 0 54px rgba(45, 212, 191, 0.08),
+            inset 0 1px 0 rgba(255,255,255,0.10);
           transform-style: preserve-3d;
           backface-visibility: hidden;
           will-change: transform, opacity, clip-path;
@@ -212,8 +212,8 @@ export default function AuthScreen() {
           position: absolute;
           inset: 0;
           background:
-            linear-gradient(112deg, transparent 25%, rgba(255,255,255,0.14) 47%, transparent 70%),
-            radial-gradient(circle at 78% 26%, rgba(255,255,255,0.15), transparent 20%);
+            linear-gradient(112deg, transparent 25%, rgba(255,255,255,0.06) 47%, transparent 70%),
+            radial-gradient(circle at 78% 26%, rgba(255,255,255,0.06), transparent 20%);
           mix-blend-mode: screen;
         }
 
@@ -292,15 +292,15 @@ export default function AuthScreen() {
             clip-path: polygon(16% 0, 100% 0, 84% 100%, 0 100%);
           }
           12% {
-            opacity: 0.98;
+            opacity: 0.28;
           }
           50% {
-            opacity: 0.96;
+            opacity: 0.22;
             transform: translate3d(0, 0, 64px) rotateY(-6deg);
             clip-path: polygon(0 0, 84% 0, 100% 100%, 16% 100%);
           }
           88% {
-            opacity: 0.7;
+            opacity: 0.12;
           }
           100% {
             opacity: 0;
@@ -316,15 +316,15 @@ export default function AuthScreen() {
             clip-path: polygon(0 0, 84% 0, 100% 100%, 16% 100%);
           }
           12% {
-            opacity: 0.98;
+            opacity: 0.28;
           }
           50% {
-            opacity: 0.96;
+            opacity: 0.22;
             transform: translate3d(0, 0, 64px) rotateY(6deg);
             clip-path: polygon(16% 0, 100% 0, 84% 100%, 0 100%);
           }
           88% {
-            opacity: 0.7;
+            opacity: 0.12;
           }
           100% {
             opacity: 0;
