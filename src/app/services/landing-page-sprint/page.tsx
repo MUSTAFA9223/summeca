@@ -37,6 +37,7 @@ export default function LandingPageSprintPage() {
     'Hi SUMMECA,\n\nI want the $75 Same-Day Landing Page Sprint.\n\nWebsite: \nMain goal: \nTarget customer: \n\nPlease send the secure payment link and next steps.',
   );
   const mailto = `mailto:hello@summeca.com?subject=${subject}&body=${body}`;
+  const checkoutHref = '/checkout?product_id=83028181-c453-495c-875e-0804619490c7&plan_id=28cb0ae6-59dc-485f-8431-4828ba9b0fd2';
 
   return (
     <div className="min-h-screen bg-background text-foreground">
