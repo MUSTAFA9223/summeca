@@ -49,7 +49,7 @@ export default function AuthScreen() {
         </Link>
       </header>
 
-      <div className="relative z-10 mx-auto grid min-h-screen w-full max-w-[1500px] items-center gap-4 px-5 pb-8 pt-24 sm:px-8 lg:grid-cols-[1.12fr_.88fr] lg:gap-8 lg:px-12 lg:pb-10 lg:pt-20">
+      <div className={`auth-layout relative z-10 mx-auto grid min-h-screen w-full max-w-[1500px] items-center gap-4 px-5 pb-8 pt-24 sm:px-8 lg:gap-8 lg:px-12 lg:pb-10 lg:pt-20 ${view === 'signup' ? 'auth-layout-signup' : 'auth-layout-login'}`}>
         <section className={`summeca-auth-feature-panel relative hidden h-[min(82vh,820px)] min-h-[620px] overflow-hidden lg:block ${transitionDirection === 'left' ? 'auth-feature-left' : transitionDirection === 'right' ? 'auth-feature-right' : ''}`}>
           <div className="summeca-auth-feature-surface absolute inset-[4%] rounded-[2rem] border border-white/[0.07] bg-white/[0.018] shadow-[inset_0_1px_0_rgba(255,255,255,.06),0_40px_120px_rgba(0,0,0,.35)] backdrop-blur-[2px]" />
           <div className="absolute left-[8%] right-[5%] top-[10%] z-20 max-w-lg">
@@ -110,101 +110,247 @@ export default function AuthScreen() {
                   )}
                 </div>
 
-                {transitionDirection && (
-                  <div
-                    key={`auth-sweep-${view}`}
-                    aria-hidden="true"
-                    className={`auth-transition-sweep ${transitionDirection === 'left' ? 'auth-sweep-left' : 'auth-sweep-right'}`}
-                  />
-                )}
               </div>
             )}
           </div>
         </section>
+
+        {transitionDirection && view !== 'forgot' && (
+          <div
+            key={`auth-layout-sweep-${view}`}
+            aria-hidden="true"
+            className={`auth-layout-transition-sweep ${transitionDirection === 'left' ? 'auth-layout-sweep-left' : 'auth-layout-sweep-right'}`}
+          />
+        )}
       </div>
 
       <style jsx>{`
 
+        .auth-layout {
+          perspective: 1800px;
+          transform-style: preserve-3d;
+          isolation: isolate;
+        }
+
+        .auth-layout-login {
+          grid-template-columns: 1.12fr 0.88fr;
+        }
+
+        .auth-layout-signup {
+          grid-template-columns: 0.88fr 1.12fr;
+        }
+
+        .auth-layout-login .summeca-auth-feature-panel {
+          grid-column: 1;
+        }
+
+        .auth-layout-login .auth-form-panel {
+          grid-column: 2;
+        }
+
+        .auth-layout-signup .auth-form-panel {
+          grid-column: 1;
+        }
+
+        .auth-layout-signup .summeca-auth-feature-panel {
+          grid-column: 2;
+        }
+
         .auth-form-panel,
         .summeca-auth-feature-panel {
+          grid-row: 1;
           transform-style: preserve-3d;
           backface-visibility: hidden;
           will-change: transform, opacity;
         }
 
         .auth-panel-left {
-          animation: auth-panel-left 900ms cubic-bezier(0.77, 0, 0.18, 1) both;
+          animation: auth-panel-to-left 900ms cubic-bezier(0.77, 0, 0.18, 1) both;
+          transform-origin: center center;
         }
 
         .auth-panel-right {
-          animation: auth-panel-right 900ms cubic-bezier(0.77, 0, 0.18, 1) both;
+          animation: auth-panel-to-right 900ms cubic-bezier(0.77, 0, 0.18, 1) both;
+          transform-origin: center center;
         }
 
         .auth-feature-left {
-          animation: auth-feature-left 900ms cubic-bezier(0.77, 0, 0.18, 1) both;
+          animation: auth-feature-to-right 900ms cubic-bezier(0.77, 0, 0.18, 1) both;
+          transform-origin: center center;
         }
 
         .auth-feature-right {
-          animation: auth-feature-right 900ms cubic-bezier(0.77, 0, 0.18, 1) both;
+          animation: auth-feature-to-left 900ms cubic-bezier(0.77, 0, 0.18, 1) both;
+          transform-origin: center center;
         }
 
-        @keyframes auth-panel-left {
-          0% {
-            opacity: 0.72;
-            transform: translate3d(82px, 0, -70px) rotateY(-4deg) scale(0.985);
-          }
-          54% {
-            opacity: 0.96;
-            transform: translate3d(-12px, 0, 18px) rotateY(1deg) scale(1.008);
-          }
-          100% {
-            opacity: 1;
-            transform: translate3d(0, 0, 0) rotateY(0deg) scale(1);
-          }
+        .auth-layout-transition-sweep {
+          position: absolute;
+          top: 15%;
+          bottom: 10%;
+          left: 28%;
+          z-index: 25;
+          width: 44%;
+          pointer-events: none;
+          opacity: 0;
+          border: 1px solid rgba(153, 246, 228, 0.22);
+          background:
+            radial-gradient(circle at 78% 20%, rgba(255,255,255,0.18), transparent 26%),
+            linear-gradient(135deg, rgba(15,118,110,0.96), rgba(20,184,166,0.94) 52%, rgba(45,212,191,0.9));
+          clip-path: polygon(16% 0, 100% 0, 84% 100%, 0 100%);
+          box-shadow:
+            0 30px 100px rgba(0, 0, 0, 0.34),
+            0 0 90px rgba(45, 212, 191, 0.18),
+            inset 0 1px 0 rgba(255,255,255,0.22);
+          transform-style: preserve-3d;
+          backface-visibility: hidden;
+          will-change: transform, opacity, clip-path;
         }
 
-        @keyframes auth-panel-right {
-          0% {
-            opacity: 0.72;
-            transform: translate3d(-82px, 0, -70px) rotateY(4deg) scale(0.985);
-          }
-          54% {
-            opacity: 0.96;
-            transform: translate3d(12px, 0, 18px) rotateY(-1deg) scale(1.008);
-          }
-          100% {
-            opacity: 1;
-            transform: translate3d(0, 0, 0) rotateY(0deg) scale(1);
-          }
+        .auth-layout-transition-sweep::after {
+          content: '';
+          position: absolute;
+          inset: 0;
+          background:
+            linear-gradient(112deg, transparent 25%, rgba(255,255,255,0.14) 47%, transparent 70%),
+            radial-gradient(circle at 78% 26%, rgba(255,255,255,0.15), transparent 20%);
+          mix-blend-mode: screen;
         }
 
-        @keyframes auth-feature-left {
-          0% {
-            opacity: 0.82;
-            transform: translate3d(-34px, 0, -36px) rotateY(2deg) scale(0.992);
-          }
-          58% {
-            opacity: 1;
-            transform: translate3d(8px, 0, 8px) rotateY(-0.5deg) scale(1.003);
-          }
-          100% {
-            opacity: 1;
-            transform: translate3d(0, 0, 0) rotateY(0deg) scale(1);
-          }
+        .auth-layout-sweep-left {
+          animation: auth-layout-sweep-left 900ms cubic-bezier(0.77, 0, 0.18, 1) both;
         }
 
-        @keyframes auth-feature-right {
+        .auth-layout-sweep-right {
+          animation: auth-layout-sweep-right 900ms cubic-bezier(0.77, 0, 0.18, 1) both;
+        }
+
+        @keyframes auth-panel-to-left {
           0% {
             opacity: 0.82;
-            transform: translate3d(34px, 0, -36px) rotateY(-2deg) scale(0.992);
+            transform: translate3d(118%, 0, -84px) rotateY(-5deg) scale(0.985);
           }
-          58% {
+          55% {
             opacity: 1;
-            transform: translate3d(-8px, 0, 8px) rotateY(0.5deg) scale(1.003);
+            transform: translate3d(-7%, 0, 18px) rotateY(1deg) scale(1.006);
           }
           100% {
             opacity: 1;
             transform: translate3d(0, 0, 0) rotateY(0deg) scale(1);
+          }
+        }
+
+        @keyframes auth-panel-to-right {
+          0% {
+            opacity: 0.82;
+            transform: translate3d(-118%, 0, -84px) rotateY(5deg) scale(0.985);
+          }
+          55% {
+            opacity: 1;
+            transform: translate3d(7%, 0, 18px) rotateY(-1deg) scale(1.006);
+          }
+          100% {
+            opacity: 1;
+            transform: translate3d(0, 0, 0) rotateY(0deg) scale(1);
+          }
+        }
+
+        @keyframes auth-feature-to-right {
+          0% {
+            opacity: 0.84;
+            transform: translate3d(-82%, 0, -64px) rotateY(4deg) scale(0.988);
+          }
+          55% {
+            opacity: 1;
+            transform: translate3d(5%, 0, 12px) rotateY(-0.8deg) scale(1.004);
+          }
+          100% {
+            opacity: 1;
+            transform: translate3d(0, 0, 0) rotateY(0deg) scale(1);
+          }
+        }
+
+        @keyframes auth-feature-to-left {
+          0% {
+            opacity: 0.84;
+            transform: translate3d(82%, 0, -64px) rotateY(-4deg) scale(0.988);
+          }
+          55% {
+            opacity: 1;
+            transform: translate3d(-5%, 0, 12px) rotateY(0.8deg) scale(1.004);
+          }
+          100% {
+            opacity: 1;
+            transform: translate3d(0, 0, 0) rotateY(0deg) scale(1);
+          }
+        }
+
+        @keyframes auth-layout-sweep-left {
+          0% {
+            opacity: 0;
+            transform: translate3d(128%, 0, 40px) rotateY(0deg);
+            clip-path: polygon(16% 0, 100% 0, 84% 100%, 0 100%);
+          }
+          12% {
+            opacity: 0.98;
+          }
+          50% {
+            opacity: 0.96;
+            transform: translate3d(0, 0, 64px) rotateY(-6deg);
+            clip-path: polygon(0 0, 84% 0, 100% 100%, 16% 100%);
+          }
+          88% {
+            opacity: 0.7;
+          }
+          100% {
+            opacity: 0;
+            transform: translate3d(-128%, 0, 40px) rotateY(-2deg);
+            clip-path: polygon(16% 0, 100% 0, 84% 100%, 0 100%);
+          }
+        }
+
+        @keyframes auth-layout-sweep-right {
+          0% {
+            opacity: 0;
+            transform: translate3d(-128%, 0, 40px) rotateY(0deg);
+            clip-path: polygon(0 0, 84% 0, 100% 100%, 16% 100%);
+          }
+          12% {
+            opacity: 0.98;
+          }
+          50% {
+            opacity: 0.96;
+            transform: translate3d(0, 0, 64px) rotateY(6deg);
+            clip-path: polygon(16% 0, 100% 0, 84% 100%, 0 100%);
+          }
+          88% {
+            opacity: 0.7;
+          }
+          100% {
+            opacity: 0;
+            transform: translate3d(128%, 0, 40px) rotateY(2deg);
+            clip-path: polygon(0 0, 84% 0, 100% 100%, 16% 100%);
+          }
+        }
+
+        @media (max-width: 1023px) {
+          .auth-layout-login,
+          .auth-layout-signup {
+            grid-template-columns: minmax(0, 1fr);
+          }
+
+          .auth-layout-login .auth-form-panel,
+          .auth-layout-signup .auth-form-panel {
+            grid-column: 1;
+          }
+
+          .auth-panel-left,
+          .auth-panel-right {
+            animation-duration: 720ms;
+          }
+
+          .auth-layout-transition-sweep {
+            display: none;
           }
         }
 
@@ -235,130 +381,6 @@ export default function AuthScreen() {
           transform-origin: left center;
         }
 
-        .auth-transition-sweep {
-          position: absolute;
-          top: -10px;
-          bottom: -10px;
-          left: 17%;
-          width: 66%;
-          z-index: 2;
-          pointer-events: none;
-          opacity: 0;
-          background:
-            radial-gradient(circle at 72% 22%, rgba(255, 255, 255, 0.18), transparent 28%),
-            linear-gradient(
-              135deg,
-              rgba(13, 148, 136, 0.96) 0%,
-              rgba(20, 184, 166, 0.95) 48%,
-              rgba(45, 212, 191, 0.9) 100%
-            );
-          clip-path: polygon(16% 0, 100% 0, 84% 100%, 0 100%);
-          box-shadow:
-            0 0 72px rgba(45, 212, 191, 0.24),
-            inset 0 1px 0 rgba(255, 255, 255, 0.24);
-          transform-style: preserve-3d;
-          backface-visibility: hidden;
-          will-change: transform, opacity, clip-path;
-        }
-
-        .auth-transition-sweep::after {
-          content: '';
-          position: absolute;
-          inset: 0;
-          background:
-            linear-gradient(115deg, transparent 26%, rgba(255, 255, 255, 0.13) 48%, transparent 70%),
-            radial-gradient(circle at 82% 28%, rgba(255, 255, 255, 0.18), transparent 22%);
-          mix-blend-mode: screen;
-        }
-
-        .auth-sweep-left {
-          animation: auth-sweep-left 900ms cubic-bezier(0.77, 0, 0.18, 1) both;
-          transform-origin: right center;
-        }
-
-        .auth-sweep-right {
-          animation: auth-sweep-right 900ms cubic-bezier(0.77, 0, 0.18, 1) both;
-          transform-origin: left center;
-        }
-
-        @keyframes auth-content-left {
-          0% {
-            opacity: 0.34;
-            transform: translate3d(34px, 0, -82px) rotateY(6deg) scale(0.982);
-          }
-          52% {
-            opacity: 0.76;
-            transform: translate3d(10px, 0, -24px) rotateY(2deg) scale(0.994);
-          }
-          100% {
-            opacity: 1;
-            transform: translate3d(0, 0, 0) rotateY(0deg) scale(1);
-          }
-        }
-
-        @keyframes auth-content-right {
-          0% {
-            opacity: 0.34;
-            transform: translate3d(-34px, 0, -82px) rotateY(-6deg) scale(0.982);
-          }
-          52% {
-            opacity: 0.76;
-            transform: translate3d(-10px, 0, -24px) rotateY(-2deg) scale(0.994);
-          }
-          100% {
-            opacity: 1;
-            transform: translate3d(0, 0, 0) rotateY(0deg) scale(1);
-          }
-        }
-
-        @keyframes auth-sweep-left {
-          0% {
-            opacity: 0;
-            clip-path: polygon(16% 0, 100% 0, 84% 100%, 0 100%);
-            transform: translate3d(150%, 0, 18px) rotateY(0deg);
-          }
-          12% {
-            opacity: 0.98;
-          }
-          50% {
-            opacity: 0.96;
-            clip-path: polygon(0 0, 84% 0, 100% 100%, 16% 100%);
-            transform: translate3d(0, 0, 34px) rotateY(-5deg);
-          }
-          88% {
-            opacity: 0.78;
-          }
-          100% {
-            opacity: 0;
-            clip-path: polygon(16% 0, 100% 0, 84% 100%, 0 100%);
-            transform: translate3d(-150%, 0, 18px) rotateY(-2deg);
-          }
-        }
-
-        @keyframes auth-sweep-right {
-          0% {
-            opacity: 0;
-            clip-path: polygon(0 0, 84% 0, 100% 100%, 16% 100%);
-            transform: translate3d(-150%, 0, 18px) rotateY(0deg);
-          }
-          12% {
-            opacity: 0.98;
-          }
-          50% {
-            opacity: 0.96;
-            clip-path: polygon(16% 0, 100% 0, 84% 100%, 0 100%);
-            transform: translate3d(0, 0, 34px) rotateY(5deg);
-          }
-          88% {
-            opacity: 0.78;
-          }
-          100% {
-            opacity: 0;
-            clip-path: polygon(0 0, 84% 0, 100% 100%, 16% 100%);
-            transform: translate3d(150%, 0, 18px) rotateY(2deg);
-          }
-        }
-
         @media (prefers-reduced-motion: reduce) {
           .auth-content-left,
           .auth-content-right,
@@ -369,7 +391,7 @@ export default function AuthScreen() {
             animation: none;
           }
 
-          .auth-transition-sweep {
+          .auth-layout-transition-sweep {
             display: none;
           }
         }
