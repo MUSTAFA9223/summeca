@@ -12,10 +12,10 @@ import {
 } from 'lucide-react';
 
 const FLOW = [
-  { label: 'SiteAgent AI', meta: 'Visitor capture', icon: Bot, depth: 76, x: -54, y: -42 },
-  { label: 'LeadFollow AI', meta: 'Lead follow-up', icon: MessageSquareText, depth: 54, x: 50, y: -28 },
-  { label: 'ProposalFlow AI', meta: 'Client proposal', icon: FileText, depth: 42, x: -42, y: 50 },
-  { label: 'InvoiceFlow', meta: 'Invoice & billing', icon: ReceiptText, depth: 66, x: 54, y: 48 },
+  { label: 'SiteAgent AI', meta: 'Visitor capture', icon: Bot, depth: 76, x: -160, y: -108 },
+  { label: 'LeadFollow AI', meta: 'Lead follow-up', icon: MessageSquareText, depth: 54, x: 160, y: -92 },
+  { label: 'ProposalFlow AI', meta: 'Client proposal', icon: FileText, depth: 42, x: -150, y: 98 },
+  { label: 'InvoiceFlow', meta: 'Invoice & billing', icon: ReceiptText, depth: 66, x: 155, y: 102 },
 ];
 
 export default function SummecaHero3DScene() {
@@ -114,6 +114,9 @@ export default function SummecaHero3DScene() {
         }
 
         .summeca-ecosystem-3d .summeca-flow-card {
+          transform:
+            translate(-50%, -50%)
+            translate3d(var(--flow-x), var(--flow-y), var(--flow-z));
           transition: transform 300ms cubic-bezier(.2,.8,.2,1), box-shadow 300ms ease;
           transform-style: preserve-3d;
         }
@@ -141,6 +144,12 @@ export default function SummecaHero3DScene() {
 
           .summeca-ecosystem-3d:hover .summeca-ecosystem-core {
             transform: translate3d(0,-3px,12px) rotateX(.5deg) rotateY(-2deg);
+          }
+
+          .summeca-ecosystem-3d .summeca-flow-card {
+            transform:
+              translate(-50%, -50%)
+              translate3d(var(--flow-x-mobile), var(--flow-y-mobile), var(--flow-z-mobile));
           }
         }
 
@@ -218,14 +227,19 @@ export default function SummecaHero3DScene() {
               </div>
 
               {FLOW.map(({ label, meta, icon: Icon, depth, x, y }, index) => {
-                const mobileX = Math.round(x * 0.77);
-                const mobileY = Math.round(y * 0.82);
+                const mobileX = Math.round(x * 0.58);
+                const mobileY = Math.round(y * 0.72);
                 return (
                   <div
                     key={label}
                     className="summeca-flow-card absolute left-1/2 top-1/2 z-10 w-[126px] rounded-2xl border border-white/[0.09] bg-[#111c25]/95 p-3 shadow-[0_15px_34px_rgba(0,0,0,.26)] sm:w-[155px] sm:p-3.5"
                     style={{
-                      transform: `translate(-50%, -50%) translate3d(clamp(${mobileX}px, ${x > 0 ? x : -x}vw, ${x}px), clamp(${mobileY}px, ${y > 0 ? y : -y}vw, ${y}px), ${depth}px)`,
+                      ['--flow-x' as string]: `${x}px`,
+                      ['--flow-y' as string]: `${y}px`,
+                      ['--flow-z' as string]: `${depth}px`,
+                      ['--flow-x-mobile' as string]: `${mobileX}px`,
+                      ['--flow-y-mobile' as string]: `${mobileY}px`,
+                      ['--flow-z-mobile' as string]: `${Math.round(depth * 0.55)}px`,
                     }}
                   >
                     <div className="flex items-center justify-between gap-2">
