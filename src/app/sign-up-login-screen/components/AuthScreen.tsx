@@ -123,12 +123,14 @@ export default function AuthScreen() {
         </section>
       </div>
 
-      <style jsx>{`
+      <style jsx>{\`
         .auth-switch-stage {
           position: relative;
           perspective: 1500px;
           transform-style: preserve-3d;
           isolation: isolate;
+          overflow: hidden;
+          border-radius: 1.6rem;
         }
 
         .auth-switch-content {
@@ -136,77 +138,97 @@ export default function AuthScreen() {
           z-index: 1;
           transform-style: preserve-3d;
           backface-visibility: hidden;
-          will-change: transform, opacity;
+          will-change: transform, opacity, filter;
         }
 
         .auth-content-left {
-          animation: auth-content-left 760ms cubic-bezier(0.2, 0.74, 0.2, 1) both;
+          animation: auth-content-left 900ms cubic-bezier(0.77, 0, 0.18, 1) both;
           transform-origin: right center;
         }
 
         .auth-content-right {
-          animation: auth-content-right 760ms cubic-bezier(0.2, 0.74, 0.2, 1) both;
+          animation: auth-content-right 900ms cubic-bezier(0.77, 0, 0.18, 1) both;
           transform-origin: left center;
         }
 
         .auth-transition-sweep {
           position: absolute;
-          inset: -6px;
+          top: -10px;
+          bottom: -10px;
+          left: 17%;
+          width: 66%;
           z-index: 2;
           pointer-events: none;
-          border-radius: 1.6rem;
-          background: linear-gradient(
-            120deg,
-            rgba(5, 8, 7, 0.12) 0%,
-            rgba(13, 148, 136, 0.72) 38%,
-            rgba(45, 212, 191, 0.46) 58%,
-            rgba(5, 8, 7, 0.08) 100%
-          );
-          box-shadow:
-            0 0 70px rgba(45, 212, 191, 0.14),
-            inset 0 1px 0 rgba(255, 255, 255, 0.18);
           opacity: 0;
+          background:
+            radial-gradient(circle at 72% 22%, rgba(255, 255, 255, 0.18), transparent 28%),
+            linear-gradient(
+              135deg,
+              rgba(13, 148, 136, 0.96) 0%,
+              rgba(20, 184, 166, 0.95) 48%,
+              rgba(45, 212, 191, 0.9) 100%
+            );
+          clip-path: polygon(16% 0, 100% 0, 84% 100%, 0 100%);
+          box-shadow:
+            0 0 72px rgba(45, 212, 191, 0.24),
+            inset 0 1px 0 rgba(255, 255, 255, 0.24);
           transform-style: preserve-3d;
           backface-visibility: hidden;
-          will-change: transform, opacity;
+          will-change: transform, opacity, clip-path;
+        }
+
+        .auth-transition-sweep::after {
+          content: '';
+          position: absolute;
+          inset: 0;
+          background:
+            linear-gradient(115deg, transparent 26%, rgba(255, 255, 255, 0.13) 48%, transparent 70%),
+            radial-gradient(circle at 82% 28%, rgba(255, 255, 255, 0.18), transparent 22%);
+          mix-blend-mode: screen;
         }
 
         .auth-sweep-left {
-          animation: auth-sweep-left 760ms cubic-bezier(0.2, 0.74, 0.2, 1) both;
+          animation: auth-sweep-left 900ms cubic-bezier(0.77, 0, 0.18, 1) both;
           transform-origin: right center;
         }
 
         .auth-sweep-right {
-          animation: auth-sweep-right 760ms cubic-bezier(0.2, 0.74, 0.2, 1) both;
+          animation: auth-sweep-right 900ms cubic-bezier(0.77, 0, 0.18, 1) both;
           transform-origin: left center;
         }
 
         @keyframes auth-content-left {
           0% {
-            opacity: 0.48;
-            transform: translate3d(24px, 0, -70px) rotateY(5deg) scale(0.985);
+            opacity: 0.34;
+            filter: blur(6px);
+            transform: translate3d(34px, 0, -82px) rotateY(6deg) scale(0.982);
           }
-          45% {
-            opacity: 0.82;
-            transform: translate3d(8px, 0, -24px) rotateY(2deg) scale(0.994);
+          52% {
+            opacity: 0.76;
+            filter: blur(2px);
+            transform: translate3d(10px, 0, -24px) rotateY(2deg) scale(0.994);
           }
           100% {
             opacity: 1;
+            filter: blur(0);
             transform: translate3d(0, 0, 0) rotateY(0deg) scale(1);
           }
         }
 
         @keyframes auth-content-right {
           0% {
-            opacity: 0.48;
-            transform: translate3d(-24px, 0, -70px) rotateY(-5deg) scale(0.985);
+            opacity: 0.34;
+            filter: blur(6px);
+            transform: translate3d(-34px, 0, -82px) rotateY(-6deg) scale(0.982);
           }
-          45% {
-            opacity: 0.82;
-            transform: translate3d(-8px, 0, -24px) rotateY(-2deg) scale(0.994);
+          52% {
+            opacity: 0.76;
+            filter: blur(2px);
+            transform: translate3d(-10px, 0, -24px) rotateY(-2deg) scale(0.994);
           }
           100% {
             opacity: 1;
+            filter: blur(0);
             transform: translate3d(0, 0, 0) rotateY(0deg) scale(1);
           }
         }
@@ -214,42 +236,48 @@ export default function AuthScreen() {
         @keyframes auth-sweep-left {
           0% {
             opacity: 0;
-            transform: translate3d(108%, 0, 12px) rotateY(0deg);
+            clip-path: polygon(16% 0, 100% 0, 84% 100%, 0 100%);
+            transform: translate3d(150%, 0, 18px) rotateY(0deg);
           }
-          16% {
-            opacity: 0.88;
+          12% {
+            opacity: 0.98;
           }
           50% {
-            opacity: 0.72;
-            transform: translate3d(0, 0, 28px) rotateY(-7deg);
+            opacity: 0.96;
+            clip-path: polygon(0 0, 84% 0, 100% 100%, 16% 100%);
+            transform: translate3d(0, 0, 34px) rotateY(-5deg);
           }
-          84% {
-            opacity: 0.42;
+          88% {
+            opacity: 0.78;
           }
           100% {
             opacity: 0;
-            transform: translate3d(-108%, 0, 12px) rotateY(-2deg);
+            clip-path: polygon(16% 0, 100% 0, 84% 100%, 0 100%);
+            transform: translate3d(-150%, 0, 18px) rotateY(-2deg);
           }
         }
 
         @keyframes auth-sweep-right {
           0% {
             opacity: 0;
-            transform: translate3d(-108%, 0, 12px) rotateY(0deg);
+            clip-path: polygon(0 0, 84% 0, 100% 100%, 16% 100%);
+            transform: translate3d(-150%, 0, 18px) rotateY(0deg);
           }
-          16% {
-            opacity: 0.88;
+          12% {
+            opacity: 0.98;
           }
           50% {
-            opacity: 0.72;
-            transform: translate3d(0, 0, 28px) rotateY(7deg);
+            opacity: 0.96;
+            clip-path: polygon(16% 0, 100% 0, 84% 100%, 0 100%);
+            transform: translate3d(0, 0, 34px) rotateY(5deg);
           }
-          84% {
-            opacity: 0.42;
+          88% {
+            opacity: 0.78;
           }
           100% {
             opacity: 0;
-            transform: translate3d(108%, 0, 12px) rotateY(2deg);
+            clip-path: polygon(0 0, 84% 0, 100% 100%, 16% 100%);
+            transform: translate3d(150%, 0, 18px) rotateY(2deg);
           }
         }
 
@@ -257,13 +285,14 @@ export default function AuthScreen() {
           .auth-content-left,
           .auth-content-right {
             animation: none;
+            filter: none;
           }
 
           .auth-transition-sweep {
             display: none;
           }
         }
-      `}</style>
+      \`}</style>
     </main>
   );
 }
