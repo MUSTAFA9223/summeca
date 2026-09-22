@@ -64,10 +64,10 @@ export default function LandingPageSprintPage() {
 
               <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
                 <a
-                  href={mailto}
+                  href={checkoutHref}
                   className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-primary px-6 py-3 text-sm font-bold text-primary-foreground transition hover:opacity-90"
                 >
-                  Start the $75 sprint
+                  Start & pay securely
                   <ArrowRight size={17} />
                 </a>
                 <a
@@ -80,7 +80,7 @@ export default function LandingPageSprintPage() {
               </div>
 
               <p className="mt-4 text-xs text-muted-foreground">
-                Secure payment link is provided before work begins. No subscription or long-term contract.
+                Secure checkout is available now. No subscription or long-term contract.
               </p>
             </div>
           </div>
@@ -125,7 +125,7 @@ export default function LandingPageSprintPage() {
                 <div>
                   <p className="font-bold">2. Confirm the sprint</p>
                   <p className="mt-1 text-sm leading-6 text-muted-foreground">
-                    We send a secure payment link for the fixed $75 project price.
+                    Complete the secure $75 checkout, then send your page details.
                   </p>
                 </div>
                 <div>
@@ -172,10 +172,10 @@ export default function LandingPageSprintPage() {
             If your page already exists and you want a sharper message today, this is the fastest way to start.
           </p>
           <a
-            href={mailto}
+            href={checkoutHref}
             className="mt-8 inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-primary px-7 py-3 text-sm font-bold text-primary-foreground transition hover:opacity-90"
           >
-            Start for $75
+            Start & pay $75
             <ArrowRight size={17} />
           </a>
         </section>
