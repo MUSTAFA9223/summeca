@@ -123,7 +123,7 @@ export default function AuthScreen() {
         </section>
       </div>
 
-      <style jsx>{\`
+      <style jsx>{`
         .auth-switch-stage {
           position: relative;
           perspective: 1500px;
@@ -292,7 +292,7 @@ export default function AuthScreen() {
             display: none;
           }
         }
-      \`}</style>
+      `}</style>
     </main>
   );
 }
