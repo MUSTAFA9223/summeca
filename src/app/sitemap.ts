@@ -13,6 +13,7 @@ const publicRoutes = [
   { path: '/saas', priority: 0.8, changeFrequency: 'weekly' as const },
   { path: '/digital', priority: 0.8, changeFrequency: 'weekly' as const },
   { path: '/pricing', priority: 0.7, changeFrequency: 'weekly' as const },
+  { path: '/services/landing-page-sprint', priority: 0.7, changeFrequency: 'weekly' as const },
   { path: '/about', priority: 0.6, changeFrequency: 'monthly' as const },
   { path: '/faq', priority: 0.6, changeFrequency: 'monthly' as const },
   { path: '/support', priority: 0.5, changeFrequency: 'monthly' as const },
