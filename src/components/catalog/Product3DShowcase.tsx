@@ -114,7 +114,7 @@ function ScreenshotPreview({
           alt={`${name} product screenshot`}
           width={1200}
           height={675}
-          loading="eager"
+          loading={hero ? 'eager' : 'lazy'}
           decoding="async"
           className="h-full w-full object-contain object-top"
         />
@@ -141,7 +141,7 @@ function ScreenshotPreview({
           alt={`${name} product screenshot`}
           width={1200}
           height={675}
-          loading="lazy"
+          loading={hero ? 'eager' : 'lazy'}
           decoding="async"
           className="min-h-0 flex-1 object-contain object-top"
         />
