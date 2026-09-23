@@ -440,7 +440,7 @@ export default function SaasProductSalesExperience({
                 <Link
                   href={freeWorkspacePath(validSlug)}
                   onClick={() => trackFunnelEvent('trial_started', { productId: product.id, productSlug: product.slug, source: 'hero' })}
-                  className="btn-primary inline-flex min-h-12 items-center justify-center gap-2 px-6 text-sm"
+                  className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-[#008f8c] bg-[#00a9a5] px-6 text-sm font-extrabold text-white shadow-[0_8px_24px_rgba(0,169,165,0.25)] transition-[background-color,border-color,box-shadow,transform] duration-200 hover:-translate-y-0.5 hover:border-[#007f7c] hover:bg-[#008f8c] hover:shadow-[0_12px_30px_rgba(0,169,165,0.32)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#008f8c] active:translate-y-0"
                 >
                   {locale === 'ar' ? 'جرّب مجانًا' : 'Try free'} <ArrowRight size={15} />
                 </Link>
