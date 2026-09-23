@@ -10,6 +10,7 @@ const EVENT_TYPES = new Set([
   'payment_method_selected',
   'payment_failed',
   'payment_completed',
+  'content_cta_click',
 ]);
 
 const METADATA_KEYS = new Set([
