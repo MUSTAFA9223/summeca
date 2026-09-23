@@ -57,6 +57,20 @@ export async function GET(request: NextRequest) {
     .eq('period_start', periodStart.toISOString().slice(0, 10))
     .maybeSingle();
 
+  // ai_generations is the durable source of truth for successful AI requests.
+  // Use it for the displayed monthly request count so the admin UI remains
+  // accurate even if an older usage-counter RPC failed after history was saved.
+  const { count: monthlyGenerationCount, error: monthlyCountError } = await usageDb
+    .from('ai_generations')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', user.id)
+    .gte('created_at', periodStart.toISOString());
+
+  if (monthlyCountError) {
+    console.warn('[ai/history] monthly generation count failed:', monthlyCountError.message);
+  }
+
+  const requestsUsed = monthlyGenerationCount ?? usageRow?.requests_count ?? 0;
   const monthlyLimit = isAdmin ? 9999 : (usageRow?.monthly_limit ?? 50);
 
   return NextResponse.json({
@@ -65,10 +79,10 @@ export async function GET(request: NextRequest) {
     page,
     limit,
     usage: {
-      requestsUsed: usageRow?.requests_count ?? 0,
+      requestsUsed,
       tokensUsed: usageRow?.tokens_used ?? 0,
       monthlyLimit,
-      remaining: Math.max(0, monthlyLimit - (usageRow?.requests_count ?? 0)),
+      remaining: isAdmin ? monthlyLimit : Math.max(0, monthlyLimit - requestsUsed),
     },
   }, { headers: { 'Cache-Control': 'private, no-store' } });
 }
