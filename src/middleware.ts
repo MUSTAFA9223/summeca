@@ -7,6 +7,7 @@ const CANONICAL_HOST = 'summeca.com';
 const PUBLIC_I18N_PATHS = new Set([
   '/',
   '/products',
+  '/guides',
   '/ai',
   '/saas',
   '/digital',
@@ -42,7 +43,9 @@ function stripLocalePrefix(pathname: string) {
 
 function isInternationalSeoPath(pathname: string) {
   const publicPath = stripLocalePrefix(pathname);
-  return PUBLIC_I18N_PATHS.has(publicPath) || publicPath.startsWith('/products/');
+  return PUBLIC_I18N_PATHS.has(publicPath)
+    || publicPath.startsWith('/products/')
+    || publicPath.startsWith('/guides/');
 }
 
 function getAuthCookiePrefix(): string | null {
@@ -228,6 +231,8 @@ export const config = {
   matcher: [
     '/',
     '/products/:path*',
+    '/guides',
+    '/guides/:path*',
     '/ai',
     '/saas',
     '/digital',
