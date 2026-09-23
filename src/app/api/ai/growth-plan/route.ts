@@ -96,6 +96,8 @@ export async function POST() {
   };
 
   let pageViews = 0;
+  let contentPageViews = 0;
+  let contentCtaClicks = 0;
   let productViews = 0;
   let buyClicks = 0;
   let checkoutStarts = 0;
@@ -107,6 +109,7 @@ export async function POST() {
     if (event.event_type === 'page_view') {
       if (traffic && traffic !== 'Real visitor') continue;
       pageViews += 1;
+      if ((event.path || '').startsWith('/guides/')) contentPageViews += 1;
       if (event.session_key) visitorKeys.add(event.session_key);
       increment(sourceCounts, safeString(metadata.source, 'Direct'));
       continue;
@@ -125,6 +128,8 @@ export async function POST() {
     } else if (event.event_type === 'payment_completed') {
       paymentCompleted += 1;
       if (slug) ensureProduct(slug).payments += 1;
+    } else if (event.event_type === 'content_cta_click') {
+      contentCtaClicks += 1;
     }
   }
 
@@ -141,6 +146,8 @@ export async function POST() {
     windowDays: 30,
     visitors: visitorKeys.size,
     pageViews,
+    contentPageViews,
+    contentCtaClicks,
     productViews,
     buyClicks,
     checkoutStarts,
