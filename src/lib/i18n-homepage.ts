@@ -41,7 +41,7 @@ const HOMEPAGE_AR_TRANSLATIONS: Record<string, string> = {
   'Protected checkout': 'دفع محمي',
   'Customer support': 'دعم العملاء',
   'Focused AI & SaaS products': 'منتجات مركزة للذكاء الاصطناعي وSaaS',
-  'Turn website visitors into leads, proposals, and invoices with SUMMECA.': 'حوّل زوار الموقع إلى عملاء محتملين وعروض وفواتير مع SUMMECA.',
+  'Start with InvoiceFlow, then add AI tools as your workflow grows.': 'ابدأ بـ InvoiceFlow، ثم أضف أدوات الذكاء الاصطناعي مع توسع سير عملك.',
   'View all products': 'عرض كل المنتجات',
   'No published products are available right now.': 'لا توجد منتجات منشورة متاحة حاليًا.',
   'Products appear here only after they have an active production offer.': 'لا تظهر المنتجات هنا إلا بعد توفر عرض إنتاج نشط لها.',
