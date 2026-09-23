@@ -22,6 +22,7 @@ const footerSections = [
       { label: { en: 'AI Tools', ar: 'أدوات الذكاء الاصطناعي' }, href: '/ai' },
       { label: { en: 'SaaS Apps', ar: 'تطبيقات SaaS' }, href: '/saas' },
       { label: { en: 'Digital Products', ar: 'المنتجات الرقمية' }, href: '/digital' },
+      { label: { en: 'Guides', ar: 'الأدلة' }, href: '/guides' },
       { label: { en: 'Pricing', ar: 'الأسعار' }, href: '/pricing' },
     ],
   },
