@@ -48,6 +48,15 @@ test('footer exposes the exact Fazier verification badge required by the free li
   assert.match(footer, /width="120"/);
 });
 
+test('footer exposes the exact Sell With Boost verification badge required by the free listing', () => {
+  assert.match(footer, /href=\{SELLWITHBOOST_URL\}/);
+  assert.match(footer, /const SELLWITHBOOST_URL = 'https:\/\/sellwithboost\.com'/);
+  assert.match(footer, /src="https:\/\/sellwithboost\.com\/badge\/listing\.svg"/);
+  assert.match(footer, /alt="Listed on Sell with boost"/);
+  assert.match(footer, /height: 40/);
+  assert.match(footer, /width: 'auto'/);
+});
+
 test('footer exposes the verified social, contact, support and legal destinations', () => {
   for (const destination of [
     'https://x.com/summeca_',
@@ -86,6 +95,10 @@ test('footer preserves the official local SUMMECA logo component and high-contra
     .replace(
       'src="https://fazier.com/api/v1//public/badges/launch_badges.svg?badge_type=launched&theme=light"',
       'src="/fazier-badge.svg"',
+    )
+    .replace(
+      'src="https://sellwithboost.com/badge/listing.svg"',
+      'src="/sellwithboost-badge.svg"',
     );
   assert.doesNotMatch(footerWithoutDirectoryBadges, /src="https?:\/\//i);
 });
