@@ -20,6 +20,7 @@ import { trackEvent } from '@/lib/analytics';
 const navLinks = [
   { label: 'For Stores', href: '/#solutions' },
   { label: 'Products', href: '/products' },
+  { label: 'Guides', href: '/guides' },
   { label: 'Pricing', href: '/pricing' },
   { label: 'Support', href: '/support' },
 ];
