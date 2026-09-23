@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   Sparkles, Search, Megaphone, BarChart2, Brain, History,
   Loader2, Copy, Check, ChevronDown, ChevronUp, AlertCircle,
-  TrendingUp, Zap, FileText, Target
+  TrendingUp, Zap, FileText, Target, Rocket
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -26,7 +26,7 @@ interface GenerationRecord {
   created_at: string;
 }
 
-type ActiveTab = 'product' | 'seo' | 'campaign' | 'analysis' | 'insights' | 'history';
+type ActiveTab = 'product' | 'seo' | 'campaign' | 'analysis' | 'insights' | 'growth' | 'history';
 
 const AI_PROVIDER_LABEL = 'Cloudflare Workers AI';
 
@@ -594,6 +594,187 @@ function CustomerInsightsTab({ usage, onGenerated }: { usage: UsageStats | null;
   );
 }
 
+
+interface GrowthMetrics {
+  windowDays: number;
+  visitors: number;
+  pageViews: number;
+  productViews: number;
+  buyClicks: number;
+  checkoutStarts: number;
+  paymentCompleted: number;
+  realCompletedOrders: number;
+  topSources: Array<{ source: string; count: number }>;
+}
+
+interface GrowthOpportunity {
+  keyword: string;
+  searchIntent: string;
+  targetProduct: string;
+  recommendedPageType: string;
+  suggestedSlug: string;
+  title: string;
+  metaDescription: string;
+  whyNow: string;
+  outline: string[];
+  socialPost: string;
+}
+
+interface GrowthPlan {
+  summary?: string;
+  opportunities?: GrowthOpportunity[];
+  conversionActions?: Array<{ title: string; reason: string; metric: string }>;
+}
+
+function GrowthEngineTab({ onGenerated }: { onGenerated: () => void }) {
+  const [loading, setLoading] = useState(false);
+  const [metrics, setMetrics] = useState<GrowthMetrics | null>(null);
+  const [plan, setPlan] = useState<GrowthPlan | null>(null);
+
+  const runGrowthPlan = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch('/api/ai/growth-plan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? 'Growth analysis failed');
+      setMetrics(data.metrics as GrowthMetrics);
+      setPlan(data.plan as GrowthPlan);
+      onGenerated();
+      toast.success('Growth plan generated from live SUMMECA data');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Growth analysis failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="rounded-xl border border-primary/20 bg-primary/5 p-5">
+        <div className="flex items-start gap-3">
+          <Rocket size={20} className="mt-0.5 text-primary" />
+          <div>
+            <h3 className="text-sm font-700 text-foreground">SUMMECA Growth Engine</h3>
+            <p className="mt-1 text-sm leading-6 text-muted-foreground">
+              Turn first-party traffic and funnel data into SEO topics, publishable page briefs, social posts, and conversion actions.
+            </p>
+            <p className="mt-2 text-xs text-muted-foreground">
+              Keyword ideas are search-intent hypotheses. This tool does not claim Google search volume or ranking data.
+            </p>
+          </div>
+        </div>
+        <button
+          onClick={runGrowthPlan}
+          disabled={loading}
+          className="mt-4 inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-600 text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
+        >
+          {loading ? <Loader2 size={16} className="animate-spin" /> : <Rocket size={16} />}
+          {loading ? 'Analyzing growth data...' : 'Find growth opportunities'}
+        </button>
+      </div>
+
+      {metrics && (
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+          {[
+            ['Visitors', metrics.visitors],
+            ['Page views', metrics.pageViews],
+            ['Product views', metrics.productViews],
+            ['Buy clicks', metrics.buyClicks],
+            ['Checkout starts', metrics.checkoutStarts],
+            ['Tracked payments', metrics.paymentCompleted],
+            ['Real completed orders', metrics.realCompletedOrders],
+          ].map(([label, value]) => (
+            <div key={String(label)} className="rounded-xl border border-border bg-card p-4">
+              <p className="text-xs text-muted-foreground">{label}</p>
+              <p className="mt-1 text-xl font-800 tabular-nums text-foreground">{Number(value).toLocaleString()}</p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {metrics && metrics.topSources.length > 0 && (
+        <div className="rounded-xl border border-border bg-card p-4">
+          <p className="text-xs font-700 uppercase tracking-wide text-muted-foreground">Top traffic sources · last {metrics.windowDays} days</p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {metrics.topSources.map((item) => (
+              <span key={item.source} className="rounded-full bg-secondary px-3 py-1.5 text-xs text-foreground">
+                {item.source}: {item.count.toLocaleString()}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {plan?.summary && (
+        <div className="rounded-xl border border-border bg-card p-5">
+          <p className="text-xs font-700 uppercase tracking-wide text-muted-foreground">Growth summary</p>
+          <p className="mt-2 text-sm leading-6 text-foreground">{plan.summary}</p>
+        </div>
+      )}
+
+      {plan?.opportunities && plan.opportunities.length > 0 && (
+        <div className="space-y-4">
+          {plan.opportunities.map((item, index) => (
+            <div key={item.suggestedSlug || item.keyword || index} className="rounded-xl border border-border bg-card p-5">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <p className="text-xs font-700 uppercase tracking-wide text-primary">Opportunity {index + 1}</p>
+                  <h3 className="mt-1 text-base font-700 text-foreground">{item.title}</h3>
+                </div>
+                <CopyButton text={JSON.stringify(item, null, 2)} />
+              </div>
+              <div className="mt-4 grid gap-3 md:grid-cols-2">
+                <div className="rounded-lg bg-secondary/40 p-3">
+                  <p className="text-xs text-muted-foreground">Search topic</p>
+                  <p className="mt-1 text-sm font-600 text-foreground">{item.keyword}</p>
+                </div>
+                <div className="rounded-lg bg-secondary/40 p-3">
+                  <p className="text-xs text-muted-foreground">Intent / page</p>
+                  <p className="mt-1 text-sm font-600 text-foreground">{item.searchIntent} · {item.recommendedPageType}</p>
+                </div>
+                <div className="rounded-lg bg-secondary/40 p-3">
+                  <p className="text-xs text-muted-foreground">Target product</p>
+                  <p className="mt-1 text-sm font-600 text-foreground">{item.targetProduct}</p>
+                </div>
+                <div className="rounded-lg bg-secondary/40 p-3">
+                  <p className="text-xs text-muted-foreground">Suggested URL</p>
+                  <p className="mt-1 break-all text-sm font-600 text-foreground">/guides/{item.suggestedSlug}</p>
+                </div>
+              </div>
+              <div className="mt-4 space-y-3">
+                <OutputBlock label="Meta Description" value={item.metaDescription} />
+                <OutputBlock label="Why This Opportunity" value={item.whyNow} />
+                {item.outline?.length > 0 && <OutputBlock label="Page Outline" value={item.outline} />}
+                <OutputBlock label="Social Post" value={item.socialPost} />
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {plan?.conversionActions && plan.conversionActions.length > 0 && (
+        <div className="rounded-xl border border-border bg-card p-5">
+          <p className="text-xs font-700 uppercase tracking-wide text-muted-foreground">Conversion actions</p>
+          <div className="mt-3 space-y-3">
+            {plan.conversionActions.map((action, index) => (
+              <div key={index} className="rounded-lg bg-secondary/40 p-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-sm font-700 text-foreground">{action.title}</p>
+                  <span className="rounded-full bg-primary/10 px-2 py-1 text-xs font-600 text-primary">{action.metric}</span>
+                </div>
+                <p className="mt-1 text-sm text-muted-foreground">{action.reason}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── History Tab ──────────────────────────────────────────────────────────────
 
 function HistoryTab() {
@@ -613,6 +794,7 @@ function HistoryTab() {
     marketing_campaign: 'Campaign',
     product_analysis: 'Analysis',
     customer_insights: 'Insights',
+    growth_plan: 'Growth Plan',
     store_assistant: 'Store Chat',
     email_campaign: 'Email',
     social_post: 'Social',
@@ -685,6 +867,7 @@ export default function AdminAIClient() {
     { id: 'campaign', label: 'Campaign Builder', icon: Megaphone, description: 'Create email, social & ad campaigns' },
     { id: 'analysis', label: 'Product Analysis', icon: TrendingUp, description: 'Analyze performance & get recommendations' },
     { id: 'insights', label: 'Business Insights', icon: Brain, description: 'AI-powered business intelligence' },
+    { id: 'growth', label: 'Growth Engine', icon: Rocket, description: 'Turn live traffic into SEO and conversion opportunities' },
     { id: 'history', label: 'History', icon: History, description: 'View all AI generations' },
   ];
 
@@ -730,7 +913,7 @@ export default function AdminAIClient() {
       )}
 
       {/* Tab navigation */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-2">
         {tabs.map(tab => (
           <button
             key={tab.id}
@@ -766,6 +949,7 @@ export default function AdminAIClient() {
         {activeTab === 'campaign' && <CampaignBuilderTab usage={usage} onGenerated={fetchUsage} />}
         {activeTab === 'analysis' && <ProductAnalysisTab usage={usage} onGenerated={fetchUsage} />}
         {activeTab === 'insights' && <CustomerInsightsTab usage={usage} onGenerated={fetchUsage} />}
+        {activeTab === 'growth' && <GrowthEngineTab onGenerated={fetchUsage} />}
         {activeTab === 'history' && <HistoryTab />}
       </div>
 
