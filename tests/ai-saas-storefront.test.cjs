@@ -23,6 +23,6 @@ test('public storefront is limited to the four focused AI and SaaS apps', () => 
   assert.match(catalog, /url\.searchParams\.set\('slug',/);
   assert.doesNotMatch(home, /href="\/products\/conversion-rescue-kit-pro"/);
   assert.match(home, /Turn website visitors into leads, proposals, and invoices with SUMMECA\./);
-  assert.match(hero, /Focused AI & SaaS apps for modern business/);
+  assert.match(hero, /SUMMECA InvoiceFlow/);
   assert.match(hero, /ProposalFlow AI/);
 });
