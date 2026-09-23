@@ -117,20 +117,20 @@ export default function PublicNav() {
       ref={headerRef}
       data-public-nav="true"
       data-theme-switcher-host="true"
-      className="sticky top-0 z-50 -mb-[70px] border-b border-primary/10 bg-background/90 shadow-sm shadow-primary/5 backdrop-blur-xl transition-[background-color,box-shadow,border-color] duration-300"
+      className="sticky top-0 z-50 -mb-[70px] border-b border-transparent bg-transparent transition-[background-color,box-shadow,border-color] duration-300"
     >
-      <div className="mx-auto max-w-screen-xl px-5 sm:px-6 lg:px-8">
-        <div className="flex h-[70px] items-center justify-between">
+      <div className="mx-auto max-w-[1380px] px-4 pt-3 sm:px-6 lg:px-8">
+        <div className="flex h-[62px] items-center justify-between rounded-[20px] border border-border/70 bg-background/80 px-4 shadow-[0_16px_50px_rgba(4,47,55,0.08)] backdrop-blur-2xl sm:px-5">
           <Link href="/" className="group flex min-w-0 shrink-0 items-center" aria-label="SUMMECA home">
             <AppLogo variant="wordmark" size={50} className="transition-transform duration-200 group-hover:scale-[1.025]" />
           </Link>
 
-          <nav className="hidden items-center gap-1 lg:flex" aria-label="Primary navigation">
+          <nav className="hidden items-center gap-1 rounded-2xl border border-border/60 bg-secondary/35 p-1 lg:flex" aria-label="Primary navigation">
             {navLinks.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
-                className="block rounded-lg px-3.5 py-2 text-sm font-medium text-secondary-foreground transition hover:bg-secondary/80 hover:text-foreground"
+                className="block rounded-xl px-3.5 py-2 text-sm font-semibold text-secondary-foreground transition hover:bg-card hover:text-foreground hover:shadow-sm"
               >
                 {item.label}
               </Link>

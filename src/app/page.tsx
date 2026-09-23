@@ -131,7 +131,11 @@ function ProductCard({ product }: { product: PublishedProduct }) {
 
   return (
     <HomeProduct3DCard>
-      <div className="relative bg-[#0c1218] p-3" style={{ transform: 'translateZ(26px)' }}>
+      <div className="relative overflow-hidden bg-[#071116] p-3" style={{ transform: 'translateZ(26px)' }}>
+        <div className="pointer-events-none absolute inset-x-0 top-0 z-20 h-px bg-gradient-to-r from-transparent via-cyan-300/70 to-transparent" />
+        <div className="absolute left-5 top-5 z-30 rounded-full border border-cyan-300/20 bg-[#08161b]/80 px-3 py-1 text-[9px] font-extrabold uppercase tracking-[0.16em] text-cyan-200 backdrop-blur-xl">
+          {productTypeLabel(product)}
+        </div>
         <Product3DShowcase
           name={product.name}
           thumbnailUrl={product.thumbnail_url}
@@ -141,8 +145,12 @@ function ProductCard({ product }: { product: PublishedProduct }) {
         />
       </div>
 
-      <div className="flex flex-1 flex-col p-4 sm:p-5" style={{ transform: 'translateZ(16px)' }}>
-        <h3 className="text-lg font-800 tracking-tight text-foreground">{product.name}</h3>
+      <div className="flex flex-1 flex-col p-5 sm:p-6" style={{ transform: 'translateZ(16px)' }}>
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <span className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-primary">SUMMECA app</span>
+          <span className="h-2 w-2 rounded-full bg-primary shadow-[0_0_18px_rgba(45,212,191,.65)]" />
+        </div>
+        <h3 className="text-xl font-800 tracking-[-0.025em] text-foreground">{product.name}</h3>
         <p className="mt-2 line-clamp-2 min-h-12 text-sm leading-6 text-muted-foreground">
           {description}
         </p>
@@ -170,7 +178,7 @@ function ProductCard({ product }: { product: PublishedProduct }) {
           </div>
           <Link
             href={`/products/${product.slug}`}
-            className="inline-flex min-h-10 shrink-0 items-center justify-center gap-1.5 rounded-xl bg-foreground px-3.5 py-2 text-[11px] font-800 text-background transition duration-200 hover:bg-primary hover:text-primary-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary motion-reduce:transition-none"
+            className="inline-flex min-h-11 shrink-0 items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-primary to-accent px-4 py-2.5 text-[11px] font-extrabold text-primary-foreground shadow-[0_10px_24px_rgba(13,148,136,.18)] transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_14px_30px_rgba(13,148,136,.28)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary motion-reduce:transition-none"
           >
             {productCta(product)} <ArrowRight size={13} />
           </Link>
@@ -244,7 +252,7 @@ export default async function HomePage() {
         <HeroSection />
 
         <section
-          className="mx-auto max-w-7xl px-6 py-12 sm:py-16"
+          className="relative mx-auto max-w-[1380px] px-5 py-16 sm:px-6 sm:py-20"
           aria-labelledby="featured-products-title"
         >
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
@@ -277,7 +285,7 @@ export default async function HomePage() {
               </p>
             </div>
           ) : (
-            <div className="mt-7 grid items-stretch gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="mt-9 grid items-stretch gap-6 lg:grid-cols-2">
               {featuredProducts.map((product) => (
                 <ProductCard key={product.id} product={product} />
               ))}
@@ -287,7 +295,7 @@ export default async function HomePage() {
 
         <section
           id="solutions"
-          className="scroll-mt-24 border-y border-border bg-secondary/25"
+          className="scroll-mt-24 border-y border-border/70 bg-[linear-gradient(180deg,color-mix(in_srgb,var(--secondary)_44%,transparent),color-mix(in_srgb,var(--background)_96%,transparent))]"
           aria-labelledby="solutions-title"
         >
           <div className="mx-auto max-w-7xl px-6 py-12 sm:py-14">

@@ -344,3 +344,77 @@ html[data-site-theme='light'] .summeca-auth-tabs {
     transform: none !important;
   }
 }
+
+
+/* Visible redesign pass — floating navigation, stronger hero composition, larger product cards. */
+[data-public-nav='true'] {
+  min-height: 76px;
+  border-bottom: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+[data-public-nav='true'] > div > div {
+  min-height: 62px;
+  border-color: color-mix(in srgb, var(--primary) 18%, var(--border));
+  background:
+    linear-gradient(120deg, color-mix(in srgb, var(--card) 93%, transparent), color-mix(in srgb, var(--secondary) 74%, transparent));
+}
+
+.summeca-home-hero {
+  background:
+    radial-gradient(circle at 74% 45%, color-mix(in srgb, var(--primary) 18%, transparent), transparent 31rem),
+    radial-gradient(circle at 24% 78%, color-mix(in srgb, var(--accent) 8%, transparent), transparent 27rem),
+    linear-gradient(150deg, color-mix(in srgb, var(--background) 97%, #02090c), var(--background));
+}
+
+html[data-site-theme='dark'] .summeca-home-hero {
+  background:
+    radial-gradient(circle at 74% 45%, rgba(45, 212, 191, 0.15), transparent 31rem),
+    radial-gradient(circle at 22% 78%, rgba(56, 189, 248, 0.08), transparent 27rem),
+    linear-gradient(145deg, #061015 0%, #071319 54%, #061016 100%);
+}
+
+html[data-site-theme='light'] .summeca-home-hero {
+  background:
+    radial-gradient(circle at 74% 45%, rgba(10, 167, 165, 0.13), transparent 31rem),
+    radial-gradient(circle at 22% 78%, rgba(21, 155, 184, 0.08), transparent 27rem),
+    linear-gradient(145deg, #f8fdfd 0%, #eff9f8 54%, #f5fbfb 100%);
+}
+
+.summeca-home-product-3d {
+  min-height: 540px !important;
+  border-radius: 30px !important;
+  overflow: hidden;
+}
+
+.summeca-home-product-3d > div:first-of-type {
+  min-height: 300px;
+}
+
+@media (min-width: 1024px) {
+  .summeca-home-product-3d {
+    min-height: 560px !important;
+  }
+}
+
+@media (max-width: 639px) {
+  [data-public-nav='true'] {
+    min-height: 70px;
+  }
+
+  [data-public-nav='true'] > div {
+    padding-top: 8px !important;
+  }
+
+  [data-public-nav='true'] > div > div {
+    min-height: 56px;
+    border-radius: 18px;
+  }
+
+  .summeca-home-product-3d {
+    min-height: 500px !important;
+  }
+}
