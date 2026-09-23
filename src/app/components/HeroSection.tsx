@@ -27,12 +27,12 @@ export default function HeroSection() {
 
   const copy = isArabic
     ? {
-        eyebrow: 'تطبيقات ذكاء اصطناعي وSaaS للأعمال الحديثة',
-        headlineOne: 'حوّل العميل إلى عرض ثم فاتورة',
-        headlineTwo: 'باستخدام تطبيقات SUMMECA الذكية.',
-        body: 'استخدم LeadFollow AI للمتابعة، وProposalFlow AI لإنشاء عروض العملاء، وInvoiceFlow للفواتير ضمن مجموعة مركزة من تطبيقات AI وSaaS.',
-        invoiceFlow: 'استكشف InvoiceFlow',
-        leadFollow: 'استكشف LeadFollow AI',
+        eyebrow: 'InvoiceFlow من SUMMECA',
+        headlineOne: 'أنشئ فواتير احترافية خلال دقائق،',
+        headlineTwo: 'بدلًا من فوضى الجداول.',
+        body: 'أدر العملاء وأنشئ الفواتير وتابع حالة الدفع من مساحة عمل واحدة. ابدأ بالمستوى المجاني المحدود داخل حساب SUMMECA بدون شراء.',
+        invoiceFlow: 'جرّب InvoiceFlow مجانًا',
+        leadFollow: 'شاهد معاينة المنتج',
         allProducts: 'عرض كل المنتجات',
         pricing: 'أسعار واضحة',
         checkout: 'دفع محمي',
@@ -40,12 +40,12 @@ export default function HeroSection() {
         support: 'دعم العملاء',
       }
     : {
-        eyebrow: 'Focused AI & SaaS apps for modern business',
-        headlineOne: 'Move from lead to proposal to invoice',
-        headlineTwo: 'with focused SUMMECA AI & SaaS apps.',
-        body: 'Use LeadFollow AI for follow-up, ProposalFlow AI for client proposals, and InvoiceFlow for invoicing in one focused SUMMECA product line.',
-        invoiceFlow: 'Explore InvoiceFlow',
-        leadFollow: 'Explore LeadFollow AI',
+        eyebrow: 'SUMMECA InvoiceFlow',
+        headlineOne: 'Create professional invoices in minutes,',
+        headlineTwo: 'not spreadsheets.',
+        body: 'Manage clients, create invoices, track payment status and keep billing organized in one focused workspace. Start with the limited Free tier in your SUMMECA account — no purchase required.',
+        invoiceFlow: 'Try InvoiceFlow free',
+        leadFollow: 'Watch the real product demo',
         allProducts: 'View all products',
         pricing: 'Transparent pricing',
         checkout: 'Protected checkout',
@@ -94,12 +94,12 @@ export default function HeroSection() {
 
           <div className={`summeca-reveal summeca-reveal-4 mt-7 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center ${isArabic ? 'sm:flex-row-reverse sm:justify-end' : ''}`}>
             <Link
-              href="/products/summeca-invoiceflow"
+              href="/user-dashboard/invoiceflow"
               onClick={() =>
                 trackEvent('primary_cta_click', {
                   placement: 'homepage_hero',
-                  destination: 'summeca-invoiceflow',
-                  audience: 'small_ecommerce',
+                  destination: 'invoiceflow-free-workspace',
+                  audience: 'freelancers_small_business',
                 })
               }
               className="group inline-flex min-h-11 items-center justify-center gap-3 rounded-full bg-gradient-to-r from-[#109f8d] via-[#20d9bd] to-[#4bcdf6] px-6 py-3 text-sm font-bold text-[#03231f] shadow-[0_14px_42px_rgba(32,217,189,0.22)] transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_18px_48px_rgba(75,205,246,0.24)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#4bcdf6] motion-reduce:transform-none motion-reduce:transition-none"
@@ -108,12 +108,12 @@ export default function HeroSection() {
               <ArrowRight size={16} className={`transition-transform duration-200 group-hover:translate-x-0.5 motion-reduce:transform-none motion-reduce:transition-none ${isArabic ? 'rotate-180 group-hover:-translate-x-0.5' : ''}`} />
             </Link>
             <Link
-              href="/products/summeca-leadfollow-ai"
+              href="/products/summeca-invoiceflow#product-preview"
               onClick={() =>
                 trackEvent('secondary_cta_click', {
                   placement: 'homepage_hero',
-                  destination: 'summeca-leadfollow-ai',
-                  audience: 'small_ecommerce',
+                  destination: 'summeca-invoiceflow-demo',
+                  audience: 'freelancers_small_business',
                 })
               }
               className="summeca-hero-secondary-cta group inline-flex min-h-11 items-center justify-center gap-2 rounded-full border px-5 py-3 text-sm font-bold transition duration-200 hover:-translate-y-0.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#4bcdf6] motion-reduce:transform-none motion-reduce:transition-none"
