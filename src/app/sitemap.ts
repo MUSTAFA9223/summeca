@@ -9,6 +9,7 @@ import {
 const publicRoutes = [
   { path: '/', priority: 1, changeFrequency: 'daily' as const },
   { path: '/products', priority: 0.9, changeFrequency: 'daily' as const },
+  { path: '/guides', priority: 0.8, changeFrequency: 'weekly' as const },
   { path: '/ai', priority: 0.8, changeFrequency: 'weekly' as const },
   { path: '/saas', priority: 0.8, changeFrequency: 'weekly' as const },
   { path: '/digital', priority: 0.8, changeFrequency: 'weekly' as const },
@@ -83,33 +84,53 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const supabase = createSupabaseClient(supabaseUrl, anonKey, {
       auth: { persistSession: false, autoRefreshToken: false },
     });
-    const { data, error } = await supabase
-      .from('products')
-      .select('slug, updated_at')
-      .eq('status', 'active')
-      .order('updated_at', { ascending: false });
+    const [productsResult, guidesResult] = await Promise.all([
+      supabase
+        .from('products')
+        .select('slug, updated_at')
+        .eq('status', 'active')
+        .order('updated_at', { ascending: false }),
+      supabase
+        .from('growth_pages')
+        .select('slug, updated_at, published_at')
+        .eq('status', 'published')
+        .order('published_at', { ascending: false }),
+    ]);
 
-    if (error) {
-      console.warn('[sitemap] Published products could not be loaded:', error.message);
-      return entries;
+    if (productsResult.error) {
+      console.warn('[sitemap] Published products could not be loaded:', productsResult.error.message);
+    } else {
+      for (const product of productsResult.data ?? []) {
+        if (!product.slug) continue;
+        const lastModified = validDate(product.updated_at);
+        const productOptions = {
+          ...(lastModified ? { lastModified } : {}),
+          changeFrequency: 'weekly' as const,
+          priority: 0.8,
+        };
+        pushLocalizedEntries(
+          entries,
+          `/products/${encodeURIComponent(product.slug)}`,
+          productOptions,
+        );
+      }
     }
 
-    for (const product of data ?? []) {
-      if (!product.slug) continue;
-      const lastModified = validDate(product.updated_at);
-      const productOptions = {
-        ...(lastModified ? { lastModified } : {}),
-        changeFrequency: 'weekly' as const,
-        priority: 0.8,
-      };
-      pushLocalizedEntries(
-        entries,
-        `/products/${encodeURIComponent(product.slug)}`,
-        productOptions,
-      );
+    if (guidesResult.error) {
+      console.warn('[sitemap] Published guides could not be loaded:', guidesResult.error.message);
+    } else {
+      for (const guide of guidesResult.data ?? []) {
+        if (!guide.slug) continue;
+        const lastModified = validDate(guide.updated_at || guide.published_at);
+        pushLocalizedEntries(entries, `/guides/${encodeURIComponent(guide.slug)}`, {
+          ...(lastModified ? { lastModified } : {}),
+          changeFrequency: 'monthly',
+          priority: 0.7,
+        });
+      }
     }
   } catch (error) {
-    console.warn('[sitemap] Product sitemap generation failed:', error);
+    console.warn('[sitemap] Dynamic sitemap generation failed:', error);
   }
 
   return entries;
