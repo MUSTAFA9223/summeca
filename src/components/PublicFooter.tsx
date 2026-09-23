@@ -10,6 +10,7 @@ const PRODUCT_HUNT_URL =
 const TOOLS_CAFE_URL = 'https://tools.cafe';
 const LAUNCHSTAG_URL = 'https://launchstag.com/p/summeca';
 const FAZIER_URL = 'https://fazier.com';
+const SELLWITHBOOST_URL = 'https://sellwithboost.com';
 const X_URL = 'https://x.com/summeca_';
 const CONTACT_EMAIL = 'hello@summeca.com';
 
@@ -75,6 +76,7 @@ export default function PublicFooter() {
         toolsCafe: 'SUMMECA مميزة على tools.cafe',
         launchstag: 'SUMMECA مميزة على Launchstag',
         fazier: 'تم إطلاق SUMMECA على Fazier',
+        sellwithboost: 'SUMMECA مدرجة على Sell With Boost',
         rights: 'جميع الحقوق محفوظة.',
       }
     : {
@@ -87,6 +89,7 @@ export default function PublicFooter() {
         toolsCafe: 'SUMMECA is featured on tools.cafe',
         launchstag: 'SUMMECA is featured on Launchstag',
         fazier: 'SUMMECA launched on Fazier',
+        sellwithboost: 'SUMMECA is listed on Sell With Boost',
         rights: 'All rights reserved.',
       };
 
@@ -211,6 +214,23 @@ export default function PublicFooter() {
                   width="120"
                   loading="lazy"
                   className="h-auto max-w-full"
+                />
+              </a>
+
+              <a
+                href={SELLWITHBOOST_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={copy.sellwithboost}
+                className="inline-flex max-w-full rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+              >
+                {/* Sell With Boost verifies this exact backlink and badge URL for the free listing. */}
+                {/* eslint-disable-next-line @next/next/no-img-element -- the directory requires its exact external badge URL. */}
+                <img
+                  src="https://sellwithboost.com/badge/listing.svg"
+                  alt="Listed on Sell with boost"
+                  loading="lazy"
+                  style={{ height: 40, width: 'auto' }}
                 />
               </a>
             </div>
