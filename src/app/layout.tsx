@@ -33,7 +33,7 @@ const plusJakartaSans = Plus_Jakarta_Sans({
 });
 
 const siteDescription =
-  'Discover and access practical AI tools, SaaS applications, and digital products designed for modern businesses and knowledge workers.';
+  'SUMMECA provides focused AI and SaaS tools for lead follow-up, client proposals, invoicing, website lead capture, and practical business workflows.';
 
 const themeInitScript = `
 try {
@@ -94,6 +94,16 @@ const structuredData = {
       publisher: { '@id': 'https://summeca.com/#organization' },
       inLanguage: 'en',
     },
+    {
+      '@type': 'WebPage',
+      '@id': 'https://summeca.com/#webpage',
+      url: 'https://summeca.com/',
+      name: 'SUMMECA — AI & SaaS Tools for Modern Business',
+      description: siteDescription,
+      isPartOf: { '@id': 'https://summeca.com/#website' },
+      about: { '@id': 'https://summeca.com/#organization' },
+      inLanguage: 'en',
+    },
   ],
 };
 
@@ -105,7 +115,7 @@ export const viewport: Viewport = {
 const baseMetadata: Metadata = {
   metadataBase: new URL('https://summeca.com'),
   title: {
-    default: 'SUMMECA — Digital Tools for Modern Work',
+    default: 'SUMMECA — AI & SaaS Tools for Modern Business',
     template: '%s | SUMMECA',
   },
   description: siteDescription,
@@ -126,7 +136,7 @@ const baseMetadata: Metadata = {
     type: 'website',
     url: 'https://summeca.com',
     siteName: 'SUMMECA',
-    title: 'SUMMECA — Digital Tools for Modern Work',
+    title: 'SUMMECA — AI & SaaS Tools for Modern Business',
     description: siteDescription,
     images: [
       {
@@ -141,7 +151,7 @@ const baseMetadata: Metadata = {
     card: 'summary_large_image',
     site: '@summeca_',
     creator: '@summeca_',
-    title: 'SUMMECA — Digital Tools for Modern Work',
+    title: 'SUMMECA — AI & SaaS Tools for Modern Business',
     description: siteDescription,
     images: ['/assets/images/summeca-logo.png'],
   },

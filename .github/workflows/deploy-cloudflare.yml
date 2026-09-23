@@ -134,6 +134,13 @@ jobs:
             if (!value.toLowerCase().includes(expected.toLowerCase())) process.exit(33);
           }
 
+          const homeHtml = await home.text();
+          console.log('Homepage SEO metadata smoke test');
+          if (!homeHtml.includes('SUMMECA — AI &amp; SaaS Tools for Modern Business')
+              && !homeHtml.includes('SUMMECA — AI & SaaS Tools for Modern Business')) process.exit(41);
+          if (!homeHtml.includes('rel="canonical"')
+              || !homeHtml.includes('https://summeca.com/')) process.exit(42);
+
           const dashboard = await fetch('https://summeca.com/user-dashboard', { redirect: 'manual' });
           const dashboardLocation = dashboard.headers.get('location') || '';
           console.log(`/user-dashboard -> ${dashboard.status} ${dashboardLocation}`);

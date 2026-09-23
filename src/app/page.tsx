@@ -22,7 +22,7 @@ export const revalidate = 300;
 export const metadata = {
   title: { absolute: 'SUMMECA — AI & SaaS Tools for Modern Business' },
   description:
-    'Focused SUMMECA AI and SaaS applications for website AI agents, lead follow-up, client proposals, invoicing, and practical business workflows.',
+    'SUMMECA provides focused AI and SaaS applications for website lead capture, lead follow-up, client proposals, invoicing, and practical business workflows.',
   alternates: {
     canonical: 'https://summeca.com/',
   },
@@ -36,6 +36,29 @@ export const metadata = {
       'max-image-preview': 'large',
       'max-video-preview': -1,
     },
+  },
+  openGraph: {
+    type: 'website',
+    url: 'https://summeca.com/',
+    siteName: 'SUMMECA',
+    title: 'SUMMECA — AI & SaaS Tools for Modern Business',
+    description:
+      'SUMMECA provides focused AI and SaaS applications for website lead capture, lead follow-up, client proposals, invoicing, and practical business workflows.',
+    images: [
+      {
+        url: '/assets/images/summeca-logo.png',
+        width: 1200,
+        height: 400,
+        alt: 'SUMMECA — AI & SaaS Tools for Modern Business',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'SUMMECA — AI & SaaS Tools for Modern Business',
+    description:
+      'SUMMECA provides focused AI and SaaS applications for website lead capture, lead follow-up, client proposals, invoicing, and practical business workflows.',
+    images: ['/assets/images/summeca-logo.png'],
   },
 };
 
