@@ -17,11 +17,11 @@ test('homepage hero keeps a readable filled headline and flagship product CTA hi
   assert.match(darkHeroCss, /\.summeca-hero-headline-line[\s\S]*?color: #e8fbfa;[\s\S]*?-webkit-text-stroke:/);
   assert.match(lightHeroCss, /html\[data-site-theme='light'\] \.summeca-hero-headline-line[\s\S]*?color: #062b35;[\s\S]*?-webkit-text-stroke:/);
   assert.match(hero, /href="\/products\/summeca-invoiceflow"[\s\S]*?primary_cta_click/);
-  assert.match(hero, /invoiceFlow: 'Explore InvoiceFlow'/);
-  assert.match(hero, /invoiceFlow: 'استكشف InvoiceFlow'/);
+  assert.match(hero, /invoiceFlow: 'Try InvoiceFlow free'/);
+  assert.match(hero, /invoiceFlow: 'جرّب InvoiceFlow مجانًا'/);
   assert.match(hero, /href="\/products\/summeca-leadfollow-ai"[\s\S]*?secondary_cta_click/);
-  assert.match(hero, /leadFollow: 'Explore LeadFollow AI'/);
-  assert.match(hero, /leadFollow: 'استكشف LeadFollow AI'/);
+  assert.match(hero, /leadFollow: 'Watch the real product demo'/);
+  assert.match(hero, /leadFollow: 'شاهد معاينة المنتج'/);
   assert.match(hero, /href="\/products"/);
   assert.match(hero, /allProducts: 'View all products'/);
   assert.match(hero, /allProducts: 'عرض كل المنتجات'/);
