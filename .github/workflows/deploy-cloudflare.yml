@@ -110,6 +110,7 @@ jobs:
             ['https://summeca.com/sign-up-login-screen', 'text/html'],
             ['https://summeca.com/robots.txt', 'text/plain'],
             ['https://summeca.com/sitemap.xml', 'application/xml'],
+            ['https://summeca.com/7f4b9d13c6e24a8f95b0d3e72c1a6f48.txt', 'text/plain'],
           ];
 
           for (const [url, expectedType] of checks) {
@@ -225,3 +226,7 @@ jobs:
           if (data?.success !== true || typeof data?.reply !== 'string' || !data.reply.trim()) process.exit(53);
           console.log(`Sales AI smoke test passed; reply length=${data.reply.length}`);
           NODE
+
+      - name: Notify IndexNow of deployed public URLs
+        continue-on-error: true
+        run: node scripts/submit-indexnow.mjs

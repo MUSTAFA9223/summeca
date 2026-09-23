@@ -23,6 +23,20 @@ export const metadata = {
   title: { absolute: 'SUMMECA — AI & SaaS Tools for Modern Business' },
   description:
     'Focused SUMMECA AI and SaaS applications for website AI agents, lead follow-up, client proposals, invoicing, and practical business workflows.',
+  alternates: {
+    canonical: 'https://summeca.com/',
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-snippet': -1,
+      'max-image-preview': 'large',
+      'max-video-preview': -1,
+    },
+  },
 };
 
 type ProductPlan = {
