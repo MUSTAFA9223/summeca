@@ -599,6 +599,8 @@ interface GrowthMetrics {
   windowDays: number;
   visitors: number;
   pageViews: number;
+  contentPageViews: number;
+  contentCtaClicks: number;
   productViews: number;
   buyClicks: number;
   checkoutStarts: number;
@@ -626,10 +628,37 @@ interface GrowthPlan {
   conversionActions?: Array<{ title: string; reason: string; metric: string }>;
 }
 
+interface GrowthPageRecord {
+  id: string;
+  slug: string;
+  title: string;
+  status: 'draft' | 'published' | 'archived';
+  target_product_name: string | null;
+  social_post: string | null;
+  published_at: string | null;
+  updated_at: string;
+}
+
 function GrowthEngineTab({ onGenerated }: { onGenerated: () => void }) {
   const [loading, setLoading] = useState(false);
   const [metrics, setMetrics] = useState<GrowthMetrics | null>(null);
   const [plan, setPlan] = useState<GrowthPlan | null>(null);
+  const [pages, setPages] = useState<GrowthPageRecord[]>([]);
+  const [pageAction, setPageAction] = useState('');
+
+  const refreshPages = useCallback(async () => {
+    try {
+      const res = await fetch('/api/ai/growth-pages', { cache: 'no-store' });
+      const data = await res.json();
+      if (res.ok) setPages((data.pages ?? []) as GrowthPageRecord[]);
+    } catch {
+      // Page history is secondary to the growth analysis itself.
+    }
+  }, []);
+
+  useEffect(() => {
+    void refreshPages();
+  }, [refreshPages]);
 
   const runGrowthPlan = async () => {
     setLoading(true);
@@ -651,20 +680,73 @@ function GrowthEngineTab({ onGenerated }: { onGenerated: () => void }) {
     }
   };
 
+  const generateDraft = async (opportunity: GrowthOpportunity) => {
+    const action = 'draft:' + opportunity.suggestedSlug;
+    setPageAction(action);
+    try {
+      const res = await fetch('/api/ai/growth-pages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ opportunity }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? 'Guide generation failed');
+      const page = data.page as GrowthPageRecord;
+      setPages((current) => [page, ...current.filter((item) => item.id !== page.id)]);
+      onGenerated();
+      toast.success('SEO guide draft created');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Guide generation failed');
+    } finally {
+      setPageAction('');
+    }
+  };
+
+  const updatePageStatus = async (page: GrowthPageRecord, status: 'draft' | 'published' | 'archived') => {
+    const action = status + ':' + page.id;
+    setPageAction(action);
+    try {
+      const res = await fetch('/api/ai/growth-pages', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: page.id, status }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? 'Guide status update failed');
+      const updated = data.page as GrowthPageRecord;
+      setPages((current) => current.map((item) => item.id === updated.id ? updated : item));
+      toast.success(status === 'published' ? 'Guide published and added to the SEO index' : 'Guide status updated');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Guide status update failed');
+    } finally {
+      setPageAction('');
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="rounded-xl border border-primary/20 bg-primary/5 p-5">
-        <div className="flex items-start gap-3">
-          <Rocket size={20} className="mt-0.5 text-primary" />
-          <div>
-            <h3 className="text-sm font-700 text-foreground">SUMMECA Growth Engine</h3>
-            <p className="mt-1 text-sm leading-6 text-muted-foreground">
-              Turn first-party traffic and funnel data into SEO topics, publishable page briefs, social posts, and conversion actions.
-            </p>
-            <p className="mt-2 text-xs text-muted-foreground">
-              Keyword ideas are search-intent hypotheses. This tool does not claim Google search volume or ranking data.
-            </p>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex items-start gap-3">
+            <Rocket size={20} className="mt-0.5 text-primary" />
+            <div>
+              <h3 className="text-sm font-700 text-foreground">SUMMECA Growth Engine</h3>
+              <p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">
+                Turn first-party traffic and funnel data into SEO topics, full guide drafts, indexable pages, social posts, and conversion actions.
+              </p>
+              <p className="mt-2 text-xs text-muted-foreground">
+                Keyword ideas are search-intent hypotheses. SUMMECA never invents Google volume, rankings, or traffic forecasts.
+              </p>
+            </div>
           </div>
+          <a
+            href="/guides"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex shrink-0 items-center justify-center rounded-lg border border-border bg-card px-3 py-2 text-xs font-600 text-foreground transition hover:border-primary/30"
+          >
+            Open public guides
+          </a>
         </div>
         <button
           onClick={runGrowthPlan}
@@ -681,10 +763,11 @@ function GrowthEngineTab({ onGenerated }: { onGenerated: () => void }) {
           {[
             ['Visitors', metrics.visitors],
             ['Page views', metrics.pageViews],
+            ['Guide views', metrics.contentPageViews],
+            ['Guide CTA clicks', metrics.contentCtaClicks],
             ['Product views', metrics.productViews],
             ['Buy clicks', metrics.buyClicks],
             ['Checkout starts', metrics.checkoutStarts],
-            ['Tracked payments', metrics.paymentCompleted],
             ['Real completed orders', metrics.realCompletedOrders],
           ].map(([label, value]) => (
             <div key={String(label)} className="rounded-xl border border-border bg-card p-4">
@@ -708,6 +791,63 @@ function GrowthEngineTab({ onGenerated }: { onGenerated: () => void }) {
         </div>
       )}
 
+      {pages.length > 0 && (
+        <div className="rounded-xl border border-border bg-card p-5">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-xs font-700 uppercase tracking-wide text-muted-foreground">SEO publishing queue</p>
+              <p className="mt-1 text-sm text-muted-foreground">Drafts stay private until you publish them.</p>
+            </div>
+            <button
+              onClick={() => void refreshPages()}
+              className="rounded-lg border border-border px-3 py-1.5 text-xs font-600 text-foreground hover:border-primary/30"
+            >
+              Refresh
+            </button>
+          </div>
+          <div className="mt-4 space-y-2">
+            {pages.slice(0, 8).map((page) => (
+              <div key={page.id} className="flex flex-col gap-3 rounded-xl border border-border bg-secondary/20 p-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-700 text-foreground">{page.title}</p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">/guides/{page.slug} · {page.status}</p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {page.status === 'draft' && (
+                    <button
+                      onClick={() => void updatePageStatus(page, 'published')}
+                      disabled={pageAction === 'published:' + page.id}
+                      className="rounded-lg bg-primary px-3 py-1.5 text-xs font-700 text-primary-foreground disabled:opacity-50"
+                    >
+                      {pageAction === 'published:' + page.id ? 'Publishing...' : 'Publish'}
+                    </button>
+                  )}
+                  {page.status === 'published' && (
+                    <>
+                      <a
+                        href={'/guides/' + page.slug}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-600 text-foreground hover:border-primary/30"
+                      >
+                        View live
+                      </a>
+                      <button
+                        onClick={() => void updatePageStatus(page, 'draft')}
+                        disabled={pageAction === 'draft:' + page.id}
+                        className="rounded-lg border border-border px-3 py-1.5 text-xs font-600 text-muted-foreground disabled:opacity-50"
+                      >
+                        Unpublish
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {plan?.summary && (
         <div className="rounded-xl border border-border bg-card p-5">
           <p className="text-xs font-700 uppercase tracking-wide text-muted-foreground">Growth summary</p>
@@ -717,41 +857,85 @@ function GrowthEngineTab({ onGenerated }: { onGenerated: () => void }) {
 
       {plan?.opportunities && plan.opportunities.length > 0 && (
         <div className="space-y-4">
-          {plan.opportunities.map((item, index) => (
-            <div key={item.suggestedSlug || item.keyword || index} className="rounded-xl border border-border bg-card p-5">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <p className="text-xs font-700 uppercase tracking-wide text-primary">Opportunity {index + 1}</p>
-                  <h3 className="mt-1 text-base font-700 text-foreground">{item.title}</h3>
+          {plan.opportunities.map((item, index) => {
+            const page = pages.find((candidate) => candidate.slug === item.suggestedSlug);
+            const draftAction = 'draft:' + item.suggestedSlug;
+            return (
+              <div key={item.suggestedSlug || item.keyword || index} className="rounded-xl border border-border bg-card p-5">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-700 uppercase tracking-wide text-primary">Opportunity {index + 1}</p>
+                    <h3 className="mt-1 text-base font-700 text-foreground">{item.title}</h3>
+                  </div>
+                  <CopyButton text={JSON.stringify(item, null, 2)} />
                 </div>
-                <CopyButton text={JSON.stringify(item, null, 2)} />
+                <div className="mt-4 grid gap-3 md:grid-cols-2">
+                  <div className="rounded-lg bg-secondary/40 p-3">
+                    <p className="text-xs text-muted-foreground">Search topic</p>
+                    <p className="mt-1 text-sm font-600 text-foreground">{item.keyword}</p>
+                  </div>
+                  <div className="rounded-lg bg-secondary/40 p-3">
+                    <p className="text-xs text-muted-foreground">Intent / page</p>
+                    <p className="mt-1 text-sm font-600 text-foreground">{item.searchIntent} · {item.recommendedPageType}</p>
+                  </div>
+                  <div className="rounded-lg bg-secondary/40 p-3">
+                    <p className="text-xs text-muted-foreground">Target product</p>
+                    <p className="mt-1 text-sm font-600 text-foreground">{item.targetProduct}</p>
+                  </div>
+                  <div className="rounded-lg bg-secondary/40 p-3">
+                    <p className="text-xs text-muted-foreground">Suggested URL</p>
+                    <p className="mt-1 break-all text-sm font-600 text-foreground">/guides/{item.suggestedSlug}</p>
+                  </div>
+                </div>
+                <div className="mt-4 space-y-3">
+                  <OutputBlock label="Meta Description" value={item.metaDescription} />
+                  <OutputBlock label="Why This Opportunity" value={item.whyNow} />
+                  {item.outline?.length > 0 && <OutputBlock label="Page Outline" value={item.outline} />}
+                  <OutputBlock label="Social Post" value={item.socialPost} />
+                </div>
+                <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-border pt-4">
+                  {!page && (
+                    <button
+                      onClick={() => void generateDraft(item)}
+                      disabled={pageAction === draftAction}
+                      className="inline-flex items-center gap-2 rounded-lg bg-primary px-3.5 py-2 text-xs font-700 text-primary-foreground disabled:opacity-50"
+                    >
+                      {pageAction === draftAction ? <Loader2 size={13} className="animate-spin" /> : <FileText size={13} />}
+                      {pageAction === draftAction ? 'Writing full guide...' : 'Generate full SEO draft'}
+                    </button>
+                  )}
+                  {page?.status === 'draft' && (
+                    <>
+                      <button
+                        onClick={() => void generateDraft(item)}
+                        disabled={pageAction === draftAction}
+                        className="rounded-lg border border-border px-3.5 py-2 text-xs font-600 text-foreground disabled:opacity-50"
+                      >
+                        {pageAction === draftAction ? 'Regenerating...' : 'Regenerate draft'}
+                      </button>
+                      <button
+                        onClick={() => void updatePageStatus(page, 'published')}
+                        disabled={pageAction === 'published:' + page.id}
+                        className="rounded-lg bg-primary px-3.5 py-2 text-xs font-700 text-primary-foreground disabled:opacity-50"
+                      >
+                        {pageAction === 'published:' + page.id ? 'Publishing...' : 'Publish to Google-ready URL'}
+                      </button>
+                    </>
+                  )}
+                  {page?.status === 'published' && (
+                    <a
+                      href={'/guides/' + page.slug}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="rounded-lg border border-primary/30 bg-primary/5 px-3.5 py-2 text-xs font-700 text-primary"
+                    >
+                      Published · view page
+                    </a>
+                  )}
+                </div>
               </div>
-              <div className="mt-4 grid gap-3 md:grid-cols-2">
-                <div className="rounded-lg bg-secondary/40 p-3">
-                  <p className="text-xs text-muted-foreground">Search topic</p>
-                  <p className="mt-1 text-sm font-600 text-foreground">{item.keyword}</p>
-                </div>
-                <div className="rounded-lg bg-secondary/40 p-3">
-                  <p className="text-xs text-muted-foreground">Intent / page</p>
-                  <p className="mt-1 text-sm font-600 text-foreground">{item.searchIntent} · {item.recommendedPageType}</p>
-                </div>
-                <div className="rounded-lg bg-secondary/40 p-3">
-                  <p className="text-xs text-muted-foreground">Target product</p>
-                  <p className="mt-1 text-sm font-600 text-foreground">{item.targetProduct}</p>
-                </div>
-                <div className="rounded-lg bg-secondary/40 p-3">
-                  <p className="text-xs text-muted-foreground">Suggested URL</p>
-                  <p className="mt-1 break-all text-sm font-600 text-foreground">/guides/{item.suggestedSlug}</p>
-                </div>
-              </div>
-              <div className="mt-4 space-y-3">
-                <OutputBlock label="Meta Description" value={item.metaDescription} />
-                <OutputBlock label="Why This Opportunity" value={item.whyNow} />
-                {item.outline?.length > 0 && <OutputBlock label="Page Outline" value={item.outline} />}
-                <OutputBlock label="Social Post" value={item.socialPost} />
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
