@@ -7,7 +7,8 @@ export type FunnelEvent =
   | 'checkout_started'
   | 'payment_method_selected'
   | 'payment_failed'
-  | 'payment_completed';
+  | 'payment_completed'
+  | 'content_cta_click';
 
 type FunnelMetadata = Record<string, string | number | boolean | null | undefined>;
 
