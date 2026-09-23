@@ -95,6 +95,7 @@ export default function PublicFooter() {
 
   return (
     <footer
+      data-public-footer="true"
       dir={isArabic ? 'rtl' : 'ltr'}
       className="relative overflow-hidden border-t border-white/10 bg-[#0A0F1E] text-white"
     >

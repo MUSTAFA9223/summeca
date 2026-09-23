@@ -1,0 +1,346 @@
+/* SUMMECA Pro UI — final visual system generated from UI/UX Pro Max guidance. */
+:root {
+  --summeca-radius-sm: 12px;
+  --summeca-radius-md: 16px;
+  --summeca-radius-lg: 22px;
+  --summeca-radius-xl: 28px;
+  --summeca-shadow-sm: 0 8px 24px rgba(4, 47, 55, 0.06);
+  --summeca-shadow-md: 0 18px 48px rgba(4, 47, 55, 0.09);
+  --summeca-shadow-lg: 0 30px 90px rgba(2, 22, 29, 0.16);
+  --summeca-ring: 0 0 0 4px rgba(20, 184, 166, 0.16);
+}
+
+html[data-site-theme='light'] {
+  --background: #f5fbfb;
+  --foreground: #062c35;
+  --primary: #0aa7a5;
+  --primary-foreground: #ffffff;
+  --secondary: #e9f6f6;
+  --secondary-foreground: #254b53;
+  --accent: #159bb8;
+  --accent-foreground: #ffffff;
+  --muted: #eef7f7;
+  --muted-foreground: #587b82;
+  --card: #ffffff;
+  --card-foreground: #062c35;
+  --border: #d4e7e8;
+  --input: #c9dfe0;
+  --ring: #0aa7a5;
+}html[data-site-theme='dark'] {
+  --background: #071015;
+  --foreground: #f0fcfc;
+  --primary: #2dd4bf;
+  --primary-foreground: #03211f;
+  --secondary: #0d1a20;
+  --secondary-foreground: #d7e9eb;
+  --accent: #38bdf8;
+  --accent-foreground: #04171f;
+  --muted: #0b171d;
+  --muted-foreground: #90aeb5;
+  --card: #0c171d;
+  --card-foreground: #f0fcfc;
+  --border: rgba(182, 241, 235, 0.11);
+  --input: rgba(182, 241, 235, 0.16);
+  --ring: #5eead4;
+}
+
+html {
+  background: var(--background);
+}
+
+body {
+  min-height: 100dvh;
+  background:
+    radial-gradient(circle at 9% 7%, color-mix(in srgb, var(--primary) 7%, transparent), transparent 26rem),
+    radial-gradient(circle at 91% 24%, color-mix(in srgb, var(--accent) 5%, transparent), transparent 30rem),
+    var(--background);
+  color: var(--foreground);
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}::selection {
+  background: color-mix(in srgb, var(--primary) 28%, transparent);
+  color: var(--foreground);
+}
+
+a,
+button,
+input,
+textarea,
+select {
+  -webkit-tap-highlight-color: transparent;
+}
+
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 3px;
+  box-shadow: var(--summeca-ring);
+}
+
+.btn-primary,
+.btn-secondary {
+  min-height: 44px;
+  border-radius: 14px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease, background 180ms ease, color 180ms ease;
+}
+
+.btn-primary {
+  border: 1px solid color-mix(in srgb, var(--primary) 76%, white);
+  background: linear-gradient(135deg, #0f9f94 0%, #13b8ae 52%, #22c7d9 100%);
+  color: #ffffff;
+  box-shadow: 0 12px 30px rgba(13, 148, 136, 0.2);
+}.btn-primary:hover {
+  transform: translateY(-1px);
+  background: linear-gradient(135deg, #0b8f85 0%, #0fa79e 52%, #18b6c9 100%);
+  box-shadow: 0 16px 38px rgba(13, 148, 136, 0.28);
+}
+
+.btn-secondary {
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--card) 92%, transparent);
+  color: var(--foreground);
+  box-shadow: var(--summeca-shadow-sm);
+}
+
+.btn-secondary:hover {
+  transform: translateY(-1px);
+  border-color: color-mix(in srgb, var(--primary) 35%, var(--border));
+  background: color-mix(in srgb, var(--secondary) 82%, var(--card));
+  color: var(--foreground);
+}
+
+.glass-card,
+.glass-card-premium {
+  border-radius: var(--summeca-radius-lg);
+  border-color: color-mix(in srgb, var(--primary) 12%, var(--border));
+  background: color-mix(in srgb, var(--card) 92%, transparent);
+  box-shadow: var(--summeca-shadow-md), inset 0 1px 0 color-mix(in srgb, white 7%, transparent);
+  backdrop-filter: blur(18px) saturate(125%);
+  -webkit-backdrop-filter: blur(18px) saturate(125%);
+}
+
+[data-public-nav='true'] {
+  min-height: 74px;
+  border-bottom: 1px solid color-mix(in srgb, var(--primary) 12%, var(--border)) !important;
+  background: color-mix(in srgb, var(--background) 84%, transparent) !important;
+  box-shadow: 0 10px 36px rgba(4, 47, 55, 0.055) !important;
+  backdrop-filter: blur(20px) saturate(135%) !important;
+}[data-public-nav='true'] > div > div {
+  min-height: 74px;
+}
+
+[data-public-nav='true'] nav a {
+  border: 1px solid transparent;
+  border-radius: 12px;
+}
+
+[data-public-nav='true'] nav a:hover {
+  border-color: color-mix(in srgb, var(--primary) 12%, transparent);
+  background: color-mix(in srgb, var(--secondary) 76%, transparent);
+}
+
+[data-mobile-nav-panel='true'] {
+  border-top-color: color-mix(in srgb, var(--primary) 18%, var(--border)) !important;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--card) 98%, transparent), var(--background)) !important;
+}
+
+.summeca-home-hero {
+  border-bottom: 1px solid color-mix(in srgb, var(--primary) 10%, transparent);
+}
+
+.summeca-hero-grid {
+  opacity: 0.42;
+  background-size: 56px 56px;
+}
+
+.summeca-hero-noise {
+  opacity: 0.026;
+}
+
+.summeca-hero-headline-line {
+  letter-spacing: -0.046em;
+  text-wrap: balance;
+}
+
+.summeca-hero-copy {
+  max-width: 39rem;
+  font-weight: 500;
+}.summeca-hero-eyebrow {
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.06), 0 10px 30px rgba(4,47,55,0.05);
+}
+
+.summeca-hero-secondary-cta {
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.05);
+}
+
+.summeca-home-product-3d {
+  border-radius: var(--summeca-radius-xl) !important;
+  border-color: color-mix(in srgb, var(--primary) 13%, var(--border)) !important;
+  background:
+    linear-gradient(160deg, color-mix(in srgb, var(--card) 98%, var(--primary) 2%), var(--card)) !important;
+  box-shadow: var(--summeca-shadow-md) !important;
+}
+
+.summeca-home-product-3d:hover {
+  border-color: color-mix(in srgb, var(--primary) 36%, var(--border)) !important;
+  box-shadow: var(--summeca-shadow-lg), 0 0 0 1px color-mix(in srgb, var(--primary) 10%, transparent) !important;
+}
+
+main input:not([type='checkbox']):not([type='radio']),
+main textarea,
+main select {
+  border-radius: 12px;
+  border-color: var(--input);
+  background: color-mix(in srgb, var(--card) 96%, transparent);
+  color: var(--foreground);
+  transition: border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
+}
+
+main input:not([type='checkbox']):not([type='radio']):focus,
+main textarea:focus,
+main select:focus {
+  border-color: var(--ring);
+  box-shadow: var(--summeca-ring);
+}[data-summeca-dashboard-shell='true'] {
+  background:
+    radial-gradient(circle at 86% 8%, color-mix(in srgb, var(--primary) 5%, transparent), transparent 26rem),
+    var(--background);
+}
+
+[data-dashboard-sidebar] {
+  border-color: color-mix(in srgb, var(--primary) 10%, var(--border)) !important;
+  background: color-mix(in srgb, var(--card) 96%, var(--background)) !important;
+  box-shadow: 18px 0 54px rgba(3, 35, 43, 0.035);
+}
+
+[data-dashboard-topbar='true'] {
+  min-height: 62px;
+  border-color: color-mix(in srgb, var(--primary) 10%, var(--border)) !important;
+  background: color-mix(in srgb, var(--card) 88%, transparent) !important;
+  box-shadow: 0 10px 34px rgba(3, 35, 43, 0.045);
+  backdrop-filter: blur(18px) saturate(125%);
+  -webkit-backdrop-filter: blur(18px) saturate(125%);
+}
+
+.sidebar-link {
+  min-height: 42px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  color: var(--muted-foreground);
+}
+
+.sidebar-link:hover {
+  border-color: color-mix(in srgb, var(--primary) 10%, transparent);
+  background: color-mix(in srgb, var(--secondary) 80%, transparent);
+  color: var(--foreground);
+}
+
+.sidebar-link.active {
+  border-color: color-mix(in srgb, var(--primary) 20%, transparent);
+  border-left-color: color-mix(in srgb, var(--primary) 20%, transparent);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--primary) 11%, var(--card)), color-mix(in srgb, var(--accent) 6%, var(--card)));
+  color: var(--primary);
+  box-shadow: inset 3px 0 0 var(--primary);
+}[data-summeca-dashboard-shell='true'] main [class*='bg-card'][class*='border'] {
+  border-color: color-mix(in srgb, var(--primary) 10%, var(--border));
+  box-shadow: var(--summeca-shadow-sm);
+}
+
+[data-public-footer='true'] {
+  border-top-color: rgba(94, 234, 212, 0.12) !important;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(45, 212, 191, 0.09), transparent 28rem),
+    linear-gradient(180deg, #071218 0%, #071015 100%) !important;
+}
+
+[data-public-footer='true'] a {
+  text-underline-offset: 4px;
+}
+
+.summeca-auth-shell {
+  background:
+    radial-gradient(circle at 14% 18%, rgba(45,212,191,0.15), transparent 28rem),
+    radial-gradient(circle at 82% 78%, rgba(56,189,248,0.08), transparent 30rem),
+    #050b0f !important;
+}
+
+.summeca-auth-card {
+  border-radius: 28px !important;
+  border-color: rgba(153, 246, 228, 0.12) !important;
+  background: rgba(8, 17, 21, 0.86) !important;
+  box-shadow: 0 34px 110px rgba(0,0,0,0.42), inset 0 1px 0 rgba(255,255,255,0.055) !important;
+}
+
+html[data-site-theme='light'] .summeca-auth-shell {
+  background:
+    radial-gradient(circle at 14% 18%, rgba(10,167,165,0.10), transparent 28rem),
+    radial-gradient(circle at 82% 78%, rgba(21,155,184,0.07), transparent 30rem),
+    #f5fbfb !important;
+  color: #062c35 !important;
+}html[data-site-theme='light'] .summeca-auth-ambient {
+  opacity: 0.58;
+}
+
+html[data-site-theme='light'] .summeca-auth-grid {
+  opacity: 0.16 !important;
+  filter: invert(1);
+}
+
+html[data-site-theme='light'] .summeca-auth-feature-surface,
+html[data-site-theme='light'] .summeca-auth-card {
+  border-color: rgba(10, 167, 165, 0.14) !important;
+  background: rgba(255,255,255,0.88) !important;
+  box-shadow: 0 30px 90px rgba(4,47,55,0.10), inset 0 1px 0 rgba(255,255,255,0.92) !important;
+}
+
+html[data-site-theme='light'] .summeca-auth-headline-line {
+  background-image: linear-gradient(90deg, #062c35 0%, #0b766e 56%, #0aa7a5 100%) !important;
+}
+
+html[data-site-theme='light'] .summeca-auth-copy,
+html[data-site-theme='light'] .summeca-auth-back-home,
+html[data-site-theme='light'] .summeca-auth-back-link {
+  color: #587b82 !important;
+}
+
+html[data-site-theme='light'] .summeca-auth-chip,
+html[data-site-theme='light'] .summeca-auth-tabs {
+  border-color: rgba(10,167,165,0.14) !important;
+  background: rgba(233,246,246,0.82) !important;
+  color: #254b53 !important;
+}
+
+@media (max-width: 767px) {
+  [data-public-nav='true'] > div > div {
+    min-height: 66px;
+  }
+
+  .summeca-hero-headline-line {
+    letter-spacing: -0.035em;
+  }
+
+  .glass-card,
+  .glass-card-premium,
+  .summeca-home-product-3d {
+    border-radius: 20px !important;
+  }
+}@media (prefers-reduced-motion: reduce) {
+  .btn-primary,
+  .btn-secondary,
+  .sidebar-link,
+  .summeca-home-product-3d {
+    transition: none !important;
+  }
+
+  .btn-primary:hover,
+  .btn-secondary:hover,
+  .summeca-home-product-3d:hover {
+    transform: none !important;
+  }
+}

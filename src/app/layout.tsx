@@ -12,6 +12,7 @@ import '../styles/summeca-light-premium.css';
 import '../styles/catalog-contrast.css';
 import '../styles/accessibility-motion-performance.css';
 import '../styles/mobile-responsive.css';
+import '../styles/summeca-pro-ui.css';
 import { Toaster } from 'sonner';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { LanguageProvider } from '@/contexts/LanguageContext';

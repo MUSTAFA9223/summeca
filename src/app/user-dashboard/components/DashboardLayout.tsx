@@ -83,7 +83,7 @@ export default function DashboardLayout({ children, activeRoute }: DashboardLayo
   }
 
   return (
-    <div className="min-h-screen bg-background text-foreground flex">
+    <div data-summeca-dashboard-shell="true" className="min-h-screen bg-background text-foreground flex">
       {activeRoute === 'leadfollow' && <LeadFollowEnglishDateTimeInputs />}
 
       <DashboardSidebar

@@ -36,6 +36,7 @@ export default function DashboardTopbar({ onOpenMobileSidebar }: DashboardTopbar
 
   return (
     <header
+      data-dashboard-topbar="true"
       data-theme-switcher-host="true"
       className="h-14 border-b border-border bg-card flex items-center gap-3 px-5 lg:px-8 flex-shrink-0 sticky top-0 z-20"
     >
