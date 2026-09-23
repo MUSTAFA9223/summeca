@@ -33,17 +33,17 @@ test('homepage keeps four focused AI and SaaS products and stays outcome-led', (
 test('hero is concise, bilingual, product-specific, and shows real product workspace previews', () => {
   assert.match(hero, /min-h-\[580px\]/);
   assert.match(hero, /lg:min-h-\[620px\]/);
-  assert.match(hero, /Focused AI & SaaS apps for modern business/);
-  assert.match(hero, /Move from lead to proposal to invoice/);
+  assert.match(hero, /SUMMECA InvoiceFlow/);
+  assert.match(hero, /Create professional invoices in minutes,/);
   assert.match(hero, /with focused SUMMECA AI & SaaS apps\./);
-  assert.match(hero, /Explore InvoiceFlow/);
-  assert.match(hero, /Explore LeadFollow AI/);
+  assert.match(hero, /Try InvoiceFlow free/);
+  assert.match(hero, /Watch the real product demo/);
   assert.match(hero, /View all products/);
-  assert.match(hero, /تطبيقات ذكاء اصطناعي وSaaS للأعمال الحديثة/);
-  assert.match(hero, /حوّل العميل إلى عرض ثم فاتورة/);
+  assert.match(hero, /InvoiceFlow من SUMMECA/);
+  assert.match(hero, /أنشئ فواتير احترافية خلال دقائق،/);
   assert.match(hero, /باستخدام تطبيقات SUMMECA الذكية\./);
-  assert.match(hero, /استكشف InvoiceFlow/);
-  assert.match(hero, /استكشف LeadFollow AI/);
+  assert.match(hero, /جرّب InvoiceFlow مجانًا/);
+  assert.match(hero, /شاهد معاينة المنتج/);
   assert.match(hero, /عرض كل المنتجات/);
   assert.match(hero, /dir=\{isArabic \? 'rtl' : 'ltr'\}/);
   assert.match(hero, /WorkspaceOverviewPreview/);
