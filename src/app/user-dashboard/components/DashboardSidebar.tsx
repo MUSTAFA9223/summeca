@@ -29,7 +29,6 @@ import {
   Shield,
   Star,
   Bot,
-  X,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -219,7 +218,7 @@ export default function DashboardSidebar({
         data-dashboard-sidebar="mobile"
         data-mobile-sidebar="true"
         data-open={mobileOpen ? 'true' : 'false'}
-        className={`fixed left-0 top-0 bottom-0 z-40 lg:hidden flex flex-col bg-card border-r border-border w-64 transition-transform duration-300 shadow-xl ${
+        className={`fixed left-0 top-0 bottom-0 z-40 lg:hidden flex flex-col bg-white border-r border-border w-64 transition-transform duration-300 shadow-xl ${
           mobileOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
@@ -230,7 +229,7 @@ export default function DashboardSidebar({
             className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary transition-all duration-150"
             aria-label="Close"
           >
-            <X size={18} aria-hidden="true" />
+            ✕
           </button>
         </div>
 
