@@ -44,7 +44,7 @@ function topEntries(map: Map<string, number>, limit = 6) {
 
 function parseJson(text: string) {
   try {
-    const cleaned = text.replace(/^\`\`\`json\s*/i, '').replace(/\s*\`\`\`$/i, '').trim();
+    const cleaned = text.replace(/^```json\s*/i, '').replace(/\s*```$/i, '').trim();
     return JSON.parse(cleaned) as unknown;
   } catch {
     return null;
