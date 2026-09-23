@@ -75,13 +75,12 @@ test('homepage does not advertise an unavailable payment provider as live', () =
 });
 
 test('hero leads with InvoiceFlow free access and keeps the broader product catalog available', () => {
-  assert.match(hero, /href="\/products\/summeca-invoiceflow"/);
-  assert.match(hero, /Explore InvoiceFlow/);
-  assert.match(hero, /destination: 'summeca-invoiceflow'/);
-  assert.match(hero, /href="\/products\/summeca-leadfollow-ai"/);
-  assert.match(hero, /Explore LeadFollow AI/);
-  assert.match(hero, /destination: 'summeca-leadfollow-ai'/);
-  assert.match(hero, /ProposalFlow AI/);
+  assert.match(hero, /href="\/user-dashboard\/invoiceflow"/);
+  assert.match(hero, /Try InvoiceFlow free/);
+  assert.match(hero, /destination: 'invoiceflow-free-workspace'/);
+  assert.match(hero, /href="\/products\/summeca-invoiceflow#product-preview"/);
+  assert.match(hero, /Watch the real product demo/);
+  assert.match(hero, /destination: 'summeca-invoiceflow-demo'/);
   assert.match(hero, /href="\/products"/);
   assert.match(hero, /View all products/);
   assert.match(hero, /homepage_view/);
