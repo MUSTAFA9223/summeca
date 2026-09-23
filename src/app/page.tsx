@@ -87,10 +87,10 @@ type PublishedProduct = {
 };
 
 const FEATURED_PRODUCT_ORDER = [
-  'summeca-siteagent-ai',
+  'summeca-invoiceflow',
   'summeca-leadfollow-ai',
   'summeca-proposalflow-ai',
-  'summeca-invoiceflow',
+  'summeca-siteagent-ai',
 ];
 
 function productTypeLabel(product: PublishedProduct) {
@@ -293,7 +293,7 @@ export default async function HomePage() {
                 id="featured-products-title"
                 className="mt-2 max-w-2xl text-2xl font-800 tracking-tight text-foreground sm:text-3xl"
               >
-                Turn website visitors into leads, proposals, and invoices with SUMMECA.
+                Start with InvoiceFlow, then add AI tools as your workflow grows.
               </h2>
             </div>
             <Link
