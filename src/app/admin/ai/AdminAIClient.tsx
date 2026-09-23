@@ -28,6 +28,24 @@ interface GenerationRecord {
 
 type ActiveTab = 'product' | 'seo' | 'campaign' | 'analysis' | 'insights' | 'history';
 
+const AI_PROVIDER_LABEL = 'Cloudflare Workers AI';
+
+function formatModelLabel(model: string) {
+  const normalized = model.replace(/^@/, '');
+  if (normalized === 'cf/meta/llama-3.1-8b-instruct-fast') {
+    return 'Meta Llama 3.1 8B Fast';
+  }
+  if (normalized.startsWith('cf/')) {
+    return normalized
+      .split('/')
+      .slice(1)
+      .join(' · ')
+      .replace(/-/g, ' ')
+      .replace(/\b\w/g, char => char.toUpperCase());
+  }
+  return model;
+}
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function CopyButton({ text }: { text: string }) {
@@ -616,16 +634,25 @@ function HistoryTab() {
   return (
     <div className="space-y-2">
       {generations.map(g => (
-        <div key={g.id} className="flex items-center justify-between p-3 rounded-xl border border-border bg-card hover:bg-secondary/30 transition-colors">
-          <div className="flex items-center gap-3">
+        <div key={g.id} className="flex flex-col gap-3 rounded-xl border border-border bg-card p-3 transition-colors hover:bg-secondary/30 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
             <span className="text-xs font-600 px-2 py-0.5 rounded-full bg-primary/10 text-primary">
               {TYPE_LABELS[g.generation_type] ?? g.generation_type}
             </span>
-            <span className="text-xs text-muted-foreground">{g.model}</span>
+            <span
+              className="max-w-full truncate text-xs text-muted-foreground"
+              title={g.model}
+            >
+              {formatModelLabel(g.model)}
+            </span>
+            <span className="inline-flex items-center gap-1 rounded-full bg-success/10 px-2 py-0.5 text-xs font-600 text-success">
+              <Check size={11} />
+              Completed
+            </span>
           </div>
-          <div className="flex items-center gap-4 text-xs text-muted-foreground">
-            <span>{g.tokens_used} tokens</span>
-            <span>{g.duration_ms}ms</span>
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+            <span>{g.tokens_used.toLocaleString()} tokens</span>
+            <span>{g.duration_ms.toLocaleString()}ms</span>
             <span>{new Date(g.created_at).toLocaleDateString()}</span>
           </div>
         </div>
@@ -671,14 +698,16 @@ export default function AdminAIClient() {
             AI Marketing Engine
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Powered by OpenAI — generate content, optimize SEO, build campaigns
+            Powered by {AI_PROVIDER_LABEL} — generate content, optimize SEO, build campaigns
           </p>
         </div>
         {usage && (
           <div className="text-right">
-            <div className="text-xs text-muted-foreground">Monthly Usage</div>
+            <div className="text-xs text-muted-foreground">Monthly AI Usage</div>
             <div className="text-sm font-700 text-foreground">
-              {usage.requestsUsed} / {usage.monthlyLimit === 9999 ? '∞' : usage.monthlyLimit}
+              {usage.monthlyLimit === 9999
+                ? `${usage.requestsUsed.toLocaleString()} requests · Unlimited`
+                : `${usage.requestsUsed.toLocaleString()} / ${usage.monthlyLimit.toLocaleString()} requests`}
             </div>
             {usage.monthlyLimit !== 9999 && (
               <div className="w-32 h-1.5 bg-secondary rounded-full mt-1">
