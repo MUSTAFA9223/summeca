@@ -9,6 +9,7 @@ export const SITE_ORIGIN = 'https://summeca.com';
 const PUBLIC_EXACT_PATHS = new Set([
   '/',
   '/products',
+  '/guides',
   '/ai',
   '/saas',
   '/digital',
@@ -46,7 +47,9 @@ export function stripLocalePrefix(pathname: string) {
 
 export function isInternationalSeoPath(pathname: string) {
   const publicPath = stripLocalePrefix(pathname);
-  return PUBLIC_EXACT_PATHS.has(publicPath) || publicPath.startsWith('/products/');
+  return PUBLIC_EXACT_PATHS.has(publicPath)
+    || publicPath.startsWith('/products/')
+    || publicPath.startsWith('/guides/');
 }
 
 export function localizePublicPath(pathname: string, _locale: PublicPathLocale) {
