@@ -74,7 +74,7 @@ test('homepage does not advertise an unavailable payment provider as live', () =
   assert.match(cryptoStatus, /const available = Boolean/);
 });
 
-test('hero leads with flagship apps and names the three-part AI and SaaS workflow', () => {
+test('hero leads with InvoiceFlow free access and keeps the broader product catalog available', () => {
   assert.match(hero, /href="\/products\/summeca-invoiceflow"/);
   assert.match(hero, /Explore InvoiceFlow/);
   assert.match(hero, /destination: 'summeca-invoiceflow'/);
