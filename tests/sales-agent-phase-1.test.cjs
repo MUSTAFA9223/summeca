@@ -13,7 +13,7 @@ test('Sales Agent phase 1 reuses current SUMMECA product routes', () => {
   assert.match(page, /\/products\/summeca-leadfollow-ai/);
   assert.match(page, /\/products\/summeca-proposalflow-ai/);
   assert.match(page, /\/products\/summeca-siteagent-ai/);
-  assert.doesNotMatch(page, /new database project/i);
+  assert.doesNotMatch(page, /\/products\/summeca-sales-agent/);
 });
 
 test('Sales Agent is included in the public sitemap', () => {
